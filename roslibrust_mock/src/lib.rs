@@ -27,6 +27,8 @@
 //! }
 //! ```
 use std::collections::BTreeMap;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 
 use roslibrust_common::*;
@@ -39,10 +41,19 @@ use log::*;
 type TypeErasedCallback = Arc<
     dyn Fn(Vec<u8>) -> std::result::Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>
         + Send
-        + Sync
-        + 'static,
+        + Sync,
 >;
 
+// This is the type that will be returned from an async service function after we have type erased it
+type TypeErasedServiceFuture = Pin<
+    Box<
+        dyn Future<Output = std::result::Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>>
+            + Send,
+    >,
+>;
+
+// This is the type that we will store to store an async service function
+type TypeErasedAsyncCallback = Arc<dyn Fn(Vec<u8>) -> TypeErasedServiceFuture + Send + Sync>;
 /// A mock ROS implementation that can be substituted for any roslibrust backend in unit tests.
 ///
 /// Implements [TopicProvider] and [ServiceProvider] to provide basic ros functionality.
@@ -52,6 +63,7 @@ pub struct MockRos {
     // but this ends up being pretty simple
     topics: Arc<RwLock<BTreeMap<String, (Channel::Sender<Vec<u8>>, Channel::Receiver<Vec<u8>>)>>>,
     services: Arc<RwLock<BTreeMap<String, TypeErasedCallback>>>,
+    async_services: Arc<RwLock<BTreeMap<String, TypeErasedAsyncCallback>>>,
 }
 
 impl MockRos {
@@ -59,6 +71,7 @@ impl MockRos {
         Self {
             topics: Arc::new(RwLock::new(BTreeMap::new())),
             services: Arc::new(RwLock::new(BTreeMap::new())),
+            async_services: Arc::new(RwLock::new(BTreeMap::new())),
         }
     }
 }
@@ -157,6 +170,7 @@ impl ServiceProvider for MockRos {
         &self,
         topic: &str,
     ) -> roslibrust_common::Result<Self::ServiceClient<T>> {
+        // Look for service in our list of services
         let services = self.services.read().await;
         if let Some(callback) = services.get(topic) {
             return Ok(MockServiceClient {
@@ -164,6 +178,16 @@ impl ServiceProvider for MockRos {
                 _marker: Default::default(),
             });
         }
+
+        // Look for service in our list of async services
+        // let async_services = self.async_services.read().await;
+        // if let Some(callback) = async_services.get(topic) {
+        //     return Ok(MockServiceClient {
+        //         callback: callback.clone(),
+        //         _marker: Default::default(),
+        //     });
+        // }
+
         Err(Error::Disconnected)
     }
 
@@ -193,6 +217,43 @@ impl ServiceProvider for MockRos {
 
         // We technically need to hand back a token that shuts the service down here
         // But we haven't implemented that yet in this mock
+        Ok(())
+    }
+
+    async fn advertise_async_service<T: RosServiceType + 'static, F, Fut>(
+        &self,
+        topic: &str,
+        server: F,
+    ) -> roslibrust_common::Result<Self::ServiceServer>
+    where
+        F: Fn(T::Request) -> Fut + Send + Sync + 'static,
+        Fut: Future<
+                Output = std::result::Result<T::Response, Box<dyn std::error::Error + Send + Sync>>,
+            > + Send
+            + 'static,
+    {
+        // Place the server into an Arc so we can clone it
+        let a_server = Arc::new(server);
+        // Wrap the async closure in a Box and convert its future to a pinned box
+        let wrapped_closure = Arc::new(move |message: Vec<u8>| -> TypeErasedServiceFuture {
+            // Here we have to move a copy of the server into the future
+            let server = a_server.clone();
+            // Return a future a pinned-box future that will evaluate the user's async closure
+            // This is now storable in a data structure
+            Box::pin(async move {
+                let request = bincode::deserialize(&message[..])
+                    .map_err(|e| Error::SerializationError(e.to_string()))?;
+                let response = (server)(request).await?;
+                let bytes = bincode::serialize(&response)
+                    .map_err(|e| Error::SerializationError(e.to_string()))?;
+                Ok(bytes)
+            })
+        });
+
+        // Store the type erased closure
+        let mut async_services = self.async_services.write().await;
+        async_services.insert(topic.to_string(), wrapped_closure);
+
         Ok(())
     }
 }
@@ -319,5 +380,55 @@ mod tests {
         let mock_ros = MockRos::new();
         let node = MyNode { ros: mock_ros };
         node.run().await;
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_mock_async_services() {
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let mock_ros = MockRos::new();
+
+        // This is what I want users to be able to write!
+        // But it doesn't work!
+        // let service = async move |request: std_srvs::SetBoolRequest| -> std::result::Result<
+        //     std_srvs::SetBoolResponse,
+        //     Box<dyn std::error::Error + Send + Sync>,
+        // > {
+        //     tx.send(request.data).await.unwrap();
+        //     Ok(std_srvs::SetBoolResponse {
+        //         success: true,
+        //         message: "You set my bool!".to_string(),
+        //     })
+        // };
+
+        // They have to write this instead which sucks!
+        let service = move |request: std_srvs::SetBoolRequest| {
+            let tx = tx.clone();
+            Box::pin(async move {
+                tx.send(request.data).await.unwrap();
+                Ok(std_srvs::SetBoolResponse {
+                    success: true,
+                    message: "You set my bool!".to_string(),
+                })
+            })
+        };
+
+        let _handle = mock_ros
+            .advertise_async_service::<std_srvs::SetBool, _, _>("test_service", service)
+            .await
+            .unwrap();
+
+        let client = mock_ros
+            .service_client::<std_srvs::SetBool>("test_service")
+            .await
+            .unwrap();
+
+        // NOTE: test fails cause this also doesn't have the logic for actually calling the service under the hood here
+        client
+            .call(&std_srvs::SetBoolRequest { data: true })
+            .await
+            .unwrap();
+
+        let received = rx.recv().await.unwrap();
+        assert_eq!(received, true);
     }
 }

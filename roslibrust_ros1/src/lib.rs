@@ -127,6 +127,28 @@ impl ServiceProvider for crate::NodeHandle {
             .await
             .map_err(|e| e.into())
     }
+
+    fn advertise_async_service<T: RosServiceType + 'static, F, Fut>(
+        &self,
+        topic: &str,
+        server: F,
+    ) -> impl std::future::Future<Output = roslibrust_common::Result<Self::ServiceServer>> + Send
+    where
+        F: Fn(T::Request) -> Fut + Send + Sync + 'static,
+        Fut: std::future::Future<
+                Output = std::result::Result<T::Response, Box<dyn std::error::Error + Send + Sync>>,
+            > + Send
+            + 'static,
+    {
+        todo!("Work in progress mr");
+        // Following code is just to set return type
+        async {
+            Ok(crate::ServiceServer::new(
+                crate::names::Name::new(topic).unwrap(),
+                self.weak_clone(),
+            ))
+        }
+    }
 }
 
 impl<T: RosMessageType> Subscribe<T> for crate::Subscriber<T> {

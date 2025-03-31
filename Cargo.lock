@@ -2607,7 +2607,6 @@ name = "roslibrust_common"
 version = "0.13.0"
 dependencies = [
  "anyhow",
- "futures",
  "md5",
  "serde",
  "thiserror 2.0.6",

@@ -7,6 +7,8 @@ license = "MIT"
 description = "Common types and traits used throughout the roslibrust ecosystem."
 repository = "https://github.com/roslibrust/roslibrust"
 categories = ["science::robotics"]
+# Requires support for async closures
+rust-version = "1.85"
 
 [dependencies]
 # Used for error handling
@@ -16,5 +18,3 @@ anyhow = "1.0"
 serde = { workspace = true }
 # Used for md5sum calculation
 md5 = "0.7"
-# Used for async trait definitions
-futures = "0.3"
