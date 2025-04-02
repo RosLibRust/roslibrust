@@ -54,6 +54,11 @@ pub trait Service<T: RosServiceType> {
     fn call(&self, request: &T::Request) -> impl Future<Output = Result<T::Response>> + Send;
 }
 
+/// Represents a ros service that can be called asynchronously
+pub trait AsyncService<T: RosServiceType> {
+    fn call(&self, request: T::Request) -> impl Future<Output = Result<T::Response>> + Send;
+}
+
 /// This trait is analogous to TopicProvider, but instead provides the capability to create service servers and service clients
 pub trait ServiceProvider {
     type ServiceClient<T: RosServiceType>: Service<T> + Send + 'static;

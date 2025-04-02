@@ -134,10 +134,15 @@ impl TopicProvider for MockRos {
     }
 }
 
+enum Callback {
+    Sync(TypeErasedCallback),
+    Async(TypeErasedAsyncCallback),
+}
+
 /// The handle type returned by calling [MockRos::service_client].
 /// Represents a ROS service connection and allows the service to be called multiple times.
 pub struct MockServiceClient<T: RosServiceType> {
-    callback: TypeErasedCallback,
+    callback: Callback,
     _marker: std::marker::PhantomData<T>,
 }
 
@@ -145,8 +150,13 @@ impl<T: RosServiceType> Service<T> for MockServiceClient<T> {
     async fn call(&self, request: &T::Request) -> roslibrust_common::Result<T::Response> {
         let data =
             bincode::serialize(request).map_err(|e| Error::SerializationError(e.to_string()))?;
-        let response =
-            (self.callback)(data).map_err(|e| Error::SerializationError(e.to_string()))?;
+
+        let response = match &self.callback {
+            Callback::Sync(callback) => (callback)(data),
+            Callback::Async(callback) => (callback)(data).await,
+        }
+        .map_err(|e| Error::ServerError(e.to_string()))?;
+
         let response = bincode::deserialize(&response[..])
             .map_err(|e| Error::SerializationError(e.to_string()))?;
         Ok(response)
@@ -174,19 +184,19 @@ impl ServiceProvider for MockRos {
         let services = self.services.read().await;
         if let Some(callback) = services.get(topic) {
             return Ok(MockServiceClient {
-                callback: callback.clone(),
+                callback: Callback::Sync(callback.clone()),
                 _marker: Default::default(),
             });
         }
 
         // Look for service in our list of async services
-        // let async_services = self.async_services.read().await;
-        // if let Some(callback) = async_services.get(topic) {
-        //     return Ok(MockServiceClient {
-        //         callback: callback.clone(),
-        //         _marker: Default::default(),
-        //     });
-        // }
+        let async_services = self.async_services.read().await;
+        if let Some(callback) = async_services.get(topic) {
+            return Ok(MockServiceClient {
+                callback: Callback::Async(callback.clone()),
+                _marker: Default::default(),
+            });
+        }
 
         Err(Error::Disconnected)
     }
@@ -393,6 +403,7 @@ mod tests {
         //     std_srvs::SetBoolResponse,
         //     Box<dyn std::error::Error + Send + Sync>,
         // > {
+        //     // Requires that tx is Copy...
         //     tx.send(request.data).await.unwrap();
         //     Ok(std_srvs::SetBoolResponse {
         //         success: true,
@@ -400,16 +411,16 @@ mod tests {
         //     })
         // };
 
-        // They have to write this instead which sucks!
         let service = move |request: std_srvs::SetBoolRequest| {
-            let tx = tx.clone();
-            Box::pin(async move {
-                tx.send(request.data).await.unwrap();
+            let data = request.data;
+            let borrow_tx = tx.clone();
+            async move {
+                borrow_tx.send(request.data.clone()).await.unwrap();
                 Ok(std_srvs::SetBoolResponse {
                     success: true,
                     message: "You set my bool!".to_string(),
                 })
-            })
+            }
         };
 
         let _handle = mock_ros
