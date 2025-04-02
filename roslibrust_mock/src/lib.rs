@@ -432,7 +432,6 @@ mod tests {
             .await
             .unwrap();
 
-        // NOTE: test fails cause this also doesn't have the logic for actually calling the service under the hood here
         client
             .call(&std_srvs::SetBoolRequest { data: true })
             .await
