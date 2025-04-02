@@ -412,10 +412,9 @@ mod tests {
         // };
 
         let service = move |request: std_srvs::SetBoolRequest| {
-            let data = request.data;
-            let borrow_tx = tx.clone();
+            let tx = tx.clone();
             async move {
-                borrow_tx.send(request.data.clone()).await.unwrap();
+                tx.send(request.data).await.unwrap();
                 Ok(std_srvs::SetBoolResponse {
                     success: true,
                     message: "You set my bool!".to_string(),
