@@ -28,7 +28,7 @@ pub mod actionlib_msgs {
     impl ::roslibrust::RosMessageType for GoalID {
         const ROS_TYPE_NAME: &'static str = "actionlib_msgs/GoalID";
         const MD5SUM: &'static str = "29380925936d499346662d2ed1573d06";
-        const DEFINITION: &'static str = r#"# The stamp should store the time at which this goal was requested.
+        const DEFINITION: &'static str = r####"# The stamp should store the time at which this goal was requested.
 # It is used by an action server when it tries to preempt all
 # goals that were requested before a certain time
 builtin_interfaces/Time stamp
@@ -36,7 +36,7 @@ builtin_interfaces/Time stamp
 # The id provides a way to associate feedback and
 # result message with specific goal requests. The id
 # specified must be unique.
-string id"#;
+string id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -56,7 +56,7 @@ string id"#;
     impl ::roslibrust::RosMessageType for GoalStatus {
         const ROS_TYPE_NAME: &'static str = "actionlib_msgs/GoalStatus";
         const MD5SUM: &'static str = "c24a9e244d837a856267339807550287";
-        const DEFINITION: &'static str = r#"GoalID goal_id
+        const DEFINITION: &'static str = r####"GoalID goal_id
 uint8 status
 uint8 PENDING         = 0   # The goal has yet to be processed by the action server.
 uint8 ACTIVE          = 1   # The goal is currently being processed by the action server.
@@ -89,7 +89,7 @@ builtin_interfaces/Time stamp
 # The id provides a way to associate feedback and
 # result message with specific goal requests. The id
 # specified must be unique.
-string id"#;
+string id"####;
     }
     #[allow(unused)]
     impl GoalStatus {
@@ -121,7 +121,7 @@ string id"#;
     impl ::roslibrust::RosMessageType for GoalStatusArray {
         const ROS_TYPE_NAME: &'static str = "actionlib_msgs/GoalStatusArray";
         const MD5SUM: &'static str = "ad4c7a55992b9ff34d89596ca74a28e0";
-        const DEFINITION: &'static str = r#"# Stores the statuses for goals that are currently being tracked
+        const DEFINITION: &'static str = r####"# Stores the statuses for goals that are currently being tracked
 # by an action server
 std_msgs/Header header
 GoalStatus[] status_list
@@ -182,7 +182,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
 }
 #[allow(unused_imports)]
@@ -215,7 +215,7 @@ pub mod diagnostic_msgs {
     impl ::roslibrust::RosMessageType for DiagnosticArray {
         const ROS_TYPE_NAME: &'static str = "diagnostic_msgs/DiagnosticArray";
         const MD5SUM: &'static str = "7f04f8332be7e46b680724aa4e9a9d71";
-        const DEFINITION: &'static str = r#"# This message is used to send diagnostic information about the state of the robot.
+        const DEFINITION: &'static str = r####"# This message is used to send diagnostic information about the state of the robot.
 std_msgs/Header header # for timestamp
 DiagnosticStatus[] status # an array of components being reported on
 ================================================================================
@@ -260,7 +260,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -282,7 +282,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for DiagnosticStatus {
         const ROS_TYPE_NAME: &'static str = "diagnostic_msgs/DiagnosticStatus";
         const MD5SUM: &'static str = "d0ce08bc6e5ba34c7754f563a9cabaf1";
-        const DEFINITION: &'static str = r#"# This message holds the status of an individual component of the robot.
+        const DEFINITION: &'static str = r####"# This message holds the status of an individual component of the robot.
 
 # Possible levels of operations.
 byte OK=0
@@ -305,7 +305,7 @@ MSG: diagnostic_msgs/KeyValue
 # What to label this value when viewing.
 string key
 # A value to track over time.
-string value"#;
+string value"####;
     }
     #[allow(unused)]
     impl DiagnosticStatus {
@@ -331,10 +331,10 @@ string value"#;
     impl ::roslibrust::RosMessageType for KeyValue {
         const ROS_TYPE_NAME: &'static str = "diagnostic_msgs/KeyValue";
         const MD5SUM: &'static str = "cf57fdc6617a881a88c16e768132149c";
-        const DEFINITION: &'static str = r#"# What to label this value when viewing.
+        const DEFINITION: &'static str = r####"# What to label this value when viewing.
 string key
 # A value to track over time.
-string value"#;
+string value"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -352,7 +352,7 @@ string value"#;
     impl ::roslibrust::RosMessageType for AddDiagnosticsRequest {
         const ROS_TYPE_NAME: &'static str = "diagnostic_msgs/AddDiagnosticsRequest";
         const MD5SUM: &'static str = "c26cf6e164288fbc6050d74f838bcdf0";
-        const DEFINITION: &'static str = r#"# This service is used as part of the process for loading analyzers at runtime,
+        const DEFINITION: &'static str = r####"# This service is used as part of the process for loading analyzers at runtime,
 # and should be used by a loader script or program, not as a standalone service.
 # Information about dynamic addition of analyzers can be found at
 # http://wiki.ros.org/diagnostics/Tutorials/Adding%20Analyzers%20at%20Runtime
@@ -368,7 +368,7 @@ string value"#;
 # and http://wiki.ros.org/diagnostics/Tutorials/Using%20the%20GenericAnalyzer
 # for examples of the structure of yaml files which are expected to have been
 # loaded into the namespace.
-string load_namespace"#;
+string load_namespace"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -387,14 +387,14 @@ string load_namespace"#;
     impl ::roslibrust::RosMessageType for AddDiagnosticsResponse {
         const ROS_TYPE_NAME: &'static str = "diagnostic_msgs/AddDiagnosticsResponse";
         const MD5SUM: &'static str = "937c9679a518e3a18d831e57125ea522";
-        const DEFINITION: &'static str = r#"# True if diagnostic aggregator was updated with new diagnostics, False
+        const DEFINITION: &'static str = r####"# True if diagnostic aggregator was updated with new diagnostics, False
 # otherwise. A false return value means that either there is a bond in the
 # aggregator which already used the requested namespace, or the initialization
 # of analyzers failed.
 bool success
 
 # Message with additional information about the success or failure
-string message"#;
+string message"####;
     }
     #[allow(dead_code)]
     pub struct AddDiagnostics {}
@@ -418,7 +418,7 @@ string message"#;
     impl ::roslibrust::RosMessageType for SelfTestRequest {
         const ROS_TYPE_NAME: &'static str = "diagnostic_msgs/SelfTestRequest";
         const MD5SUM: &'static str = "d41d8cd98f00b204e9800998ecf8427e";
-        const DEFINITION: &'static str = r#""#;
+        const DEFINITION: &'static str = r####""####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -438,7 +438,7 @@ string message"#;
     impl ::roslibrust::RosMessageType for SelfTestResponse {
         const ROS_TYPE_NAME: &'static str = "diagnostic_msgs/SelfTestResponse";
         const MD5SUM: &'static str = "ac21b1bab7ab17546986536c22eb34e9";
-        const DEFINITION: &'static str = r#"string id
+        const DEFINITION: &'static str = r####"string id
 byte passed
 DiagnosticStatus[] status
 ================================================================================
@@ -472,7 +472,7 @@ MSG: diagnostic_msgs/KeyValue
 # What to label this value when viewing.
 string key
 # A value to track over time.
-string value"#;
+string value"####;
     }
     #[allow(dead_code)]
     pub struct SelfTest {}
@@ -513,7 +513,7 @@ pub mod geometry_msgs {
     impl ::roslibrust::RosMessageType for Accel {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/Accel";
         const MD5SUM: &'static str = "9f195f881246fdfa2798d1d3eebca84a";
-        const DEFINITION: &'static str = r#"# This expresses acceleration in free space broken into its linear and angular parts.
+        const DEFINITION: &'static str = r####"# This expresses acceleration in free space broken into its linear and angular parts.
 Vector3  linear
 Vector3  angular
 ================================================================================
@@ -526,7 +526,7 @@ MSG: geometry_msgs/Vector3
 
 float64 x
 float64 y
-float64 z"#;
+float64 z"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -545,7 +545,7 @@ float64 z"#;
     impl ::roslibrust::RosMessageType for AccelStamped {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/AccelStamped";
         const MD5SUM: &'static str = "19a31cf6d39a90e769a5539f9a293621";
-        const DEFINITION: &'static str = r#"# An accel with reference coordinate frame and timestamp
+        const DEFINITION: &'static str = r####"# An accel with reference coordinate frame and timestamp
 std_msgs/Header header
 Accel accel
 ================================================================================
@@ -585,7 +585,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -606,7 +606,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for AccelWithCovariance {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/AccelWithCovariance";
         const MD5SUM: &'static str = "ad5a718d699c6be72a02b8d6a139f334";
-        const DEFINITION: &'static str = r#"# This expresses acceleration in free space with uncertainty.
+        const DEFINITION: &'static str = r####"# This expresses acceleration in free space with uncertainty.
 
 Accel accel
 
@@ -641,7 +641,7 @@ MSG: geometry_msgs/Vector3
 
 float64 x
 float64 y
-float64 z"#;
+float64 z"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -660,7 +660,7 @@ float64 z"#;
     impl ::roslibrust::RosMessageType for AccelWithCovarianceStamped {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/AccelWithCovarianceStamped";
         const MD5SUM: &'static str = "36b6f1177d3c3f476d4c306279c6f18a";
-        const DEFINITION: &'static str = r#"# This represents an estimated accel with reference coordinate frame and timestamp.
+        const DEFINITION: &'static str = r####"# This represents an estimated accel with reference coordinate frame and timestamp.
 std_msgs/Header header
 AccelWithCovariance accel
 ================================================================================
@@ -738,7 +738,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -763,7 +763,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Inertia {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/Inertia";
         const MD5SUM: &'static str = "1d26e4bb6c83ff141c5cf0d883c2b0fe";
-        const DEFINITION: &'static str = r#"# Mass [kg]
+        const DEFINITION: &'static str = r####"# Mass [kg]
 float64 m
 
 # Center of mass [m]
@@ -789,7 +789,7 @@ MSG: geometry_msgs/Vector3
 
 float64 x
 float64 y
-float64 z"#;
+float64 z"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -808,7 +808,7 @@ float64 z"#;
     impl ::roslibrust::RosMessageType for InertiaStamped {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/InertiaStamped";
         const MD5SUM: &'static str = "d4fb75ac056292d6c4bbec5e51d25080";
-        const DEFINITION: &'static str = r#"# An Inertia with a time stamp and reference frame.
+        const DEFINITION: &'static str = r####"# An Inertia with a time stamp and reference frame.
 
 std_msgs/Header header
 Inertia inertia
@@ -862,7 +862,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -882,10 +882,10 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Point {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/Point";
         const MD5SUM: &'static str = "4a842b65f413084dc2b10fb484ea7f17";
-        const DEFINITION: &'static str = r#"# This contains the position of a point in free space
+        const DEFINITION: &'static str = r####"# This contains the position of a point in free space
 float64 x
 float64 y
-float64 z"#;
+float64 z"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -905,7 +905,7 @@ float64 z"#;
     impl ::roslibrust::RosMessageType for Point32 {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/Point32";
         const MD5SUM: &'static str = "cc153912f1453b708d221682bc23d9ac";
-        const DEFINITION: &'static str = r#"# This contains the position of a point in free space(with 32 bits of precision).
+        const DEFINITION: &'static str = r####"# This contains the position of a point in free space(with 32 bits of precision).
 # It is recommended to use Point wherever possible instead of Point32.
 #
 # This recommendation is to promote interoperability.
@@ -915,7 +915,7 @@ float64 z"#;
 
 float32 x
 float32 y
-float32 z"#;
+float32 z"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -934,7 +934,7 @@ float32 z"#;
     impl ::roslibrust::RosMessageType for PointStamped {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/PointStamped";
         const MD5SUM: &'static str = "938cb86faf4572821e49e2490701e6df";
-        const DEFINITION: &'static str = r#"# This represents a Point with reference coordinate frame and timestamp
+        const DEFINITION: &'static str = r####"# This represents a Point with reference coordinate frame and timestamp
 
 std_msgs/Header header
 Point point
@@ -954,7 +954,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -972,7 +972,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Polygon {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/Polygon";
         const MD5SUM: &'static str = "cd60a26494a087f577976f0329fa120e";
-        const DEFINITION: &'static str = r#"# A specification of a polygon where the first and last points are assumed to be connected
+        const DEFINITION: &'static str = r####"# A specification of a polygon where the first and last points are assumed to be connected
 
 Point32[] points
 ================================================================================
@@ -987,7 +987,7 @@ MSG: geometry_msgs/Point32
 
 float32 x
 float32 y
-float32 z"#;
+float32 z"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1006,7 +1006,7 @@ float32 z"#;
     impl ::roslibrust::RosMessageType for PolygonStamped {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/PolygonStamped";
         const MD5SUM: &'static str = "56a3a2a80165092f696df3db62e18fbf";
-        const DEFINITION: &'static str = r#"# This represents a Polygon with reference coordinate frame and timestamp
+        const DEFINITION: &'static str = r####"# This represents a Polygon with reference coordinate frame and timestamp
 
 std_msgs/Header header
 Polygon polygon
@@ -1051,7 +1051,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1070,7 +1070,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Pose {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/Pose";
         const MD5SUM: &'static str = "e45d45a5a1ce597b249e23fb30fc871f";
-        const DEFINITION: &'static str = r#"# A representation of pose in free space, composed of position and orientation.
+        const DEFINITION: &'static str = r####"# A representation of pose in free space, composed of position and orientation.
 
 Point position
 Quaternion orientation
@@ -1087,7 +1087,7 @@ MSG: geometry_msgs/Quaternion
 float64 x 0
 float64 y 0
 float64 z 0
-float64 w 1"#;
+float64 w 1"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1107,7 +1107,7 @@ float64 w 1"#;
     impl ::roslibrust::RosMessageType for Pose2D {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/Pose2D";
         const MD5SUM: &'static str = "938fa65709584ad8e77d238529be13b8";
-        const DEFINITION: &'static str = r#"# Deprecated as of Foxy and will potentially be removed in any following release.
+        const DEFINITION: &'static str = r####"# Deprecated as of Foxy and will potentially be removed in any following release.
 # Please use the full 3D pose.
 
 # In general our recommendation is to use a full 3D representation of everything and for 2D specific applications make the appropriate projections into the plane for their calculations but optimally will preserve the 3D information during processing.
@@ -1116,7 +1116,7 @@ float64 w 1"#;
 
 float64 x
 float64 y
-float64 theta"#;
+float64 theta"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1135,7 +1135,7 @@ float64 theta"#;
     impl ::roslibrust::RosMessageType for PoseArray {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/PoseArray";
         const MD5SUM: &'static str = "ea7300c78ec47498d5f226be74a155e8";
-        const DEFINITION: &'static str = r#"# An array of poses with a header for global reference.
+        const DEFINITION: &'static str = r####"# An array of poses with a header for global reference.
 
 std_msgs/Header header
 
@@ -1184,7 +1184,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1203,7 +1203,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for PoseStamped {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/PoseStamped";
         const MD5SUM: &'static str = "c088ec4a70a5930b0ca46520d5745e2d";
-        const DEFINITION: &'static str = r#"# A Pose with reference coordinate frame and timestamp
+        const DEFINITION: &'static str = r####"# A Pose with reference coordinate frame and timestamp
 
 std_msgs/Header header
 Pose pose
@@ -1251,7 +1251,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1272,7 +1272,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for PoseWithCovariance {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/PoseWithCovariance";
         const MD5SUM: &'static str = "c23e848cf1b7533a8d7c259073a97e6f";
-        const DEFINITION: &'static str = r#"# This represents a pose in free space with uncertainty.
+        const DEFINITION: &'static str = r####"# This represents a pose in free space with uncertainty.
 
 Pose pose
 
@@ -1314,7 +1314,7 @@ MSG: geometry_msgs/Quaternion
 float64 x 0
 float64 y 0
 float64 z 0
-float64 w 1"#;
+float64 w 1"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1333,7 +1333,7 @@ float64 w 1"#;
     impl ::roslibrust::RosMessageType for PoseWithCovarianceStamped {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/PoseWithCovarianceStamped";
         const MD5SUM: &'static str = "2178452bf195c1abe1e99b07b4e6c8f0";
-        const DEFINITION: &'static str = r#"# This expresses an estimated pose with a reference coordinate frame and timestamp
+        const DEFINITION: &'static str = r####"# This expresses an estimated pose with a reference coordinate frame and timestamp
 
 std_msgs/Header header
 PoseWithCovariance pose
@@ -1426,7 +1426,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1451,12 +1451,12 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Quaternion {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/Quaternion";
         const MD5SUM: &'static str = "a779879fadf0160734f906b8c19c7004";
-        const DEFINITION: &'static str = r#"# This represents an orientation in free space in quaternion form.
+        const DEFINITION: &'static str = r####"# This represents an orientation in free space in quaternion form.
 
 float64 x 0
 float64 y 0
 float64 z 0
-float64 w 1"#;
+float64 w 1"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1475,7 +1475,7 @@ float64 w 1"#;
     impl ::roslibrust::RosMessageType for QuaternionStamped {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/QuaternionStamped";
         const MD5SUM: &'static str = "8f93ed7c8430d06bd82fefcc6f7a349e";
-        const DEFINITION: &'static str = r#"# This represents an orientation with reference coordinate frame and timestamp.
+        const DEFINITION: &'static str = r####"# This represents an orientation with reference coordinate frame and timestamp.
 
 std_msgs/Header header
 Quaternion quaternion
@@ -1497,7 +1497,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1516,7 +1516,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Transform {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/Transform";
         const MD5SUM: &'static str = "ac9eff44abf714214112b05d54a3cf9b";
-        const DEFINITION: &'static str = r#"# This represents the transform between two coordinate frames in free space.
+        const DEFINITION: &'static str = r####"# This represents the transform between two coordinate frames in free space.
 
 Vector3 translation
 Quaternion rotation
@@ -1538,7 +1538,7 @@ MSG: geometry_msgs/Vector3
 
 float64 x
 float64 y
-float64 z"#;
+float64 z"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1558,7 +1558,7 @@ float64 z"#;
     impl ::roslibrust::RosMessageType for TransformStamped {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/TransformStamped";
         const MD5SUM: &'static str = "09bf247c06cf7c69e8c55300b05a7a04";
-        const DEFINITION: &'static str = r#"# This expresses a transform from coordinate frame header.frame_id
+        const DEFINITION: &'static str = r####"# This expresses a transform from coordinate frame header.frame_id
 # to the coordinate frame child_frame_id at the time of header.stamp
 #
 # This message is mostly used by the
@@ -1631,7 +1631,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1650,7 +1650,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Twist {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/Twist";
         const MD5SUM: &'static str = "9f195f881246fdfa2798d1d3eebca84a";
-        const DEFINITION: &'static str = r#"# This expresses velocity in free space broken into its linear and angular parts.
+        const DEFINITION: &'static str = r####"# This expresses velocity in free space broken into its linear and angular parts.
 
 Vector3  linear
 Vector3  angular
@@ -1664,7 +1664,7 @@ MSG: geometry_msgs/Vector3
 
 float64 x
 float64 y
-float64 z"#;
+float64 z"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1683,7 +1683,7 @@ float64 z"#;
     impl ::roslibrust::RosMessageType for TwistStamped {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/TwistStamped";
         const MD5SUM: &'static str = "09f84400c1ca2e7e26a9da1232813bd0";
-        const DEFINITION: &'static str = r#"# A twist with reference coordinate frame and timestamp
+        const DEFINITION: &'static str = r####"# A twist with reference coordinate frame and timestamp
 
 std_msgs/Header header
 Twist twist
@@ -1725,7 +1725,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1746,7 +1746,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for TwistWithCovariance {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/TwistWithCovariance";
         const MD5SUM: &'static str = "1fe8a28e6890a4cc3ae4c3ca5c7d82e6";
-        const DEFINITION: &'static str = r#"# This expresses velocity in free space with uncertainty.
+        const DEFINITION: &'static str = r####"# This expresses velocity in free space with uncertainty.
 
 Twist twist
 
@@ -1782,7 +1782,7 @@ MSG: geometry_msgs/Vector3
 
 float64 x
 float64 y
-float64 z"#;
+float64 z"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1801,7 +1801,7 @@ float64 z"#;
     impl ::roslibrust::RosMessageType for TwistWithCovarianceStamped {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/TwistWithCovarianceStamped";
         const MD5SUM: &'static str = "7019807c85ce8602fb83180366470670";
-        const DEFINITION: &'static str = r#"# This represents an estimated twist with reference coordinate frame and timestamp.
+        const DEFINITION: &'static str = r####"# This represents an estimated twist with reference coordinate frame and timestamp.
 
 std_msgs/Header header
 TwistWithCovariance twist
@@ -1882,7 +1882,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1902,7 +1902,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Vector3 {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/Vector3";
         const MD5SUM: &'static str = "4a842b65f413084dc2b10fb484ea7f17";
-        const DEFINITION: &'static str = r#"# This represents a vector in free space.
+        const DEFINITION: &'static str = r####"# This represents a vector in free space.
 
 # This is semantically different than a point.
 # A vector is always anchored at the origin.
@@ -1910,7 +1910,7 @@ string frame_id"#;
 
 float64 x
 float64 y
-float64 z"#;
+float64 z"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1929,7 +1929,7 @@ float64 z"#;
     impl ::roslibrust::RosMessageType for Vector3Stamped {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/Vector3Stamped";
         const MD5SUM: &'static str = "5cd361f2989a2e76d5aaf432c3bf0fb9";
-        const DEFINITION: &'static str = r#"# This represents a Vector3 with reference coordinate frame and timestamp
+        const DEFINITION: &'static str = r####"# This represents a Vector3 with reference coordinate frame and timestamp
 
 # Note that this follows vector semantics with it always anchored at the origin,
 # so the rotational elements of a transform are the only parts applied when transforming.
@@ -1957,7 +1957,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -1976,7 +1976,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Wrench {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/Wrench";
         const MD5SUM: &'static str = "4f539cf138b23283b520fd271b567936";
-        const DEFINITION: &'static str = r#"# This represents force in free space, separated into its linear and angular parts.
+        const DEFINITION: &'static str = r####"# This represents force in free space, separated into its linear and angular parts.
 
 Vector3  force
 Vector3  torque
@@ -1990,7 +1990,7 @@ MSG: geometry_msgs/Vector3
 
 float64 x
 float64 y
-float64 z"#;
+float64 z"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -2009,7 +2009,7 @@ float64 z"#;
     impl ::roslibrust::RosMessageType for WrenchStamped {
         const ROS_TYPE_NAME: &'static str = "geometry_msgs/WrenchStamped";
         const MD5SUM: &'static str = "5bc71556ab354cd6274d262a7de094a5";
-        const DEFINITION: &'static str = r#"# A wrench with reference coordinate frame and timestamp
+        const DEFINITION: &'static str = r####"# A wrench with reference coordinate frame and timestamp
 
 std_msgs/Header header
 Wrench wrench
@@ -2051,7 +2051,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
 }
 #[allow(unused_imports)]
@@ -2086,7 +2086,7 @@ pub mod nav_msgs {
     impl ::roslibrust::RosMessageType for GridCells {
         const ROS_TYPE_NAME: &'static str = "nav_msgs/GridCells";
         const MD5SUM: &'static str = "bb9f07bfd2183241b5719f45a81f8cc5";
-        const DEFINITION: &'static str = r#"# An array of cells in a 2D grid
+        const DEFINITION: &'static str = r####"# An array of cells in a 2D grid
 
 std_msgs/Header header
 
@@ -2114,7 +2114,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -2136,7 +2136,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for MapMetaData {
         const ROS_TYPE_NAME: &'static str = "nav_msgs/MapMetaData";
         const MD5SUM: &'static str = "d10232bae3de4ae536d98f679fce2cf2";
-        const DEFINITION: &'static str = r#"# This hold basic information about the characteristics of the OccupancyGrid
+        const DEFINITION: &'static str = r####"# This hold basic information about the characteristics of the OccupancyGrid
 
 # The time at which the map was loaded
 builtin_interfaces/Time map_load_time
@@ -2186,7 +2186,7 @@ MSG: geometry_msgs/Quaternion
 float64 x 0
 float64 y 0
 float64 z 0
-float64 w 1"#;
+float64 w 1"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -2206,7 +2206,7 @@ float64 w 1"#;
     impl ::roslibrust::RosMessageType for OccupancyGrid {
         const ROS_TYPE_NAME: &'static str = "nav_msgs/OccupancyGrid";
         const MD5SUM: &'static str = "2b0657f1993991bf3953916eb5ff5203";
-        const DEFINITION: &'static str = r#"# This represents a 2-D grid map
+        const DEFINITION: &'static str = r####"# This represents a 2-D grid map
 std_msgs/Header header
 
 # MetaData for the map
@@ -2316,7 +2316,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -2337,7 +2337,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Odometry {
         const ROS_TYPE_NAME: &'static str = "nav_msgs/Odometry";
         const MD5SUM: &'static str = "81a0900daae2c6c0acc71c9f8df88947";
-        const DEFINITION: &'static str = r#"# This represents an estimate of a position and velocity in free space.
+        const DEFINITION: &'static str = r####"# This represents an estimate of a position and velocity in free space.
 # The pose in this message should be specified in the coordinate frame given by header.frame_id
 # The twist in this message should be specified in the coordinate frame given by the child_frame_id
 
@@ -2508,7 +2508,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -2527,7 +2527,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Path {
         const ROS_TYPE_NAME: &'static str = "nav_msgs/Path";
         const MD5SUM: &'static str = "9f78b006a4c2cc2a146c12ed59d1bb7f";
-        const DEFINITION: &'static str = r#"# An array of poses that represents a Path for a robot to follow.
+        const DEFINITION: &'static str = r####"# An array of poses that represents a Path for a robot to follow.
 
 # Indicates the frame_id of the path.
 std_msgs/Header header
@@ -2629,7 +2629,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -2645,7 +2645,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for GetMapRequest {
         const ROS_TYPE_NAME: &'static str = "nav_msgs/GetMapRequest";
         const MD5SUM: &'static str = "d41d8cd98f00b204e9800998ecf8427e";
-        const DEFINITION: &'static str = r#"# Get the map as a nav_msgs/OccupancyGrid"#;
+        const DEFINITION: &'static str = r####"# Get the map as a nav_msgs/OccupancyGrid"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -2663,7 +2663,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for GetMapResponse {
         const ROS_TYPE_NAME: &'static str = "nav_msgs/GetMapResponse";
         const MD5SUM: &'static str = "d6e8b0301af2dfe2244959ba20a4080a";
-        const DEFINITION: &'static str = r#"# The current map hosted by this map service.
+        const DEFINITION: &'static str = r####"# The current map hosted by this map service.
 OccupancyGrid map
 ================================================================================
 MSG: geometry_msgs/Point
@@ -2875,7 +2875,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(dead_code)]
     pub struct GetMap {}
@@ -2903,7 +2903,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for GetPlanRequest {
         const ROS_TYPE_NAME: &'static str = "nav_msgs/GetPlanRequest";
         const MD5SUM: &'static str = "e4855e4d3c7377c76ec90e403202286a";
-        const DEFINITION: &'static str = r#"# Get a plan from the current position to the goal Pose
+        const DEFINITION: &'static str = r####"# Get a plan from the current position to the goal Pose
 
 # The start pose for the plan
 geometry_msgs/PoseStamped start
@@ -3009,7 +3009,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -3027,7 +3027,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for GetPlanResponse {
         const ROS_TYPE_NAME: &'static str = "nav_msgs/GetPlanResponse";
         const MD5SUM: &'static str = "37c13f9b42d0ee04e1dae0d4f7d14878";
-        const DEFINITION: &'static str = r#"# Array of poses from start to goal if one was successfully found.
+        const DEFINITION: &'static str = r####"# Array of poses from start to goal if one was successfully found.
 Path plan
 ================================================================================
 MSG: geometry_msgs/Point
@@ -3229,7 +3229,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(dead_code)]
     pub struct GetPlan {}
@@ -3255,10 +3255,10 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for LoadMapRequest {
         const ROS_TYPE_NAME: &'static str = "nav_msgs/LoadMapRequest";
         const MD5SUM: &'static str = "3813ba1ae85fbcd4dc88c90f1426b90b";
-        const DEFINITION: &'static str = r#"# URL of map resource
+        const DEFINITION: &'static str = r####"# URL of map resource
 # Can be an absolute path to a file: file:///path/to/maps/floor1.yaml
 # Or, relative to a ROS package: package://my_ros_package/maps/floor2.yaml
-string map_url"#;
+string map_url"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -3277,7 +3277,7 @@ string map_url"#;
     impl ::roslibrust::RosMessageType for LoadMapResponse {
         const ROS_TYPE_NAME: &'static str = "nav_msgs/LoadMapResponse";
         const MD5SUM: &'static str = "cdb849e3dfaed8b5fe66776d7a64b83e";
-        const DEFINITION: &'static str = r#"# Result code defintions
+        const DEFINITION: &'static str = r####"# Result code defintions
 uint8 RESULT_SUCCESS=0
 uint8 RESULT_MAP_DOES_NOT_EXIST=1
 uint8 RESULT_INVALID_MAP_DATA=2
@@ -3497,7 +3497,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(unused)]
     impl LoadMapResponse {
@@ -3532,7 +3532,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for SetMapRequest {
         const ROS_TYPE_NAME: &'static str = "nav_msgs/SetMapRequest";
         const MD5SUM: &'static str = "98782a373ad73e1165352caf85923850";
-        const DEFINITION: &'static str = r#"# Set a new map together with an initial pose
+        const DEFINITION: &'static str = r####"# Set a new map together with an initial pose
 
 # Requested 2D map to be set.
 nav_msgs/OccupancyGrid map
@@ -3890,7 +3890,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -3908,8 +3908,8 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for SetMapResponse {
         const ROS_TYPE_NAME: &'static str = "nav_msgs/SetMapResponse";
         const MD5SUM: &'static str = "358e233cde0c8a8bcfea4ce193f8fc15";
-        const DEFINITION: &'static str = r#"# True if the map was successfully set, false otherwise.
-bool success"#;
+        const DEFINITION: &'static str = r####"# True if the map was successfully set, false otherwise.
+bool success"####;
     }
     #[allow(dead_code)]
     pub struct SetMap {}
@@ -3964,7 +3964,7 @@ pub mod sensor_msgs {
     impl ::roslibrust::RosMessageType for BatteryState {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/BatteryState";
         const MD5SUM: &'static str = "0e25cedcd370a46961764fe3a9d2ddcb";
-        const DEFINITION: &'static str = r#"# Constants are chosen to match the enums in the linux kernel
+        const DEFINITION: &'static str = r####"# Constants are chosen to match the enums in the linux kernel
 # defined in include/linux/power_supply.h as of version 3.7
 # The one difference is for style reasons the constants are
 # all uppercase not mixed case.
@@ -4025,7 +4025,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(unused)]
     impl BatteryState {
@@ -4077,7 +4077,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for CameraInfo {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/CameraInfo";
         const MD5SUM: &'static str = "47b55ddbbf2ec398f94cddf328bbc2ac";
-        const DEFINITION: &'static str = r#"# This message defines meta information for a camera. It should be in a
+        const DEFINITION: &'static str = r####"# This message defines meta information for a camera. It should be in a
 # camera namespace on topic "camera_info" and accompanied by up to five
 # image topics named:
 #
@@ -4239,7 +4239,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -4258,7 +4258,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for ChannelFloat32 {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/ChannelFloat32";
         const MD5SUM: &'static str = "3d40139cdd33dfedcb71ffeeeb42ae7f";
-        const DEFINITION: &'static str = r#"# This message is used by the PointCloud message to hold optional data
+        const DEFINITION: &'static str = r####"# This message is used by the PointCloud message to hold optional data
 # associated with each point in the cloud. The length of the values
 # array should be the same as the length of the points array in the
 # PointCloud, and each value should be associated with the corresponding
@@ -4281,7 +4281,7 @@ string name
 
 # The values array should be 1-1 with the elements of the associated
 # PointCloud.
-float32[] values"#;
+float32[] values"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -4302,7 +4302,7 @@ float32[] values"#;
     impl ::roslibrust::RosMessageType for CompressedImage {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/CompressedImage";
         const MD5SUM: &'static str = "1df88053b24348f5f499666c7cb1d980";
-        const DEFINITION: &'static str = r#"# This message contains a compressed image.
+        const DEFINITION: &'static str = r####"# This message contains a compressed image.
 
 std_msgs/Header header # Header timestamp should be acquisition time of image
                              # Header frame_id should be optical frame of camera
@@ -4326,7 +4326,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -4346,7 +4346,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for FluidPressure {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/FluidPressure";
         const MD5SUM: &'static str = "4967e6ff4dcf72e6b8fca0600661e0b6";
-        const DEFINITION: &'static str = r#"# Single pressure reading.  This message is appropriate for measuring the
+        const DEFINITION: &'static str = r####"# Single pressure reading.  This message is appropriate for measuring the
 # pressure inside of a fluid (air, water, etc).  This also includes
 # atmospheric or barometric pressure.
 #
@@ -4368,7 +4368,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -4388,7 +4388,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Illuminance {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/Illuminance";
         const MD5SUM: &'static str = "94ccac1a1be684df74466dfc561512aa";
-        const DEFINITION: &'static str = r#"# Single photometric illuminance measurement.  Light should be assumed to be
+        const DEFINITION: &'static str = r####"# Single photometric illuminance measurement.  Light should be assumed to be
 # measured along the sensor's x-axis (the area of detection is the y-z plane).
 # The illuminance should have a 0 or positive value and be received with
 # the sensor's +X axis pointing toward the light source.
@@ -4418,7 +4418,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -4443,7 +4443,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Image {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/Image";
         const MD5SUM: &'static str = "9c8b3d25a28b72f070da359dbecf985b";
-        const DEFINITION: &'static str = r#"# This message contains an uncompressed image
+        const DEFINITION: &'static str = r####"# This message contains an uncompressed image
 # (0, 0) is at top-left corner of image
 
 std_msgs/Header header # Header timestamp should be acquisition time of image
@@ -4479,7 +4479,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -4503,7 +4503,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Imu {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/Imu";
         const MD5SUM: &'static str = "058a92f712764b4ade1563e82041c569";
-        const DEFINITION: &'static str = r#"# This is a message to hold data from an IMU (Inertial Measurement Unit)
+        const DEFINITION: &'static str = r####"# This is a message to hold data from an IMU (Inertial Measurement Unit)
 #
 # Accelerations should be in m/s^2 (not in g's), and rotational velocity should be in rad/sec
 #
@@ -4556,7 +4556,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -4578,7 +4578,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for JointState {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/JointState";
         const MD5SUM: &'static str = "3f61f1439a9898cdd864497d378ce55c";
-        const DEFINITION: &'static str = r#"# This is a message that holds data to describe the state of a set of torque controlled joints.
+        const DEFINITION: &'static str = r####"# This is a message that holds data to describe the state of a set of torque controlled joints.
 #
 # The state of each joint (revolute or prismatic) is defined by:
 #  * the position of the joint (rad or m),
@@ -4613,7 +4613,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -4633,7 +4633,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Joy {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/Joy";
         const MD5SUM: &'static str = "967f985c9ca9013a4669430613e3e016";
-        const DEFINITION: &'static str = r#"# Reports the state of a joystick's axes and buttons.
+        const DEFINITION: &'static str = r####"# Reports the state of a joystick's axes and buttons.
 
 # The timestamp is the time at which data is received from the joystick.
 std_msgs/Header header
@@ -4653,7 +4653,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -4673,7 +4673,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for JoyFeedback {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/JoyFeedback";
         const MD5SUM: &'static str = "f4dcd73460360d98f36e55ee7f2e46f1";
-        const DEFINITION: &'static str = r#"# Declare of the type of feedback
+        const DEFINITION: &'static str = r####"# Declare of the type of feedback
 uint8 TYPE_LED    = 0
 uint8 TYPE_RUMBLE = 1
 uint8 TYPE_BUZZER = 2
@@ -4686,7 +4686,7 @@ uint8 id
 
 # Intensity of the feedback, from 0.0 to 1.0, inclusive.  If device is
 # actually binary, driver should treat 0<=x<0.5 as off, 0.5<=x<=1 as on.
-float32 intensity"#;
+float32 intensity"####;
     }
     #[allow(unused)]
     impl JoyFeedback {
@@ -4710,7 +4710,7 @@ float32 intensity"#;
     impl ::roslibrust::RosMessageType for JoyFeedbackArray {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/JoyFeedbackArray";
         const MD5SUM: &'static str = "cde5730a895b1fc4dee6f91b754b213d";
-        const DEFINITION: &'static str = r#"# This message publishes values for multiple feedback at once.
+        const DEFINITION: &'static str = r####"# This message publishes values for multiple feedback at once.
 JoyFeedback[] array
 ================================================================================
 MSG: sensor_msgs/JoyFeedback
@@ -4727,7 +4727,7 @@ uint8 id
 
 # Intensity of the feedback, from 0.0 to 1.0, inclusive.  If device is
 # actually binary, driver should treat 0<=x<0.5 as off, 0.5<=x<=1 as on.
-float32 intensity"#;
+float32 intensity"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -4745,11 +4745,11 @@ float32 intensity"#;
     impl ::roslibrust::RosMessageType for LaserEcho {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/LaserEcho";
         const MD5SUM: &'static str = "8bc5ae449b200fba4d552b4225586696";
-        const DEFINITION: &'static str = r#"# This message is a submessage of MultiEchoLaserScan and is not intended
+        const DEFINITION: &'static str = r####"# This message is a submessage of MultiEchoLaserScan and is not intended
 # to be used separately.
 
 float32[] echoes  # Multiple values of ranges or intensities.
-                  # Each array represents data from the same angle increment."#;
+                  # Each array represents data from the same angle increment."####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -4776,7 +4776,7 @@ float32[] echoes  # Multiple values of ranges or intensities.
     impl ::roslibrust::RosMessageType for LaserScan {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/LaserScan";
         const MD5SUM: &'static str = "f86984b4383bf67523c75820e114e988";
-        const DEFINITION: &'static str = r#"# Single scan from a planar laser range-finder
+        const DEFINITION: &'static str = r####"# Single scan from a planar laser range-finder
 #
 # If you have another ranging device with different behavior (e.g. a sonar
 # array), please find or create a different message, since applications
@@ -4816,7 +4816,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -4836,7 +4836,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for MagneticField {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/MagneticField";
         const MD5SUM: &'static str = "c8761d20eb9dc59addd882f1d4de2266";
-        const DEFINITION: &'static str = r#"# Measurement of the Magnetic Field vector at a specific location.
+        const DEFINITION: &'static str = r####"# Measurement of the Magnetic Field vector at a specific location.
 #
 # If the covariance of the measurement is known, it should be filled in.
 # If all you know is the variance of each measurement, e.g. from the datasheet,
@@ -4878,7 +4878,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -4900,7 +4900,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for MultiDOFJointState {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/MultiDOFJointState";
         const MD5SUM: &'static str = "9eb02d78422731545fd7e9b60069f261";
-        const DEFINITION: &'static str = r#"# Representation of state for joints with multiple degrees of freedom,
+        const DEFINITION: &'static str = r####"# Representation of state for joints with multiple degrees of freedom,
 # following the structure of JointState which can only represent a single degree of freedom.
 #
 # It is assumed that a joint in a system corresponds to a transform that gets applied
@@ -5014,7 +5014,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -5041,7 +5041,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for MultiEchoLaserScan {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/MultiEchoLaserScan";
         const MD5SUM: &'static str = "fda674281c16cdee9a79d075ab27d12f";
-        const DEFINITION: &'static str = r#"# Single scan from a multi-echo planar laser range-finder
+        const DEFINITION: &'static str = r####"# Single scan from a multi-echo planar laser range-finder
 #
 # If you have another ranging device with different behavior (e.g. a sonar
 # array), please find or create a different message, since applications
@@ -5090,7 +5090,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -5114,7 +5114,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for NavSatFix {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/NavSatFix";
         const MD5SUM: &'static str = "faa1756146a6a934d7e4ef0e3855c531";
-        const DEFINITION: &'static str = r#"# Navigation Satellite fix for any Global Navigation Satellite System
+        const DEFINITION: &'static str = r####"# Navigation Satellite fix for any Global Navigation Satellite System
 #
 # Specified using the WGS 84 reference ellipsoid
 
@@ -5193,7 +5193,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(unused)]
     impl NavSatFix {
@@ -5219,7 +5219,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for NavSatStatus {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/NavSatStatus";
         const MD5SUM: &'static str = "331cdbddfa4bc96ffc3b9ad98900a54c";
-        const DEFINITION: &'static str = r#"# Navigation Satellite fix status for any Global Navigation Satellite System.
+        const DEFINITION: &'static str = r####"# Navigation Satellite fix status for any Global Navigation Satellite System.
 #
 # Whether to output an augmented fix is determined by both the fix
 # type and the last time differential corrections were received.  A
@@ -5240,7 +5240,7 @@ uint16 SERVICE_GLONASS = 2
 uint16 SERVICE_COMPASS = 4      # includes BeiDou.
 uint16 SERVICE_GALILEO = 8
 
-uint16 service"#;
+uint16 service"####;
     }
     #[allow(unused)]
     impl NavSatStatus {
@@ -5271,7 +5271,7 @@ uint16 service"#;
     impl ::roslibrust::RosMessageType for PointCloud {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/PointCloud";
         const MD5SUM: &'static str = "95c9c548e015c235b38b961c79973db7";
-        const DEFINITION: &'static str = r#"## THIS MESSAGE IS DEPRECATED AS OF FOXY
+        const DEFINITION: &'static str = r####"## THIS MESSAGE IS DEPRECATED AS OF FOXY
 ## Please use sensor_msgs/PointCloud2
 
 # This message holds a collection of 3d points, plus optional additional
@@ -5337,7 +5337,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -5364,7 +5364,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for PointCloud2 {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/PointCloud2";
         const MD5SUM: &'static str = "c61ffb665fe19735825e4dd31b53913d";
-        const DEFINITION: &'static str = r#"# This message holds a collection of N-dimensional points, which may
+        const DEFINITION: &'static str = r####"# This message holds a collection of N-dimensional points, which may
 # contain additional information such as normals, intensity, etc. The
 # point data is stored as a binary blob, its layout described by the
 # contents of the "fields" array.
@@ -5418,7 +5418,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -5439,7 +5439,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for PointField {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/PointField";
         const MD5SUM: &'static str = "268eacb2962780ceac86cbd17e328150";
-        const DEFINITION: &'static str = r#"# This message holds the description of one point entry in the
+        const DEFINITION: &'static str = r####"# This message holds the description of one point entry in the
 # PointCloud2 message format.
 uint8 INT8    = 1
 uint8 UINT8   = 2
@@ -5454,7 +5454,7 @@ uint8 FLOAT64 = 8
 string name      # Name of field
 uint32 offset    # Offset from start of point struct
 uint8  datatype  # Datatype enumeration, see above
-uint32 count     # How many elements in the field"#;
+uint32 count     # How many elements in the field"####;
     }
     #[allow(unused)]
     impl PointField {
@@ -5488,7 +5488,7 @@ uint32 count     # How many elements in the field"#;
     impl ::roslibrust::RosMessageType for Range {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/Range";
         const MD5SUM: &'static str = "1ec40687acdf15b9559a6ff690722eae";
-        const DEFINITION: &'static str = r#"# Single range reading from an active ranger that emits energy and reports
+        const DEFINITION: &'static str = r####"# Single range reading from an active ranger that emits energy and reports
 # one range reading that is valid along an arc at the distance measured.
 # This message is  not appropriate for laser scanners. See the LaserScan
 # message if you are working with a laser scanner.
@@ -5537,7 +5537,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(unused)]
     impl Range {
@@ -5564,7 +5564,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for RegionOfInterest {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/RegionOfInterest";
         const MD5SUM: &'static str = "bdb633039d588fcccb441a4d43ccfe09";
-        const DEFINITION: &'static str = r#"# This message is used to specify a region of interest within an image.
+        const DEFINITION: &'static str = r####"# This message is used to specify a region of interest within an image.
 #
 # When used to specify the ROI setting of the camera when the image was
 # taken, the height and width fields should either match the height and
@@ -5582,7 +5582,7 @@ uint32 width     # Width of ROI
 # ROI in this message. Typically this should be False if the full image
 # is captured (ROI not used), and True if a subwindow is captured (ROI
 # used).
-bool do_rectify"#;
+bool do_rectify"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -5602,7 +5602,7 @@ bool do_rectify"#;
     impl ::roslibrust::RosMessageType for RelativeHumidity {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/RelativeHumidity";
         const MD5SUM: &'static str = "71cfefa31dcc94f47083b1e89e6fa5c9";
-        const DEFINITION: &'static str = r#"# Single reading from a relative humidity sensor.
+        const DEFINITION: &'static str = r####"# Single reading from a relative humidity sensor.
 # Defines the ratio of partial pressure of water vapor to the saturated vapor
 # pressure at a temperature.
 
@@ -5625,7 +5625,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -5645,7 +5645,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Temperature {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/Temperature";
         const MD5SUM: &'static str = "c6df0674fcfebff84a15927a80ebb14b";
-        const DEFINITION: &'static str = r#"# Single temperature reading.
+        const DEFINITION: &'static str = r####"# Single temperature reading.
 
 std_msgs/Header header # timestamp is the time the temperature was measured
                              # frame_id is the location of the temperature reading
@@ -5663,7 +5663,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -5683,7 +5683,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for TimeReference {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/TimeReference";
         const MD5SUM: &'static str = "7cb7ae5aa838323e9028637e304e0ad7";
-        const DEFINITION: &'static str = r#"# Measurement from an external time source not actively synchronized with the system clock.
+        const DEFINITION: &'static str = r####"# Measurement from an external time source not actively synchronized with the system clock.
 
 std_msgs/Header header      # stamp is system time for which measurement was valid
                                   # frame_id is not used
@@ -5700,7 +5700,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -5718,7 +5718,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for SetCameraInfoRequest {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/SetCameraInfoRequest";
         const MD5SUM: &'static str = "251c96e357751cc7c699c496178141d5";
-        const DEFINITION: &'static str = r#"# This service requests that a camera stores the given CameraInfo as that
+        const DEFINITION: &'static str = r####"# This service requests that a camera stores the given CameraInfo as that
 # camera's calibration information.
 #
 # The width and height in the camera_info field should match what the
@@ -5923,7 +5923,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -5942,8 +5942,8 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for SetCameraInfoResponse {
         const ROS_TYPE_NAME: &'static str = "sensor_msgs/SetCameraInfoResponse";
         const MD5SUM: &'static str = "2ec6f3eff0161f4257b808b12bc830c2";
-        const DEFINITION: &'static str = r#"bool success                             # True if the call succeeded
-string status_message                    # Used to give details about success"#;
+        const DEFINITION: &'static str = r####"bool success                             # True if the call succeeded
+string status_message                    # Used to give details about success"####;
     }
     #[allow(dead_code)]
     pub struct SetCameraInfo {}
@@ -5984,7 +5984,7 @@ pub mod shape_msgs {
     impl ::roslibrust::RosMessageType for Mesh {
         const ROS_TYPE_NAME: &'static str = "shape_msgs/Mesh";
         const MD5SUM: &'static str = "1ffdae9486cd3316a121c578b47a85cc";
-        const DEFINITION: &'static str = r#"# Definition of a mesh.
+        const DEFINITION: &'static str = r####"# Definition of a mesh.
 
 # List of triangles; the index values refer to positions in vertices[].
 MeshTriangle[] triangles
@@ -6001,7 +6001,7 @@ float64 z
 MSG: shape_msgs/MeshTriangle
 # Definition of a triangle's vertices.
 
-uint32[3] vertex_indices"#;
+uint32[3] vertex_indices"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6019,9 +6019,9 @@ uint32[3] vertex_indices"#;
     impl ::roslibrust::RosMessageType for MeshTriangle {
         const ROS_TYPE_NAME: &'static str = "shape_msgs/MeshTriangle";
         const MD5SUM: &'static str = "23688b2e6d2de3d32fe8af104a903253";
-        const DEFINITION: &'static str = r#"# Definition of a triangle's vertices.
+        const DEFINITION: &'static str = r####"# Definition of a triangle's vertices.
 
-uint32[3] vertex_indices"#;
+uint32[3] vertex_indices"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6039,13 +6039,13 @@ uint32[3] vertex_indices"#;
     impl ::roslibrust::RosMessageType for Plane {
         const ROS_TYPE_NAME: &'static str = "shape_msgs/Plane";
         const MD5SUM: &'static str = "2c1b92ed8f31492f8e73f6a4a44ca796";
-        const DEFINITION: &'static str = r#"# Representation of a plane, using the plane equation ax + by + cz + d = 0.
+        const DEFINITION: &'static str = r####"# Representation of a plane, using the plane equation ax + by + cz + d = 0.
 #
 # a := coef[0]
 # b := coef[1]
 # c := coef[2]
 # d := coef[3]
-float64[4] coef"#;
+float64[4] coef"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6065,7 +6065,7 @@ float64[4] coef"#;
     impl ::roslibrust::RosMessageType for SolidPrimitive {
         const ROS_TYPE_NAME: &'static str = "shape_msgs/SolidPrimitive";
         const MD5SUM: &'static str = "0cdf91a0a45ccd7bc1e0deb784cb2958";
-        const DEFINITION: &'static str = r#"# Defines box, sphere, cylinder, cone and prism.
+        const DEFINITION: &'static str = r####"# Defines box, sphere, cylinder, cone and prism.
 # All shapes are defined to have their bounding boxes centered around 0,0,0.
 
 uint8 BOX=1
@@ -6145,7 +6145,7 @@ MSG: geometry_msgs/Point32
 
 float32 x
 float32 y
-float32 z"#;
+float32 z"####;
     }
     #[allow(unused)]
     impl SolidPrimitive {
@@ -6194,12 +6194,12 @@ pub mod std_msgs {
     impl ::roslibrust::RosMessageType for Bool {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Bool";
         const MD5SUM: &'static str = "8b94c1b53db61fb6aed406028ad6332a";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
-bool data"#;
+bool data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6217,12 +6217,12 @@ bool data"#;
     impl ::roslibrust::RosMessageType for Byte {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Byte";
         const MD5SUM: &'static str = "ad736a2e8818154c487bb80fe42ce43b";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
-byte data"#;
+byte data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6241,7 +6241,7 @@ byte data"#;
     impl ::roslibrust::RosMessageType for ByteMultiArray {
         const ROS_TYPE_NAME: &'static str = "std_msgs/ByteMultiArray";
         const MD5SUM: &'static str = "70ea476cbcfd65ac2f68f3cda1e891fe";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
@@ -6303,7 +6303,7 @@ MSG: std_msgs/MultiArrayDimension
 
 string label   # label of given dimension
 uint32 size    # size of given dimension (in type units)
-uint32 stride  # stride of given dimension"#;
+uint32 stride  # stride of given dimension"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6321,12 +6321,12 @@ uint32 stride  # stride of given dimension"#;
     impl ::roslibrust::RosMessageType for Char {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Char";
         const MD5SUM: &'static str = "1bf77f25acecdedba0e224b162199717";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
-char data"#;
+char data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6347,10 +6347,10 @@ char data"#;
     impl ::roslibrust::RosMessageType for ColorRGBA {
         const ROS_TYPE_NAME: &'static str = "std_msgs/ColorRGBA";
         const MD5SUM: &'static str = "a29a96539573343b1310c73607334b00";
-        const DEFINITION: &'static str = r#"float32 r
+        const DEFINITION: &'static str = r####"float32 r
 float32 g
 float32 b
-float32 a"#;
+float32 a"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6366,7 +6366,7 @@ float32 a"#;
     impl ::roslibrust::RosMessageType for Empty {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Empty";
         const MD5SUM: &'static str = "d41d8cd98f00b204e9800998ecf8427e";
-        const DEFINITION: &'static str = r#""#;
+        const DEFINITION: &'static str = r####""####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6384,12 +6384,12 @@ float32 a"#;
     impl ::roslibrust::RosMessageType for Float32 {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Float32";
         const MD5SUM: &'static str = "73fcbf46b49191e672908e50842a83d4";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
-float32 data"#;
+float32 data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6408,7 +6408,7 @@ float32 data"#;
     impl ::roslibrust::RosMessageType for Float32MultiArray {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Float32MultiArray";
         const MD5SUM: &'static str = "6a40e0ffa6a17a503ac3f8616991b1f6";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
@@ -6470,7 +6470,7 @@ MSG: std_msgs/MultiArrayDimension
 
 string label   # label of given dimension
 uint32 size    # size of given dimension (in type units)
-uint32 stride  # stride of given dimension"#;
+uint32 stride  # stride of given dimension"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6488,12 +6488,12 @@ uint32 stride  # stride of given dimension"#;
     impl ::roslibrust::RosMessageType for Float64 {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Float64";
         const MD5SUM: &'static str = "fdb28210bfa9d7c91146260178d9a584";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
-float64 data"#;
+float64 data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6512,7 +6512,7 @@ float64 data"#;
     impl ::roslibrust::RosMessageType for Float64MultiArray {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Float64MultiArray";
         const MD5SUM: &'static str = "4b7d974086d4060e7db4613a7e6c3ba4";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
@@ -6574,7 +6574,7 @@ MSG: std_msgs/MultiArrayDimension
 
 string label   # label of given dimension
 uint32 size    # size of given dimension (in type units)
-uint32 stride  # stride of given dimension"#;
+uint32 stride  # stride of given dimension"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6593,7 +6593,7 @@ uint32 stride  # stride of given dimension"#;
     impl ::roslibrust::RosMessageType for Header {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Header";
         const MD5SUM: &'static str = "5ed6b5dd1ef879ffb9c2ac51bab61a63";
-        const DEFINITION: &'static str = r#"# Standard metadata for higher-level stamped data types.
+        const DEFINITION: &'static str = r####"# Standard metadata for higher-level stamped data types.
 # This is generally used to communicate timestamped data
 # in a particular coordinate frame.
 
@@ -6601,7 +6601,7 @@ uint32 stride  # stride of given dimension"#;
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6619,12 +6619,12 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for Int16 {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Int16";
         const MD5SUM: &'static str = "8524586e34fbd7cb1c08c5f5f1ca0e57";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
-int16 data"#;
+int16 data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6643,7 +6643,7 @@ int16 data"#;
     impl ::roslibrust::RosMessageType for Int16MultiArray {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Int16MultiArray";
         const MD5SUM: &'static str = "d9338d7f523fcb692fae9d0a0e9f067c";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
@@ -6705,7 +6705,7 @@ MSG: std_msgs/MultiArrayDimension
 
 string label   # label of given dimension
 uint32 size    # size of given dimension (in type units)
-uint32 stride  # stride of given dimension"#;
+uint32 stride  # stride of given dimension"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6723,12 +6723,12 @@ uint32 stride  # stride of given dimension"#;
     impl ::roslibrust::RosMessageType for Int32 {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Int32";
         const MD5SUM: &'static str = "da5909fbe378aeaf85e547e830cc1bb7";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
-int32 data"#;
+int32 data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6747,7 +6747,7 @@ int32 data"#;
     impl ::roslibrust::RosMessageType for Int32MultiArray {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Int32MultiArray";
         const MD5SUM: &'static str = "1d99f79f8b325b44fee908053e9c945b";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
@@ -6809,7 +6809,7 @@ MSG: std_msgs/MultiArrayDimension
 
 string label   # label of given dimension
 uint32 size    # size of given dimension (in type units)
-uint32 stride  # stride of given dimension"#;
+uint32 stride  # stride of given dimension"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6827,12 +6827,12 @@ uint32 stride  # stride of given dimension"#;
     impl ::roslibrust::RosMessageType for Int64 {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Int64";
         const MD5SUM: &'static str = "34add168574510e6e17f5d23ecc077ef";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
-int64 data"#;
+int64 data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6851,7 +6851,7 @@ int64 data"#;
     impl ::roslibrust::RosMessageType for Int64MultiArray {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Int64MultiArray";
         const MD5SUM: &'static str = "54865aa6c65be0448113a2afc6a49270";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
@@ -6913,7 +6913,7 @@ MSG: std_msgs/MultiArrayDimension
 
 string label   # label of given dimension
 uint32 size    # size of given dimension (in type units)
-uint32 stride  # stride of given dimension"#;
+uint32 stride  # stride of given dimension"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6931,12 +6931,12 @@ uint32 stride  # stride of given dimension"#;
     impl ::roslibrust::RosMessageType for Int8 {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Int8";
         const MD5SUM: &'static str = "27ffa0c9c4b8fb8492252bcad9e5c57b";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
-int8 data"#;
+int8 data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -6955,7 +6955,7 @@ int8 data"#;
     impl ::roslibrust::RosMessageType for Int8MultiArray {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Int8MultiArray";
         const MD5SUM: &'static str = "d7c1af35a1b4781bbe79e03dd94b7c13";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
@@ -7017,7 +7017,7 @@ MSG: std_msgs/MultiArrayDimension
 
 string label   # label of given dimension
 uint32 size    # size of given dimension (in type units)
-uint32 stride  # stride of given dimension"#;
+uint32 stride  # stride of given dimension"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7037,14 +7037,14 @@ uint32 stride  # stride of given dimension"#;
     impl ::roslibrust::RosMessageType for MultiArrayDimension {
         const ROS_TYPE_NAME: &'static str = "std_msgs/MultiArrayDimension";
         const MD5SUM: &'static str = "4cd0c83a8683deae40ecdac60e53bfa8";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
 string label   # label of given dimension
 uint32 size    # size of given dimension (in type units)
-uint32 stride  # stride of given dimension"#;
+uint32 stride  # stride of given dimension"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7063,7 +7063,7 @@ uint32 stride  # stride of given dimension"#;
     impl ::roslibrust::RosMessageType for MultiArrayLayout {
         const ROS_TYPE_NAME: &'static str = "std_msgs/MultiArrayLayout";
         const MD5SUM: &'static str = "0fed2a11c13e11c5571b4e2a995a91a3";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
@@ -7103,7 +7103,7 @@ MSG: std_msgs/MultiArrayDimension
 
 string label   # label of given dimension
 uint32 size    # size of given dimension (in type units)
-uint32 stride  # stride of given dimension"#;
+uint32 stride  # stride of given dimension"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7121,12 +7121,12 @@ uint32 stride  # stride of given dimension"#;
     impl ::roslibrust::RosMessageType for String {
         const ROS_TYPE_NAME: &'static str = "std_msgs/String";
         const MD5SUM: &'static str = "992ce8a1687cec8c8bd883ec73ca41d1";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
-string data"#;
+string data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7144,12 +7144,12 @@ string data"#;
     impl ::roslibrust::RosMessageType for UInt16 {
         const ROS_TYPE_NAME: &'static str = "std_msgs/UInt16";
         const MD5SUM: &'static str = "1df79edf208b629fe6b81923a544552d";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
-uint16 data"#;
+uint16 data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7168,7 +7168,7 @@ uint16 data"#;
     impl ::roslibrust::RosMessageType for UInt16MultiArray {
         const ROS_TYPE_NAME: &'static str = "std_msgs/UInt16MultiArray";
         const MD5SUM: &'static str = "52f264f1c973c4b73790d384c6cb4484";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
@@ -7230,7 +7230,7 @@ MSG: std_msgs/MultiArrayDimension
 
 string label   # label of given dimension
 uint32 size    # size of given dimension (in type units)
-uint32 stride  # stride of given dimension"#;
+uint32 stride  # stride of given dimension"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7248,12 +7248,12 @@ uint32 stride  # stride of given dimension"#;
     impl ::roslibrust::RosMessageType for UInt32 {
         const ROS_TYPE_NAME: &'static str = "std_msgs/UInt32";
         const MD5SUM: &'static str = "304a39449588c7f8ce2df6e8001c5fce";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
-uint32 data"#;
+uint32 data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7272,7 +7272,7 @@ uint32 data"#;
     impl ::roslibrust::RosMessageType for UInt32MultiArray {
         const ROS_TYPE_NAME: &'static str = "std_msgs/UInt32MultiArray";
         const MD5SUM: &'static str = "4d6a180abc9be191b96a7eda6c8a233d";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
@@ -7334,7 +7334,7 @@ MSG: std_msgs/MultiArrayDimension
 
 string label   # label of given dimension
 uint32 size    # size of given dimension (in type units)
-uint32 stride  # stride of given dimension"#;
+uint32 stride  # stride of given dimension"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7352,12 +7352,12 @@ uint32 stride  # stride of given dimension"#;
     impl ::roslibrust::RosMessageType for UInt64 {
         const ROS_TYPE_NAME: &'static str = "std_msgs/UInt64";
         const MD5SUM: &'static str = "1b2a79973e8bf53d7b53acb71299cb57";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
-uint64 data"#;
+uint64 data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7376,7 +7376,7 @@ uint64 data"#;
     impl ::roslibrust::RosMessageType for UInt64MultiArray {
         const ROS_TYPE_NAME: &'static str = "std_msgs/UInt64MultiArray";
         const MD5SUM: &'static str = "6088f127afb1d6c72927aa1247e945af";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
@@ -7438,7 +7438,7 @@ MSG: std_msgs/MultiArrayDimension
 
 string label   # label of given dimension
 uint32 size    # size of given dimension (in type units)
-uint32 stride  # stride of given dimension"#;
+uint32 stride  # stride of given dimension"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7456,12 +7456,12 @@ uint32 stride  # stride of given dimension"#;
     impl ::roslibrust::RosMessageType for UInt8 {
         const ROS_TYPE_NAME: &'static str = "std_msgs/UInt8";
         const MD5SUM: &'static str = "7c8164229e7d2c17eb95e9231617fdee";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
 
-uint8 data"#;
+uint8 data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7481,7 +7481,7 @@ uint8 data"#;
     impl ::roslibrust::RosMessageType for UInt8MultiArray {
         const ROS_TYPE_NAME: &'static str = "std_msgs/UInt8MultiArray";
         const MD5SUM: &'static str = "82373f1612381bb6ee473b5cd6f5d89c";
-        const DEFINITION: &'static str = r#"# This was originally provided as an example message.
+        const DEFINITION: &'static str = r####"# This was originally provided as an example message.
 # It is deprecated as of Foxy
 # It is recommended to create your own semantically meaningful message.
 # However if you would like to continue using this please use the equivalent in example_msgs.
@@ -7543,7 +7543,7 @@ MSG: std_msgs/MultiArrayDimension
 
 string label   # label of given dimension
 uint32 size    # size of given dimension (in type units)
-uint32 stride  # stride of given dimension"#;
+uint32 stride  # stride of given dimension"####;
     }
 }
 #[allow(unused_imports)]
@@ -7573,7 +7573,7 @@ pub mod std_srvs {
     impl ::roslibrust::RosMessageType for EmptyRequest {
         const ROS_TYPE_NAME: &'static str = "std_srvs/EmptyRequest";
         const MD5SUM: &'static str = "d41d8cd98f00b204e9800998ecf8427e";
-        const DEFINITION: &'static str = r#""#;
+        const DEFINITION: &'static str = r####""####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7589,7 +7589,7 @@ pub mod std_srvs {
     impl ::roslibrust::RosMessageType for EmptyResponse {
         const ROS_TYPE_NAME: &'static str = "std_srvs/EmptyResponse";
         const MD5SUM: &'static str = "d41d8cd98f00b204e9800998ecf8427e";
-        const DEFINITION: &'static str = r#""#;
+        const DEFINITION: &'static str = r####""####;
     }
     #[allow(dead_code)]
     pub struct Empty {}
@@ -7615,7 +7615,8 @@ pub mod std_srvs {
     impl ::roslibrust::RosMessageType for SetBoolRequest {
         const ROS_TYPE_NAME: &'static str = "std_srvs/SetBoolRequest";
         const MD5SUM: &'static str = "8b94c1b53db61fb6aed406028ad6332a";
-        const DEFINITION: &'static str = r#"bool data # e.g. for hardware enabling / disabling"#;
+        const DEFINITION: &'static str =
+            r####"bool data # e.g. for hardware enabling / disabling"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7634,8 +7635,8 @@ pub mod std_srvs {
     impl ::roslibrust::RosMessageType for SetBoolResponse {
         const ROS_TYPE_NAME: &'static str = "std_srvs/SetBoolResponse";
         const MD5SUM: &'static str = "937c9679a518e3a18d831e57125ea522";
-        const DEFINITION: &'static str = r#"bool success   # indicate successful run of triggered service
-string message # informational, e.g. for error messages"#;
+        const DEFINITION: &'static str = r####"bool success   # indicate successful run of triggered service
+string message # informational, e.g. for error messages"####;
     }
     #[allow(dead_code)]
     pub struct SetBool {}
@@ -7659,7 +7660,7 @@ string message # informational, e.g. for error messages"#;
     impl ::roslibrust::RosMessageType for TriggerRequest {
         const ROS_TYPE_NAME: &'static str = "std_srvs/TriggerRequest";
         const MD5SUM: &'static str = "d41d8cd98f00b204e9800998ecf8427e";
-        const DEFINITION: &'static str = r#""#;
+        const DEFINITION: &'static str = r####""####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7678,8 +7679,8 @@ string message # informational, e.g. for error messages"#;
     impl ::roslibrust::RosMessageType for TriggerResponse {
         const ROS_TYPE_NAME: &'static str = "std_srvs/TriggerResponse";
         const MD5SUM: &'static str = "937c9679a518e3a18d831e57125ea522";
-        const DEFINITION: &'static str = r#"bool success   # indicate successful run of triggered service
-string message # informational, e.g. for error messages"#;
+        const DEFINITION: &'static str = r####"bool success   # indicate successful run of triggered service
+string message # informational, e.g. for error messages"####;
     }
     #[allow(dead_code)]
     pub struct Trigger {}
@@ -7726,7 +7727,7 @@ pub mod stereo_msgs {
     impl ::roslibrust::RosMessageType for DisparityImage {
         const ROS_TYPE_NAME: &'static str = "stereo_msgs/DisparityImage";
         const MD5SUM: &'static str = "cb0de8feef04280238c7b77d74b2beca";
-        const DEFINITION: &'static str = r#"# Separate header for compatibility with current TimeSynchronizer.
+        const DEFINITION: &'static str = r####"# Separate header for compatibility with current TimeSynchronizer.
 # Likely to be removed in a later release, use image.header instead.
 std_msgs/Header header
 
@@ -7825,7 +7826,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
 }
 #[allow(unused_imports)]
@@ -7868,7 +7869,7 @@ pub mod test_msgs {
     impl ::roslibrust::RosMessageType for Defaults {
         const ROS_TYPE_NAME: &'static str = "test_msgs/Defaults";
         const MD5SUM: &'static str = "43c441dc2b521c313f54affd982b5314";
-        const DEFINITION: &'static str = r#"# This message is specifically for testing generating of default values
+        const DEFINITION: &'static str = r####"# This message is specifically for testing generating of default values
 # Examples based on https://docs.ros.org/en/rolling/Concepts/About-ROS-Interfaces.html
 uint8 x 42
 int16 y -2000
@@ -7883,7 +7884,7 @@ string[] s_vec ["hello", "world"]
 # string[] s_vec_2 ['hello', 'world']
 
 # TODO ROS says this is valid, but we currently don't handle
-#string single_quote 'Jane Doe'"#;
+#string single_quote 'Jane Doe'"####;
     }
 }
 #[allow(unused_imports)]
@@ -7917,7 +7918,7 @@ pub mod trajectory_msgs {
     impl ::roslibrust::RosMessageType for JointTrajectory {
         const ROS_TYPE_NAME: &'static str = "trajectory_msgs/JointTrajectory";
         const MD5SUM: &'static str = "d63e3b4556d9dbd9f48b5ab4a03f1fee";
-        const DEFINITION: &'static str = r#"# The header is used to specify the coordinate frame and the reference time for
+        const DEFINITION: &'static str = r####"# The header is used to specify the coordinate frame and the reference time for
 # the trajectory durations
 std_msgs/Header header
 
@@ -7966,7 +7967,7 @@ float64[] accelerations
 float64[] effort
 
 # Desired time from the trajectory start to arrive at this trajectory point.
-builtin_interfaces/Duration time_from_start"#;
+builtin_interfaces/Duration time_from_start"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -7988,7 +7989,7 @@ builtin_interfaces/Duration time_from_start"#;
     impl ::roslibrust::RosMessageType for JointTrajectoryPoint {
         const ROS_TYPE_NAME: &'static str = "trajectory_msgs/JointTrajectoryPoint";
         const MD5SUM: &'static str = "2c812f86aa886c93954e333721749ac5";
-        const DEFINITION: &'static str = r#"# Each trajectory point specifies either positions[, velocities[, accelerations]]
+        const DEFINITION: &'static str = r####"# Each trajectory point specifies either positions[, velocities[, accelerations]]
 # or positions[, effort] for the trajectory to be executed.
 # All specified values are in the same order as the joint names in JointTrajectory.msg.
 
@@ -8013,7 +8014,7 @@ float64[] accelerations
 float64[] effort
 
 # Desired time from the trajectory start to arrive at this trajectory point.
-builtin_interfaces/Duration time_from_start"#;
+builtin_interfaces/Duration time_from_start"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -8033,7 +8034,7 @@ builtin_interfaces/Duration time_from_start"#;
     impl ::roslibrust::RosMessageType for MultiDOFJointTrajectory {
         const ROS_TYPE_NAME: &'static str = "trajectory_msgs/MultiDOFJointTrajectory";
         const MD5SUM: &'static str = "d00d14d97bd70c5eb648278240cfb066";
-        const DEFINITION: &'static str = r#"# The header is used to specify the coordinate frame and the reference time for the trajectory durations
+        const DEFINITION: &'static str = r####"# The header is used to specify the coordinate frame and the reference time for the trajectory durations
 std_msgs/Header header
 
 # A representation of a multi-dof joint trajectory (each point is a transformation)
@@ -8188,7 +8189,7 @@ MSG: geometry_msgs/Vector3
 
 float64 x
 float64 y
-float64 z"#;
+float64 z"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -8209,7 +8210,7 @@ float64 z"#;
     impl ::roslibrust::RosMessageType for MultiDOFJointTrajectoryPoint {
         const ROS_TYPE_NAME: &'static str = "trajectory_msgs/MultiDOFJointTrajectoryPoint";
         const MD5SUM: &'static str = "6731945e53cbc0fbc6e93c28f7416a71";
-        const DEFINITION: &'static str = r#"# Each multi-dof joint can specify a transform (up to 6 DOF).
+        const DEFINITION: &'static str = r####"# Each multi-dof joint can specify a transform (up to 6 DOF).
 geometry_msgs/Transform[] transforms
 
 # There can be a velocity specified for the origin of the joint.
@@ -8280,7 +8281,7 @@ MSG: geometry_msgs/Vector3
 
 float64 x
 float64 y
-float64 z"#;
+float64 z"####;
     }
 }
 #[allow(unused_imports)]
@@ -8324,7 +8325,7 @@ pub mod visualization_msgs {
     impl ::roslibrust::RosMessageType for ImageMarker {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/ImageMarker";
         const MD5SUM: &'static str = "829dd5d9ba39b8c3844252ebd8b47b96";
-        const DEFINITION: &'static str = r#"int32 CIRCLE=0
+        const DEFINITION: &'static str = r####"int32 CIRCLE=0
 int32 LINE_STRIP=1
 int32 LINE_LIST=2
 int32 POLYGON=3
@@ -8382,7 +8383,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(unused)]
     impl ImageMarker {
@@ -8416,7 +8417,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for InteractiveMarker {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/InteractiveMarker";
         const MD5SUM: &'static str = "d71737fa44c5bdefd6bdb4fa9b2b86e5";
-        const DEFINITION: &'static str = r#"# Time/frame info.
+        const DEFINITION: &'static str = r####"# Time/frame info.
 # If header.time is set to 0, the marker will be retransformed into
 # its frame on each timestep. You will receive the pose feedback
 # in the same frame.
@@ -9160,7 +9161,7 @@ MSG: visualization_msgs/UVCoordinate
 # Location of the pixel as a ratio of the width of a 2D texture.
 # Values should be in range: [0.0-1.0].
 float32 u
-float32 v"#;
+float32 v"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -9185,7 +9186,7 @@ float32 v"#;
     impl ::roslibrust::RosMessageType for InteractiveMarkerControl {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/InteractiveMarkerControl";
         const MD5SUM: &'static str = "7b945e790a2d68f430a6eb79f33bf8df";
-        const DEFINITION: &'static str = r#"# Represents a control that is to be displayed together with an interactive marker
+        const DEFINITION: &'static str = r####"# Represents a control that is to be displayed together with an interactive marker
 
 # Identifying string for this control.
 # You need to assign a unique value to this to receive feedback from the GUI
@@ -9553,7 +9554,7 @@ MSG: visualization_msgs/UVCoordinate
 # Location of the pixel as a ratio of the width of a 2D texture.
 # Values should be in range: [0.0-1.0].
 float32 u
-float32 v"#;
+float32 v"####;
     }
     #[allow(unused)]
     impl InteractiveMarkerControl {
@@ -9595,7 +9596,7 @@ float32 v"#;
     impl ::roslibrust::RosMessageType for InteractiveMarkerFeedback {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/InteractiveMarkerFeedback";
         const MD5SUM: &'static str = "880e5141421ed8d30906fad686bc17bd";
-        const DEFINITION: &'static str = r#"# Time/frame info.
+        const DEFINITION: &'static str = r####"# Time/frame info.
 std_msgs/Header header
 
 # Identifying string. Must be unique in the topic namespace.
@@ -9681,7 +9682,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(unused)]
     impl InteractiveMarkerFeedback {
@@ -9710,7 +9711,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for InteractiveMarkerInit {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/InteractiveMarkerInit";
         const MD5SUM: &'static str = "5d275694a5cb7ea4627f917a9eb1b4cd";
-        const DEFINITION: &'static str = r#"# Identifying string. Must be unique in the topic namespace
+        const DEFINITION: &'static str = r####"# Identifying string. Must be unique in the topic namespace
 # that this server works on.
 string server_id
 
@@ -11189,7 +11190,7 @@ MSG: visualization_msgs/UVCoordinate
 # Location of the pixel as a ratio of the width of a 2D texture.
 # Values should be in range: [0.0-1.0].
 float32 u
-float32 v"#;
+float32 v"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -11209,7 +11210,7 @@ float32 v"#;
     impl ::roslibrust::RosMessageType for InteractiveMarkerPose {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/InteractiveMarkerPose";
         const MD5SUM: &'static str = "b88540594a0f8e3fe46c720be41faa03";
-        const DEFINITION: &'static str = r#"# Time/frame info.
+        const DEFINITION: &'static str = r####"# Time/frame info.
 std_msgs/Header header
 
 # Initial pose. Also, defines the pivot point for rotations.
@@ -11262,7 +11263,7 @@ MSG: std_msgs/Header
 builtin_interfaces/Time stamp
 
 # Transform frame with which this data is associated.
-string frame_id"#;
+string frame_id"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -11285,7 +11286,7 @@ string frame_id"#;
     impl ::roslibrust::RosMessageType for InteractiveMarkerUpdate {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/InteractiveMarkerUpdate";
         const MD5SUM: &'static str = "8f52c675c849441ae87da82eaa4d6eb5";
-        const DEFINITION: &'static str = r#"# Identifying string. Must be unique in the topic namespace
+        const DEFINITION: &'static str = r####"# Identifying string. Must be unique in the topic namespace
 # that this server works on.
 string server_id
 
@@ -12837,7 +12838,7 @@ MSG: visualization_msgs/UVCoordinate
 # Location of the pixel as a ratio of the width of a 2D texture.
 # Values should be in range: [0.0-1.0].
 float32 u
-float32 v"#;
+float32 v"####;
     }
     #[allow(unused)]
     impl InteractiveMarkerUpdate {
@@ -12878,7 +12879,7 @@ float32 v"#;
     impl ::roslibrust::RosMessageType for Marker {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/Marker";
         const MD5SUM: &'static str = "56c6324983a404ead7a426609371feed";
-        const DEFINITION: &'static str = r#"# See:
+        const DEFINITION: &'static str = r####"# See:
 #  - http://www.ros.org/wiki/rviz/DisplayTypes/Marker
 #  - http://www.ros.org/wiki/rviz/Tutorials/Markers%3A%20Basic%20Shapes
 #
@@ -13062,7 +13063,7 @@ MSG: visualization_msgs/UVCoordinate
 # Location of the pixel as a ratio of the width of a 2D texture.
 # Values should be in range: [0.0-1.0].
 float32 u
-float32 v"#;
+float32 v"####;
     }
     #[allow(unused)]
     impl Marker {
@@ -13099,7 +13100,7 @@ float32 v"#;
     impl ::roslibrust::RosMessageType for MarkerArray {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/MarkerArray";
         const MD5SUM: &'static str = "11e38f15427197858cf46456867167bd";
-        const DEFINITION: &'static str = r#"Marker[] markers
+        const DEFINITION: &'static str = r####"Marker[] markers
 ================================================================================
 MSG: geometry_msgs/Point
 # This contains the position of a point in free space
@@ -13391,7 +13392,7 @@ MSG: visualization_msgs/UVCoordinate
 # Location of the pixel as a ratio of the width of a 2D texture.
 # Values should be in range: [0.0-1.0].
 float32 u
-float32 v"#;
+float32 v"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -13413,7 +13414,7 @@ float32 v"#;
     impl ::roslibrust::RosMessageType for MenuEntry {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/MenuEntry";
         const MD5SUM: &'static str = "b90ec63024573de83b57aa93eb39be2d";
-        const DEFINITION: &'static str = r#"# MenuEntry message.
+        const DEFINITION: &'static str = r####"# MenuEntry message.
 #
 # Each InteractiveMarker message has an array of MenuEntry messages.
 # A collection of MenuEntries together describe a
@@ -13466,7 +13467,7 @@ string command
 uint8 FEEDBACK=0
 uint8 ROSRUN=1
 uint8 ROSLAUNCH=2
-uint8 command_type"#;
+uint8 command_type"####;
     }
     #[allow(unused)]
     impl MenuEntry {
@@ -13492,14 +13493,14 @@ uint8 command_type"#;
     impl ::roslibrust::RosMessageType for MeshFile {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/MeshFile";
         const MD5SUM: &'static str = "39f264648e441626a1045a7d9ef1ba17";
-        const DEFINITION: &'static str = r#"# Used to send raw mesh files.
+        const DEFINITION: &'static str = r####"# Used to send raw mesh files.
 
 # The filename is used for both debug purposes and to provide a file extension
 # for whatever parser is used.
 string filename
 
 # This stores the raw text of the mesh file.
-uint8[] data"#;
+uint8[] data"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -13518,10 +13519,10 @@ uint8[] data"#;
     impl ::roslibrust::RosMessageType for UVCoordinate {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/UVCoordinate";
         const MD5SUM: &'static str = "4f5254e0e12914c461d4b17a0cd07f7f";
-        const DEFINITION: &'static str = r#"# Location of the pixel as a ratio of the width of a 2D texture.
+        const DEFINITION: &'static str = r####"# Location of the pixel as a ratio of the width of a 2D texture.
 # Values should be in range: [0.0-1.0].
 float32 u
-float32 v"#;
+float32 v"####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -13537,7 +13538,7 @@ float32 v"#;
     impl ::roslibrust::RosMessageType for GetInteractiveMarkersRequest {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/GetInteractiveMarkersRequest";
         const MD5SUM: &'static str = "d41d8cd98f00b204e9800998ecf8427e";
-        const DEFINITION: &'static str = r#""#;
+        const DEFINITION: &'static str = r####""####;
     }
     #[allow(non_snake_case)]
     #[derive(
@@ -13556,7 +13557,7 @@ float32 v"#;
     impl ::roslibrust::RosMessageType for GetInteractiveMarkersResponse {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/GetInteractiveMarkersResponse";
         const MD5SUM: &'static str = "923b76ef2c497d4ff5f83a061d424d3b";
-        const DEFINITION: &'static str = r#"# Sequence number.
+        const DEFINITION: &'static str = r####"# Sequence number.
 # Set to the sequence number of the latest update message
 # at the time the server received the request.
 # Clients use this to detect if any updates were missed.
@@ -15029,7 +15030,7 @@ MSG: visualization_msgs/UVCoordinate
 # Location of the pixel as a ratio of the width of a 2D texture.
 # Values should be in range: [0.0-1.0].
 float32 u
-float32 v"#;
+float32 v"####;
     }
     #[allow(dead_code)]
     pub struct GetInteractiveMarkers {}

@@ -53,7 +53,7 @@ pub fn generate_service(service: ServiceFile) -> Result<TokenStream, Error> {
 
 /// Turns a string into a TokenStream that represents a raw string literal of the string
 pub fn generate_raw_string_literal(value: &str) -> TokenStream {
-    let wrapped = format!("r#\"{}\"#", value);
+    let wrapped = format!("r####\"{}\"####", value);
     TokenStream::from_str(&wrapped).unwrap()
 }
 
