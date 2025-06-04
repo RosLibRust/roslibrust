@@ -221,6 +221,8 @@ fn parse_ros_package_info(
     let mut in_name = false;
     let mut version = None;
     let mut name = None;
+    let mut catkin_found = false;
+    let mut ament_found = false;
     for e in parser {
         match e {
             Ok(XmlEvent::StartElement { name, .. }) => {
@@ -233,6 +235,14 @@ fn parse_ros_package_info(
             Ok(XmlEvent::EndElement { name, .. }) => {
                 if name.local_name == BUILD_TOOL_TAG {
                     in_build = false;
+                    if catkin_found && !ament_found {
+                        version = Some(RosVersion::ROS1);
+                    } else if !catkin_found && ament_found {
+                        version = Some(RosVersion::ROS2);
+                    } else {
+                        log::trace!("Both catkin and ament_cmake were found in the package.xml file, can not determine ROS Version");
+                    }
+                    // else: we don't know what version this package is for, so we'll just return
                 } else if name.local_name == NAME_TAG {
                     in_name = false;
                 }
@@ -242,10 +252,10 @@ fn parse_ros_package_info(
                     log::trace!("Got data inside of {BUILD_TOOL_TAG}: {data}");
                     match data.as_str() {
                         "catkin" => {
-                            version = Some(RosVersion::ROS1);
+                            catkin_found = true;
                         }
                         "ament_cmake" => {
-                            version = Some(RosVersion::ROS2);
+                            ament_found = true;
                         }
                         _ => {}
                     };
