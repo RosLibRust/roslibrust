@@ -45,26 +45,30 @@ pub fn parse_ros_message_file(
     let mut fields = vec![];
     let mut constants = vec![];
 
-    for line in data.lines() {
-        let line = strip_comments(line).trim();
-        if line.is_empty() {
+    for full_line in data.lines() {
+        let line_without_comments = strip_comments(full_line).trim();
+        if line_without_comments.is_empty() {
             // Comment only line skip
             continue;
         }
         // Determine if we're looking at a constant or a field
-        let sep = line.find(' ').ok_or(
+        let sep = line_without_comments.find(' ').ok_or(
             Error::new(
-                format!("Found an invalid ros field line, no space delinting type from name: {line} in {}\n{data}",
-                path.display())
+                format!("Found an invalid ros field line, no space delinting type from name: {line_without_comments} in {}\n{data}",
+                        path.display())
             )
         )?;
-        let equal_after_sep = line[sep..].find('=');
+        let equal_after_sep = line_without_comments[sep..].find('=');
         if equal_after_sep.is_some() {
             // Since we found an equal sign after a space, this must be a constant
-            constants.push(parse_constant_field(line, package)?)
+            constants.push(parse_constant_field(
+                line_without_comments,
+                full_line,
+                package,
+            )?)
         } else {
             // Is regular field
-            fields.push(parse_field(line, package, name)?);
+            fields.push(parse_field(line_without_comments, package, name)?);
         }
     }
     Ok(ParsedMessageFile {
