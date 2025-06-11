@@ -108,7 +108,7 @@ fn parse_field(line: &str, pkg: &Package, msg_name: &str) -> Result<FieldInfo, E
     })
 }
 
-fn parse_constant_field(line: &str, pkg: &Package) -> Result<ConstantInfo, Error> {
+fn parse_constant_field(line: &str, full_line: &str, pkg: &Package) -> Result<ConstantInfo, Error> {
     let sep = line.find(' ').ok_or(
         Error::new(format!("Failed to find white space seperator ' ' while parsing constant information one line {line} for package {pkg:?}"))
     )?;
@@ -119,11 +119,15 @@ fn parse_constant_field(line: &str, pkg: &Package) -> Result<ConstantInfo, Error
     let constant_name = line[sep + 1..(equal_after_sep + sep)].trim().to_string();
 
     // Handle the fact that string type should be different for constants than fields
-    if constant_type == "String" {
+    let constant_value: String;
+    if constant_type == "String" || constant_type == "string" {
         constant_type = "&'static str".to_string();
+        // In the particular case of a string constant, we need to use the full line to get the value
+        // even if it contains the '#' character
+        constant_value = full_line[sep + equal_after_sep + 1..].trim().to_string();
+    } else {
+        constant_value = line[sep + equal_after_sep + 1..].trim().to_string();
     }
-
-    let constant_value = line[sep + equal_after_sep + 1..].trim().to_string();
     Ok(ConstantInfo {
         constant_type,
         constant_name,

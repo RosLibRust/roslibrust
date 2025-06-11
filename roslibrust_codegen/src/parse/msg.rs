@@ -45,26 +45,30 @@ pub fn parse_ros_message_file(
     let mut fields = vec![];
     let mut constants = vec![];
 
-    for line in data.lines() {
-        let line = strip_comments(line).trim();
-        if line.is_empty() {
+    for full_line in data.lines() {
+        let line_without_comments = strip_comments(full_line).trim();
+        if line_without_comments.is_empty() {
             // Comment only line skip
             continue;
         }
         // Determine if we're looking at a constant or a field
-        let sep = line.find(' ').ok_or(
+        let sep = line_without_comments.find(' ').ok_or(
             Error::new(
-                format!("Found an invalid ros field line, no space delinting type from name: {line} in {}\n{data}",
+                format!("Found an invalid ros field line, no space delinting type from name: {line_without_comments} in {}\n{data}",
                 path.display())
             )
         )?;
-        let equal_after_sep = line[sep..].find('=');
+        let equal_after_sep = line_without_comments[sep..].find('=');
         if equal_after_sep.is_some() {
             // Since we found an equal sign after a space, this must be a constant
-            constants.push(parse_constant_field(line, package)?)
+            constants.push(parse_constant_field(
+                line_without_comments,
+                full_line,
+                package,
+            )?)
         } else {
             // Is regular field
-            fields.push(parse_field(line, package, name)?);
+            fields.push(parse_field(line_without_comments, package, name)?);
         }
     }
     Ok(ParsedMessageFile {
@@ -76,4 +80,45 @@ pub fn parse_ros_message_file(
         source: data.to_owned(),
         path: path.to_owned(),
     })
+}
+
+#[cfg(test)]
+mod test {
+    use std::path::Path;
+
+    use crate::{
+        parse::msg::parse_ros_message_file,
+        utils::{Package, RosVersion},
+    };
+
+    #[test_log::test]
+    fn parse_ros_message_file_works() {
+        let data = r#"
+# This is a comment
+int32 my_int
+float64 my_float # with a comment
+string my_string
+string CONSTANT_WITH_SHARP=# foo
+int32 INTEGER_CONSTANT=123 #with comment
+"#;
+        let package = Package {
+            name: "test_package".to_string(),
+            path: "./not_a_path".into(),
+            version: Some(RosVersion::ROS1),
+        };
+        let parsed =
+            parse_ros_message_file(data, "test.msg", &package, Path::new("test.msg")).unwrap();
+        assert_eq!(parsed.fields.len(), 3);
+        assert_eq!(parsed.fields[0].field_name, "my_int");
+        assert_eq!(parsed.fields[1].field_name, "my_float");
+        assert_eq!(parsed.fields[2].field_name, "my_string");
+        assert_eq!(parsed.constants[0].constant_name, "CONSTANT_WITH_SHARP");
+        assert_eq!(
+            parsed.constants[0].constant_value.inner,
+            "# foo".to_string()
+        );
+
+        assert_eq!(parsed.constants[1].constant_name, "INTEGER_CONSTANT");
+        assert_eq!(parsed.constants[1].constant_value.inner, "123".to_string());
+    }
 }
