@@ -23,6 +23,8 @@ mod parse;
 use parse::*;
 pub mod utils;
 use utils::RosVersion;
+mod ros2_hashing;
+use ros2_hashing::*;
 
 pub mod integral_types;
 pub use integral_types::*;
@@ -44,24 +46,39 @@ pub use smart_default::SmartDefault; // Used in generated code for default value
 pub struct MessageFile {
     pub(crate) parsed: ParsedMessageFile,
     pub(crate) md5sum: String,
+    // NOTE: ros2 hash is only being set to optional, while we're developing it
+    // Once it's more stable, we can make it required
+    pub(crate) ros2_hash: Option<String>,
     // This is the expanded definition of the message for use in message_definition field of
     // a connection header.
     // See how https://wiki.ros.org/ROS/TCPROS references gendeps --cat
     // See https://wiki.ros.org/roslib/gentools for an example of the output
     pub(crate) definition: String,
-    pub(crate) is_fixed_length: bool,
+    // If true this message has no dynamic sized members and fits in a fixed size in memory
+    pub(crate) is_fixed_encoding_length: bool,
 }
 
 impl MessageFile {
     fn resolve(parsed: ParsedMessageFile, graph: &BTreeMap<String, MessageFile>) -> Option<Self> {
-        let md5sum = Self::compute_md5sum(&parsed, graph)?;
-        let definition = Self::compute_full_definition(&parsed, graph)?;
-        let is_fixed_length = Self::determine_if_fixed_length(&parsed, graph)?;
+        let md5sum = Self::compute_md5sum(&parsed, graph).or_else(|| {
+            log::error!("Failed to calculate md5sum for message: {parsed:#?}");
+            None
+        })?;
+        let ros2_hash = calculate_ros2_hash(&parsed, graph);
+        let definition = Self::compute_full_definition(&parsed, graph).or_else(|| {
+            log::error!("Failed to calculate full definition for message: {parsed:#?}");
+            None
+        })?;
+        let is_fixed_length = Self::determine_if_fixed_length(&parsed, graph).or_else(|| {
+            log::error!("Failed to determine if message is fixed length: {parsed:#?}");
+            None
+        })?;
         Some(MessageFile {
             parsed,
             md5sum,
+            ros2_hash,
             definition,
-            is_fixed_length,
+            is_fixed_encoding_length: is_fixed_length,
         })
     }
 
@@ -90,7 +107,7 @@ impl MessageFile {
     }
 
     pub fn is_fixed_length(&self) -> bool {
-        self.is_fixed_length
+        self.is_fixed_encoding_length
     }
 
     pub fn get_definition(&self) -> &str {
@@ -153,9 +170,9 @@ impl MessageFile {
             if is_intrinsic_type(parsed.version.unwrap_or(RosVersion::ROS1), field_type) {
                 continue;
             }
-            let sub_message = graph.get(field.get_full_name().as_str())?;
+            let sub_message = graph.get(field.get_full_type_name().as_str())?;
             // Note: need to add both the field that is referenced AND its sub-dependencies
-            unique_field_types.insert(field.get_full_name());
+            unique_field_types.insert(field.get_full_type_name());
             let mut sub_deps = Self::get_unique_field_types(&sub_message.parsed, graph)?;
             unique_field_types.append(&mut sub_deps);
         }
@@ -190,22 +207,24 @@ impl MessageFile {
         Some(definition_content)
     }
 
+    /// Reports if any field (recursively) referenced by the message contains a dynamic sized type
     fn determine_if_fixed_length(
         parsed: &ParsedMessageFile,
         graph: &BTreeMap<String, MessageFile>,
     ) -> Option<bool> {
         for field in &parsed.fields {
-            if matches!(field.field_type.array_info, Some(Some(_))) {
-                return Some(true);
-            } else if matches!(field.field_type.array_info, Some(None)) {
-                return Some(false);
+            // If the field has a bounded or unbounded vector type, the message is not fixed length
+            match field.field_type.array_info {
+                ArrayType::Unbounded | ArrayType::Bounded(_) => return Some(false),
+                _ => {}
             }
             if field.field_type.package_name.is_none() {
+                // If any field is a string, the message is not fixed length
                 if field.field_type.field_type == "string" {
                     return Some(false);
                 }
             } else {
-                let field_msg = graph.get(field.get_full_name().as_str())?;
+                let field_msg = graph.get(field.get_full_type_name().as_str())?;
                 let field_is_fixed_length =
                     Self::determine_if_fixed_length(&field_msg.parsed, graph)?;
                 if !field_is_fixed_length {
@@ -223,20 +242,25 @@ pub struct ServiceFile {
     pub(crate) request: MessageFile,
     pub(crate) response: MessageFile,
     pub(crate) md5sum: String,
+    pub(crate) ros2_hash: Option<String>,
 }
 
 impl ServiceFile {
+    /// Attempts to convert a [ParsedServiceFile] into a fully resolved [ServiceFile]
+    /// This will only succeed if all dependencies are already resolved in the graph
     fn resolve(parsed: ParsedServiceFile, graph: &BTreeMap<String, MessageFile>) -> Option<Self> {
         if let (Some(request), Some(response)) = (
             MessageFile::resolve(parsed.request_type.clone(), graph),
             MessageFile::resolve(parsed.response_type.clone(), graph),
         ) {
             let md5sum = Self::compute_md5sum(&parsed, graph)?;
+            let ros2_hash = calculate_ros2_srv_hash(&parsed, graph);
             Some(ServiceFile {
                 parsed,
                 request,
                 response,
                 md5sum,
+                ros2_hash,
             })
         } else {
             log::error!("Unable to resolve dependencies in service: {parsed:#?}");
@@ -305,6 +329,16 @@ impl From<String> for RosLiteral {
     }
 }
 
+/// Represents the different options for a field being an array
+#[derive(PartialEq, Eq, Hash, Debug, Clone)]
+pub enum ArrayType {
+    NotArray,
+    FixedLength(usize),
+    // Bounded is ROS2 only
+    Bounded(usize),
+    Unbounded,
+}
+
 /// Describes the type for an individual field in a message
 #[derive(PartialEq, Eq, Hash, Debug, Clone)]
 pub struct FieldType {
@@ -314,21 +348,35 @@ pub struct FieldType {
     // This is so that when an external package_name is not present
     // we can still construct the full name of the field "package/field_type"
     pub source_package: String,
-    // Explicit text of type without array specifier
+    // Explicit text of type without array specifier, referenced package, or string capacity
+    // e.g. "string", "uint8", "Header", "MyCustomType"
+    // Not: "std_msgs/Header", "uint8[10]", "string<=10"
     pub field_type: String,
-    // Metadata indicating whether the field is a collection.
-    // Is Some(None) if it's an array type of variable size or Some(Some(N))
-    // if it's an array type of fixed size.
-    pub array_info: Option<Option<usize>>,
+    // Indicates if the field is some type of list or "NotArray"
+    pub array_info: ArrayType,
+
+    // ROS2 specific feature, you can write "string<=10" to indicate a string with a maximum length
+    // When this happen we'll parse the capacity here, and convert the field_type to "string"
+    pub string_capacity: Option<usize>,
 }
 
+/// Serializes the field type exactly how it would be written in a .msg file
 impl std::fmt::Display for FieldType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.array_info {
-            Some(Some(n)) => f.write_fmt(format_args!("{}[{}]", self.field_type, n)),
-            Some(None) => f.write_fmt(format_args!("{}[]", self.field_type)),
-            None => f.write_fmt(format_args!("{}", self.field_type)),
+            ArrayType::FixedLength(n) => f.write_fmt(format_args!("{}[{}]", self.field_type, n)),
+            ArrayType::Unbounded => f.write_fmt(format_args!("{}[]", self.field_type)),
+            ArrayType::NotArray => f.write_fmt(format_args!("{}", self.field_type)),
+            ArrayType::Bounded(n) => f.write_fmt(format_args!("{}[<={}]", self.field_type, n)),
         }
+    }
+}
+
+impl FieldType {
+    /// Returns true iff this field type is a primitive type in ROS1 & ROS2, and not referenced sub-type
+    /// Time, Duration, and Header are not considered primitive types
+    pub fn is_primitive(&self) -> bool {
+        crate::parse::ROS_PRIMITIVE_TYPE_LIST.contains(&self.field_type.as_str())
     }
 }
 
@@ -350,13 +398,25 @@ impl PartialEq for FieldInfo {
 }
 
 impl FieldInfo {
-    pub fn get_full_name(&self) -> String {
+    // Returns the full name of the type of this field in ROS1 format, e.g. std_msgs/String or example_interfaces/Int32
+    pub fn get_full_type_name(&self) -> String {
         let field_package = self
             .field_type
             .package_name
             .as_ref()
             .unwrap_or(&self.field_type.source_package);
         format!("{field_package}/{}", self.field_type.field_type)
+    }
+
+    // Returns the full name of the type of this field in ROS2 format, e.g. std_msgs/msg/String or example_interfaces/msg/Int32
+    pub fn get_ros2_full_type_name(&self) -> String {
+        let field_package = self
+            .field_type
+            .package_name
+            .as_ref()
+            .unwrap_or(&self.field_type.source_package);
+        // Not sure this is a safe assumption, but I think we can safely shove msg here?
+        format!("{field_package}/msg/{}", self.field_type.field_type)
     }
 }
 
@@ -488,6 +548,7 @@ pub fn find_and_parse_ros_messages(
             std::env::current_dir().unwrap()
         );
     }
+    debug!("After deduplication {:?} packages remain.", packages.len());
 
     let message_files = packages
         .iter()
@@ -500,10 +561,17 @@ pub fn find_and_parse_ros_messages(
             });
             // See https://stackoverflow.com/questions/59852161/how-to-handle-result-in-flat-map
             match files {
-                Ok(files) => files
-                    .into_iter()
-                    .map(|path| Ok((pkg.clone(), path)))
-                    .collect(),
+                Ok(files) => {
+                    debug!(
+                        "Found {:?} interface files in package: {:?}",
+                        files.len(),
+                        pkg.name
+                    );
+                    files
+                        .into_iter()
+                        .map(|path| Ok((pkg.clone(), path)))
+                        .collect()
+                }
                 Err(e) => vec![Err(e)],
             }
         })
@@ -590,13 +658,10 @@ pub fn resolve_dependency_graph(
     while let Some(MessageMetadata { msg, seen_count }) = unresolved_messages.pop_front() {
         // Check our resolved messages for each of the fields
         let fully_resolved = msg.fields.iter().all(|field| {
-            let is_ros1_primitive =
-                ROS_TYPE_TO_RUST_TYPE_MAP.contains_key(field.field_type.field_type.as_str());
-            let is_ros2_primitive =
-                ROS_2_TYPE_TO_RUST_TYPE_MAP.contains_key(field.field_type.field_type.as_str());
-            let is_primitive = is_ros1_primitive || is_ros2_primitive;
+            let is_primitive = field.field_type.is_primitive();
             if !is_primitive {
-                let is_resolved = resolved_messages.contains_key(field.get_full_name().as_str());
+                let is_resolved =
+                    resolved_messages.contains_key(field.get_full_type_name().as_str());
                 is_resolved
             } else {
                 true
@@ -621,9 +686,43 @@ pub fn resolve_dependency_graph(
                 .iter()
                 .map(|item| format!("{}/{}", item.msg.package, item.msg.name))
                 .collect::<Vec<_>>();
-            bail!("Unable to resolve dependencies after reaching search limit.\n\
-                   The following messages have unresolved dependencies: {msg_names:?}\n\
-                   These messages likely depend on packages not found in the provided search paths.");
+
+            // Determine which fields are still unresolved, that don't reference other messages that aren't resolved
+            let mut unresolved_fields = unresolved_messages
+                .iter()
+                .flat_map(|item| {
+                    item.msg
+                        .fields
+                        .iter()
+                        .filter_map(|field| {
+                            if !field.field_type.is_primitive() {
+                                if resolved_messages
+                                    .contains_key(field.get_full_type_name().as_str())
+                                {
+                                    None
+                                } else {
+                                    // Field is unresolved!
+                                    Some(field.get_full_type_name())
+                                }
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>();
+            unresolved_fields.sort();
+            unresolved_fields.dedup();
+            let unresolved_fields = unresolved_fields
+                .into_iter()
+                .filter(|f| !msg_names.contains(f))
+                .collect::<Vec<_>>();
+
+            bail!(
+                "Unable to resolve ROS message dependencies after reaching search limit.\n\
+                 The following types are still unresolved:\n{unresolved_fields:#?}\n
+                 This is preventing full resolution for the following messages:\n{msg_names:#?}"
+            );
         }
     }
 
@@ -648,7 +747,7 @@ pub fn resolve_dependency_graph(
 /// The returned collection will contain all messages files including those buried with the
 /// service or action files, and will have fully expanded and resolved referenced types in other packages.
 /// * `msg_paths` -- List of tuple (Package, Path to File) for each file to parse
-fn parse_ros_files(
+pub(crate) fn parse_ros_files(
     msg_paths: Vec<(Package, PathBuf)>,
 ) -> Result<
     (
@@ -733,7 +832,13 @@ mod test {
             "/../assets/ros2_common_interfaces"
         );
 
-        let (source, paths) = find_and_generate_ros_messages(vec![assets_path.into()]).unwrap();
+        let required_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../assets/ros2_required_msgs/rcl_interfaces/builtin_interfaces"
+        );
+
+        let (source, paths) =
+            find_and_generate_ros_messages(vec![assets_path.into(), required_path.into()]).unwrap();
         // Make sure something actually got generated
         assert!(!source.is_empty());
         // Make sure we have some paths
@@ -742,7 +847,6 @@ mod test {
 
     /// Confirms we don't panic on ros1_test_msgs parsing
     #[test_log::test]
-    #[cfg_attr(not(feature = "ros1_test"), ignore)]
     fn generate_ok_on_ros1_test_msgs() {
         // Note: because our test msgs depend on std_message this test will fail unless ROS_PACKAGE_PATH includes std_msgs
         // To avoid that we add std_messsages to the extra paths.
@@ -760,11 +864,15 @@ mod test {
 
     /// Confirms we don't panic on ros2_test_msgs parsing
     #[test_log::test]
-    #[cfg_attr(not(feature = "ros2_test"), ignore)]
     fn generate_ok_on_ros2_test_msgs() {
         let assets_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../assets/ros2_test_msgs");
+        let required_path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../assets/ros2_required_msgs/rcl_interfaces/builtin_interfaces"
+        );
 
-        let (source, paths) = find_and_generate_ros_messages(vec![assets_path.into()]).unwrap();
+        let (source, paths) =
+            find_and_generate_ros_messages(vec![assets_path.into(), required_path.into()]).unwrap();
         assert!(!source.is_empty());
         assert!(!paths.is_empty());
     }

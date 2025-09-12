@@ -1,5 +1,5 @@
 use crate::utils::{Package, RosVersion};
-use crate::{bail, Error};
+use crate::{bail, ArrayType, Error};
 use crate::{ConstantInfo, FieldInfo, FieldType};
 use std::collections::HashMap;
 
@@ -9,6 +9,13 @@ mod msg;
 pub use msg::{parse_ros_message_file, ParsedMessageFile};
 mod srv;
 pub use srv::{parse_ros_service_file, ParsedServiceFile};
+
+// Note: time and duration are primitives in ROS1, but not used in ROS2
+// List of types which are "individual data fields" and not containers for other data
+pub const ROS_PRIMITIVE_TYPE_LIST: [&str; 17] = [
+    "bool", "int8", "uint8", "byte", "char", "int16", "uint16", "int32", "uint32", "int64",
+    "uint64", "float32", "float64", "string", "wstring", "time", "duration",
+];
 
 lazy_static::lazy_static! {
     pub static ref ROS_TYPE_TO_RUST_TYPE_MAP: HashMap<&'static str, &'static str> = vec![
@@ -26,7 +33,6 @@ lazy_static::lazy_static! {
         ("float32", "f32"),
         ("float64", "f64"),
         ("string", "::std::string::String"),
-        // TODO we should really get these namespaces out of here
         ("time", "::roslibrust::codegen::integral_types::Time"),
         ("duration", "::roslibrust::codegen::integral_types::Duration"),
     ].into_iter().collect();
@@ -46,7 +52,6 @@ lazy_static::lazy_static! {
         ("float32", "f32"),
         ("float64", "f64"),
         ("string", "::std::string::String"),
-        // TODO we should really get these namespaces out of here
         ("builtin_interfaces/Time", "::roslibrust::codegen::integral_types::Time"),
         ("builtin_interfaces/Duration", "::roslibrust::codegen::integral_types::Duration"),
         // ("wstring", TODO),
@@ -55,8 +60,10 @@ lazy_static::lazy_static! {
 
 pub fn is_intrinsic_type(version: RosVersion, ros_type: &str) -> bool {
     match version {
+        // Treat time and duration as intrinsic in ROS1
         RosVersion::ROS1 => ROS_TYPE_TO_RUST_TYPE_MAP.contains_key(ros_type),
-        RosVersion::ROS2 => ROS_2_TYPE_TO_RUST_TYPE_MAP.contains_key(ros_type),
+        // In ros 2 builtin_interfaces/Time and builtin_interfaces/Duration are not intrinsic
+        RosVersion::ROS2 => ROS_PRIMITIVE_TYPE_LIST.contains(&ros_type),
     }
 }
 
@@ -140,47 +147,63 @@ fn strip_comments(line: &str) -> &str {
 }
 
 //TODO it is a little scary that this function appears infallible?
-fn parse_field_type(type_str: &str, array_info: Option<Option<usize>>, pkg: &Package) -> FieldType {
+fn parse_field_type(
+    type_str: &str,
+    array_info: ArrayType,
+    pkg: &Package,
+) -> Result<FieldType, Error> {
     let items = type_str.split('/').collect::<Vec<&str>>();
 
     if items.len() == 1 {
         // If there is only one item (no package redirect)
         let pkg_version = pkg.version.unwrap_or(RosVersion::ROS1);
-        FieldType {
-            package_name: if is_intrinsic_type(pkg_version, type_str) {
+
+        let (field_type, string_capacity) = parse_bounded_string(items[0])?;
+
+        Ok(FieldType {
+            package_name: if is_intrinsic_type(pkg_version, &field_type) {
                 // If it is a fundamental type, no package
                 None
             } else {
-                // Otherwise it is referencing another message in the same package
+                // Very special case for "Header"
                 if type_str == "Header" {
                     Some("std_msgs".to_owned())
                 } else {
+                    // Otherwise it is referencing another message in the same package
                     Some(pkg.name.clone())
                 }
             },
             source_package: pkg.name.clone(),
-            field_type: items[0].to_string(),
+            field_type: field_type,
             array_info,
-        }
+            string_capacity,
+        })
     } else {
         // If there is more than one item there is a package redirect
 
-        // Special workaround for builtin_interfaces package
-        if items[0] == "builtin_interfaces" {
-            FieldType {
-                package_name: None,
-                source_package: pkg.name.clone(),
-                field_type: type_str.to_string(),
-                array_info,
-            }
-        } else {
-            FieldType {
-                package_name: Some(items[0].to_string()),
-                source_package: pkg.name.clone(),
-                field_type: items[1].to_string(),
-                array_info,
-            }
-        }
+        Ok(FieldType {
+            package_name: Some(items[0].to_string()),
+            source_package: pkg.name.clone(),
+            field_type: items[1].to_string(),
+            string_capacity: None,
+            array_info,
+        })
+    }
+}
+
+/// Specifically handles bounded string types, e.g. "string<=10"
+/// Returns the field_type and the string_capacity if it is a bounded string
+/// Otherwise returns the original type and None for the capacity
+fn parse_bounded_string(type_str: &str) -> Result<(String, Option<usize>), Error> {
+    if type_str.starts_with("string<=") {
+        let capacity = type_str[8..].parse::<usize>().map_err(|err| {
+            Error::new(format!(
+                "Unable to parse capacity of bounded string: {type_str}: {err}"
+            ))
+        })?;
+        Ok(("string".to_string(), Some(capacity)))
+    } else {
+        Ok((type_str.to_string(), None))
     }
 }
 
@@ -194,27 +217,38 @@ fn parse_type(type_str: &str, pkg: &Package) -> Result<FieldType, Error> {
     match (open_bracket_idx, close_bracket_idx) {
         (Some(o), Some(c)) => {
             // After having stripped array information, parse the remainder of the type
-            let array_size = if c - o == 1 {
+            let array_info = if c - o == 1 {
                 // No size specified
-                None
+                ArrayType::Unbounded
             } else {
                 let fixed_size_str = &type_str[(o + 1)..c];
-                let fixed_size = fixed_size_str.parse::<usize>().map_err(|err| {
+                let is_bounded;
+                let offset;
+                // Check if the first two characters are <=
+                if fixed_size_str.starts_with("<=") {
+                    is_bounded = true;
+                    offset = 2;
+                } else {
+                    is_bounded = false;
+                    offset = 0;
+                }
+
+                let fixed_size = fixed_size_str[offset..].parse::<usize>().map_err(|err| {
                     Error::new(format!(
                         "Unable to parse size of the array: {type_str}, defaulting to 0: {err}"
                     ))
-                });
-                // TODO we don't currently handle "array limits" in ROS2, so for now we're ejecting this error
-                // To make this function complete we need to handle clauses like '<=3'
-                // None of this really matters at current time, because we don't generate fixed size array types yet anyway
-                let fixed_size = fixed_size.unwrap_or(0);
-                Some(fixed_size)
+                })?;
+                if is_bounded {
+                    ArrayType::Bounded(fixed_size)
+                } else {
+                    ArrayType::FixedLength(fixed_size)
+                }
             };
-            Ok(parse_field_type(&type_str[..o], Some(array_size), pkg))
+            parse_field_type(&type_str[..o], array_info, pkg)
         }
         (None, None) => {
             // Not an array parse normally
-            Ok(parse_field_type(type_str, None, pkg))
+            parse_field_type(type_str, ArrayType::NotArray, pkg)
         }
         _ => {
             bail!("Found malformed type: {type_str} in package {pkg:?}. Likely file is invalid.");
@@ -227,6 +261,7 @@ mod test {
     use crate::{
         parse::parse_type,
         utils::{Package, RosVersion},
+        ArrayType,
     };
 
     // Simple test to just confirm fixed size logic is working correctly on the parse side
@@ -239,6 +274,30 @@ mod test {
             version: Some(RosVersion::ROS1),
         };
         let parsed = parse_type(line, &pkg).unwrap();
-        assert_eq!(parsed.array_info, Some(Some(9)));
+        assert_eq!(parsed.array_info, ArrayType::FixedLength(9));
+    }
+
+    #[test_log::test]
+    fn parse_type_handles_bounded_size_correctly() {
+        let line = "int32[<=9]";
+        let pkg = Package {
+            name: "test_pkg".to_string(),
+            path: "./not_a_path".into(),
+            version: Some(RosVersion::ROS1),
+        };
+        let parsed = parse_type(line, &pkg).unwrap();
+        assert_eq!(parsed.array_info, ArrayType::Bounded(9));
+    }
+
+    #[test_log::test]
+    fn parse_type_handles_unbounded_size_correctly() {
+        let line = "int32[]";
+        let pkg = Package {
+            name: "test_pkg".to_string(),
+            path: "./not_a_path".into(),
+            version: Some(RosVersion::ROS1),
+        };
+        let parsed = parse_type(line, &pkg).unwrap();
+        assert_eq!(parsed.array_info, ArrayType::Unbounded);
     }
 }

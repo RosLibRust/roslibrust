@@ -228,9 +228,9 @@ impl ClientHandle {
     ///   let ros1_subscriber = handle.subscribe::<ros1::std_msgs::Header>("/topic").await?;
     ///   let ros2_subscriber = handle.subscribe::<ros2::std_msgs::Header>("/topic").await?;
     ///   // Await both subscribers and get a result back from whichever succeeds at deserializing
-    ///   let time = tokio::select!(
-    ///     r1_msg = ros1_subscriber.next() => r1_msg.stamp,
-    ///     r2_msg = ros2_subscriber.next() => r2_msg.stamp,
+    ///   tokio::select!(
+    ///     r1_msg = ros1_subscriber.next() => println!("{:?}", r1_msg.stamp),
+    ///     r2_msg = ros2_subscriber.next() => println!("{:?}", r2_msg.stamp),
     ///   );
     /// # Ok(())
     /// # }

@@ -18,8 +18,21 @@ const ROS_2_PATH: &str = concat!(
     "/../assets/ros2_common_interfaces"
 );
 const ROS_2_TEST_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../assets/ros2_test_msgs");
+const ROS_2_REQUIRED_PATH: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../assets/ros2_required_msgs/rcl_interfaces/builtin_interfaces"
+);
+const ROS_2_SERVICE_MSGS_PATH: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../assets/ros2_required_msgs/rcl_interfaces/service_msgs"
+);
 lazy_static! {
-    static ref ROS_2_PATHS: Vec<PathBuf> = vec![ROS_2_PATH.into(), ROS_2_TEST_PATH.into()];
+    static ref ROS_2_PATHS: Vec<PathBuf> = vec![
+        ROS_2_PATH.into(),
+        ROS_2_TEST_PATH.into(),
+        ROS_2_REQUIRED_PATH.into(),
+        ROS_2_SERVICE_MSGS_PATH.into()
+    ];
 }
 
 /// This main function is used to generate the contents of ros1.rs, ros2.rs
@@ -33,10 +46,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::fs::write(concat!(env!("CARGO_MANIFEST_DIR"), "/src/ros1.rs"), source)?;
 
     let (source, _paths) =
-        roslibrust::codegen::find_and_generate_ros_messages_without_ros_package_path(vec![
-            ROS_2_PATH.into(),
-            ROS_2_TEST_PATH.into(),
-        ])?;
+        roslibrust::codegen::find_and_generate_ros_messages_without_ros_package_path(
+            (*ROS_2_PATHS).clone(),
+        )?;
     let source = format_rust_source(source.to_string().as_str()).to_string();
     std::fs::write(concat!(env!("CARGO_MANIFEST_DIR"), "/src/ros2.rs"), source)?;
     Ok(())

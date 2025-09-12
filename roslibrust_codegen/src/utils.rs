@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use log::debug;
+
 #[derive(Clone, Debug)]
 pub struct Package {
     pub name: String,
@@ -59,7 +61,10 @@ pub fn crawl<P: AsRef<Path>>(search_paths: &[P]) -> Vec<Package> {
             packages = [packages, found_packages].concat();
         }
     }
-
+    debug!(
+        "Found {:?} packages while crawling search paths.",
+        packages.len()
+    );
     packages
 }
 

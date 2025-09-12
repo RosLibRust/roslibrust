@@ -22,6 +22,10 @@ impl ParsedServiceFile {
     pub fn get_full_name(&self) -> String {
         format!("{}/{}", self.package, self.name)
     }
+
+    pub fn get_ros2_full_name(&self) -> String {
+        format!("{}/srv/{}", self.package, self.name)
+    }
 }
 
 /// Parses the contents of a service file and returns and struct representing the found content.

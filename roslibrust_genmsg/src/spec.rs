@@ -1,4 +1,4 @@
-use roslibrust_codegen::{ConstantInfo, FieldInfo, MessageFile, ServiceFile};
+use roslibrust_codegen::{ArrayType, ConstantInfo, FieldInfo, MessageFile, ServiceFile};
 use serde::{Deserialize, Serialize};
 
 pub static ROS_TYPENAMES: &[&str] = &[
@@ -27,10 +27,11 @@ impl From<&FieldInfo> for Field {
             name: value.field_name.clone(),
             field_type: value.field_type.field_type.clone(),
             package: value.field_type.package_name.clone(),
+            // TODO this is a little silly, we should probably modify genmsg to use ArrayType instead...
             array_info: match value.field_type.array_info {
-                Some(Some(n)) => ArrayInfo::Array(n),
-                Some(None) => ArrayInfo::Vector,
-                None => ArrayInfo::NotAnArray,
+                ArrayType::FixedLength(n) => ArrayInfo::Array(n),
+                ArrayType::Bounded(_) | ArrayType::Unbounded => ArrayInfo::Vector,
+                ArrayType::NotArray => ArrayInfo::NotAnArray,
             },
         }
     }

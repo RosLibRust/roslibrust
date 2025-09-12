@@ -4,12 +4,13 @@
 [![Galactic](https://github.com/roslibrust/roslibrust/actions/workflows/galactic.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/galactic.yml)
 [![Humble](https://github.com/roslibrust/roslibrust/actions/workflows/humble.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/humble.yml)
 [![Iron](https://github.com/roslibrust/roslibrust/actions/workflows/iron.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/iron.yml)
+[![Kilted](https://github.com/roslibrust/roslibrust/actions/workflows/kilted.yml/badge.svg)][https://github.com/roslibrust/roslibrust/actions/workflows/kilted.yml]
 [![License:MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This crate provides a convenient "async first" library for interacting with ROS.
-This crate defines generic traits for interacting with ROS-like systems, and implementations of those traits for various backends.
+An async rust library for interfacing with ROS1 and ROS2, built on Tokio.
 
-This crate is **pure rust and requires no ROS1 or ROS2 dependencies or installation**.
+- One Trait Based API - Write your behavior once and use it with any backend! Select the backend you want to use at compile time.
+- Pure Rust - No ROS1 or ROS2 dependencies or installation required! Compile time message generation from .msg/.srv files.
 
 This allows writing generic behaviors like:
 
@@ -29,24 +30,17 @@ async fn relay<T: TopicProvider>(ros: T) -> roslibrust::Result<()> {
 
 #[tokio::main]
 async fn main() -> roslibrust::Result<()> {
-    // Relay messages over a rosbridge connection with either ROS1 or ROS2!
-    #[cfg(feature = "rosbridge")]
-    {
-    let ros = roslibrust::rosbridge::ClientHandle::new("ws://localhost:9090").await?;
-    relay(ros).await?;
-    }
+    // Relay messages over a native ROS2 connection using Zenoh
+    // #[cfg(feature = "ros2")]
+    // {
+    // let ros = roslibrust::ros2::NodeHandle::new("http://localhost:11311", "relay").await?;
+    // relay(ros).await?;
+    // }
 
-    // Relay messages over a native ROS1 connection
+    // Relay messages over a native ROS1 connection via TCPROS
     #[cfg(feature = "ros1")]
     {
     let ros = roslibrust::ros1::NodeHandle::new("http://localhost:11311", "relay").await?;
-    relay(ros).await?;
-    }
-
-    // Relay messages over a mock ROS connection for testing
-    #[cfg(feature = "mock")]
-    {
-    let ros = roslibrust::mock::MockRos::new();
     relay(ros).await?;
     }
 
@@ -57,10 +51,20 @@ async fn main() -> roslibrust::Result<()> {
     relay(ros).await?;
     }
 
-    // TODO - not supported yet!
-    // Relay messages over a native ROS2 connection
-    // let ros = roslibrust::ros2::NodeHandle::new("http://localhost:11311", "relay").await?;
-    // relay(ros).await?;
+    // Relay messages over a rosbridge_server connection with either ROS1 or ROS2!
+    #[cfg(feature = "rosbridge")]
+    {
+    let ros = roslibrust::rosbridge::ClientHandle::new("ws://localhost:9090").await?;
+    relay(ros).await?;
+    }
+
+    // Relay messages over a mock ROS connection for testing
+    #[cfg(feature = "mock")]
+    {
+    let ros = roslibrust::mock::MockRos::new();
+    relay(ros).await?;
+    }
+
     Ok(())
 }
 ```
@@ -90,9 +94,9 @@ To get started with writing a node with `roslibrust` we recommend looking at [ex
 `Cargo.toml` and `build.rs` in a similar way.
 Some important tips to keep in mind with using the crate:
 
-* This crate is built around the [tokio runtime](https://docs.rs/tokio/latest/tokio/) and requires tokio to work. All backends expect to be created inside a tokio runtime.
-* The generic traits `TopicProvider` and `ServiceProvider` are not [object safe](https://doc.rust-lang.org/reference/items/traits.html#object-safety) due to their generic parameters. This means you cannot use them as trait objects with `Box<dyn TopicProvider>` or `Box<dyn ServiceProvider>`. Instead, they should be used as compile time generics like `fn foo(ros: impl TopicProvider)` or `struct MyNode<T: TopicProvider> { ros: T }`.
-* By default the roslibrust crate does not include any backends. You must enable the specific backends you want to use with features in `Cargo.toml` like `roslibrust = { version = "0.12", features = ["ros1"] }`.
+- This crate is built around the [tokio runtime](https://docs.rs/tokio/latest/tokio/) and requires tokio to work. All backends expect to be created inside a tokio runtime.
+- The generic traits `TopicProvider` and `ServiceProvider` are not [object safe](https://doc.rust-lang.org/reference/items/traits.html#object-safety) due to their generic parameters. This means you cannot use them as trait objects with `Box<dyn TopicProvider>` or `Box<dyn ServiceProvider>`. Instead, they should be used as compile time generics like `fn foo(ros: impl TopicProvider)` or `struct MyNode<T: TopicProvider> { ros: T }`.
+- By default the roslibrust crate does not include any backends. You must enable the specific backends you want to use with features in `Cargo.toml` like `roslibrust = { version = "0.12", features = ["ros1"] }`.
 
 ## Contributing
 

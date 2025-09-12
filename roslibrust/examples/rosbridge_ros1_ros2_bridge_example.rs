@@ -12,7 +12,8 @@ mod ros1 {
 
 mod ros2 {
     roslibrust_codegen_macro::find_and_generate_ros_messages_without_ros_package_path!(
-        "assets/ros2_common_interfaces/std_msgs"
+        "assets/ros2_common_interfaces/std_msgs",
+        "assets/ros2_required_msgs/rcl_interfaces/builtin_interfaces"
     );
 }
 
@@ -83,7 +84,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // We got a new message!
                 // Covert it to the ros2 format
                 let converted_msg = ros2::std_msgs::Header {
-                    stamp: msg.stamp,
+                    // TODO want to try to unify the time types again, but need to sort out ROS2 hashing first
+                    stamp: ros2::builtin_interfaces::Time {
+                        sec: msg.stamp.secs,
+                        nanosec: msg.stamp.nsecs as u32,
+                    },
                     frame_id: msg.frame_id,
                 };
 

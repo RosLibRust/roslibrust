@@ -1,5 +1,6 @@
-<package format="2">
-  <name>test_msgs</name>
+<!-- Had to change this to 3 to get this to work -->
+<package format="3">
+  <name>ros2_test_msgs</name>
   <version>1.2.4</version>
   <description>
     This package provides foo capability.
@@ -8,4 +9,8 @@
   <license>BSD</license>
   <!-- This line is required for this package to be recognized as ROS2 -->
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>rosidl_default_generators</build_depend>
+  <!-- Can't find this in documentation, but seems to not build without it -->
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
 </package>

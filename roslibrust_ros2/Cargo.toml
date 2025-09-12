@@ -1,0 +1,20 @@
+[package]
+name = "roslibrust_ros2"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+zenoh = "1.5"
+tokio = { workspace = true }
+env_logger = "0.11"
+cdr = "0.2"
+roslibrust_common = { path = "../roslibrust_common", version = "0.15" }
+anyhow = "1.0"
+
+[dev-dependencies]
+roslibrust_test = { path = "../roslibrust_test" }
+serde = { workspace = true }
+
+[features]
+# Used to enable tests that rely on a locally running ros2 rmw_zenohd
+ros2_zenoh_test = []

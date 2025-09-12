@@ -3,7 +3,8 @@ use crate::Error;
 use crate::{ConstantInfo, FieldInfo, Package, RosVersion};
 use std::path::{Path, PathBuf};
 
-/// Describes all information for a single message file
+/// Describes all information for a single message file available in the file without other context
+/// This is different from MessageFile which contains resolved information from dependencies
 #[derive(Clone, PartialEq, Debug)]
 pub struct ParsedMessageFile {
     pub name: String,
@@ -18,6 +19,7 @@ pub struct ParsedMessageFile {
 }
 
 impl ParsedMessageFile {
+    // True iff this message contains a field of type std_msgs/Header
     pub fn has_header(&self) -> bool {
         self.fields.iter().any(|field| {
             field.field_type.field_type.as_str() == "Header"
@@ -26,8 +28,29 @@ impl ParsedMessageFile {
         })
     }
 
+    /// Returns full ros1 name of the message e.g. std_msgs/String
     pub fn get_full_name(&self) -> String {
         format!("{}/{}", self.package, self.name)
+    }
+
+    /// Returns full ros2 name of the message, e.g. std_msgs/msg/String or example_interfaces/srv/AddTwoInts
+    pub fn get_ros2_full_name(&self) -> String {
+        // Not sure this a safe assumption, but for now we'll extract the name of the parent folder as the "middle name" in ROS2
+        let parent = self
+            .path
+            .parent()
+            .expect("All ROS messages should have a parent directory")
+            .file_name()
+            .expect("All parent directories should have a resolveable file name")
+            .to_str()
+            .expect("All parent directory names should be valid unicode");
+        format!("{}/{}/{}", self.package, parent, self.name)
+    }
+
+    /// Returns the fully qualified type name for use with ROS2 zenoh
+    /// This is used in the mangling of topic names to subscribe to ros2 topics over zenoh
+    pub fn get_ros2_dds_type_name(&self) -> String {
+        format!("{}::msg::dds_::{}_", self.package, self.name)
     }
 }
 
@@ -35,7 +58,7 @@ impl ParsedMessageFile {
 /// * `data` -- Raw contents of the file as loaded from disk
 /// * `name` -- Name of the object being parsed excluding the file extension, e.g. `Header`
 /// * `package` -- Name of the package the message is found in, required for relative type paths
-/// * `ros2` -- True iff the package is a ros2 package and should be parsed with ros2 logic
+/// * `path` -- Path to the message file
 pub fn parse_ros_message_file(
     data: &str,
     name: &str,

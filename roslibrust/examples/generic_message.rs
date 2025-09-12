@@ -2,7 +2,7 @@
 //! to decode to the right type.
 use roslibrust_common::RosMessageType;
 
-/// We place the ros1 generate code into a module to prevent name collisions with the identically
+/// We place the ros1 generated code into a module to prevent name collisions with the identically
 /// named ros2 types.
 mod ros1 {
     roslibrust_codegen_macro::find_and_generate_ros_messages!("assets/ros1_common_interfaces");
@@ -10,7 +10,8 @@ mod ros1 {
 
 mod ros2 {
     roslibrust_codegen_macro::find_and_generate_ros_messages_without_ros_package_path!(
-        "assets/ros2_common_interfaces"
+        "assets/ros2_common_interfaces",
+        "assets/ros2_required_msgs/rcl_interfaces/builtin_interfaces"
     );
 }
 

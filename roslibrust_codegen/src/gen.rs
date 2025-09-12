@@ -6,7 +6,7 @@ use syn::parse_quote;
 
 use crate::parse::convert_ros_type_to_rust_type;
 use crate::utils::RosVersion;
-use crate::{bail, Error};
+use crate::{bail, ArrayType, Error};
 use crate::{ConstantInfo, FieldInfo, MessageFile, RosLiteral, ServiceFile};
 
 fn derive_attrs() -> Vec<syn::Attribute> {
@@ -27,6 +27,8 @@ fn derive_attrs() -> Vec<syn::Attribute> {
 pub fn generate_service(service: ServiceFile) -> Result<TokenStream, Error> {
     let service_type_name = service.get_full_name();
     let service_md5sum = service.md5sum;
+    // Optional for now until we get all the hashing sorted out
+    let service_ros2_hash = service.ros2_hash.unwrap_or_else(|| String::from(""));
     let struct_name = format_ident!("{}", service.parsed.name);
     let request_name = format_ident!("{}", service.parsed.request_type.name);
     let response_name = format_ident!("{}", service.parsed.response_type.name);
@@ -45,6 +47,7 @@ pub fn generate_service(service: ServiceFile) -> Result<TokenStream, Error> {
         impl ::roslibrust::RosServiceType for #struct_name {
             const ROS_SERVICE_NAME: &'static str = #service_type_name;
             const MD5SUM: &'static str = #service_md5sum;
+            const ROS2_HASH: &'static str = #service_ros2_hash;
             type Request = #request_name;
             type Response = #response_name;
         }
@@ -59,6 +62,7 @@ pub fn generate_raw_string_literal(value: &str) -> TokenStream {
 
 pub fn generate_struct(msg: MessageFile) -> Result<TokenStream, Error> {
     let ros_type_name = msg.get_full_name();
+    let ros2_type_name = msg.parsed.get_ros2_dds_type_name();
     let attrs = derive_attrs();
     let fields = msg
         .parsed
@@ -88,6 +92,8 @@ pub fn generate_struct(msg: MessageFile) -> Result<TokenStream, Error> {
     let struct_name = format_ident!("{}", msg.parsed.name);
     let md5sum = msg.md5sum;
     let definition = msg.definition;
+    // TODO MAJOR: when finished with ROS2 hashing logic this should be required
+    let ros2_hash = msg.ros2_hash.unwrap_or_else(|| String::from(""));
 
     // Raw here is only used to make the generated code look better.
     let raw_message_definition = generate_raw_string_literal(&definition);
@@ -103,6 +109,8 @@ pub fn generate_struct(msg: MessageFile) -> Result<TokenStream, Error> {
             const ROS_TYPE_NAME: &'static str = #ros_type_name;
             const MD5SUM: &'static str = #md5sum;
             const DEFINITION: &'static str = #raw_message_definition;
+            const ROS2_HASH: &'static str = #ros2_hash;
+            const ROS2_TYPE_NAME: &'static str = #ros2_type_name;
         }
     };
 
@@ -137,11 +145,14 @@ fn generate_field_definition(
     };
     // Wrap type in appropriate Vec or array wrapper based on array information
     let rust_field_type = match field.field_type.array_info {
-        Some(None) => {
+        ArrayType::Unbounded => {
             format!("::std::vec::Vec<{rust_field_type}>")
         }
-        Some(Some(fixed_length)) => format!("[{rust_field_type}; {fixed_length}]"),
-        None => rust_field_type,
+        ArrayType::FixedLength(fixed_length) => format!("[{rust_field_type}; {fixed_length}]"),
+        ArrayType::NotArray => rust_field_type,
+        ArrayType::Bounded(_) => {
+            format!("::std::vec::Vec<{rust_field_type}>")
+        }
     };
     let rust_field_type = TokenStream::from_str(rust_field_type.as_str()).expect(
         "Somehow we generate a rust type that isn't valid rust syntax. This should not happen!",
@@ -153,10 +164,13 @@ fn generate_field_definition(
         let default_val = ros_literal_to_rust_literal(
             &field.field_type.field_type,
             default_val,
-            field.field_type.array_info,
+            &field.field_type.array_info,
             version,
         )?;
-        if field.field_type.array_info.is_some() {
+        if matches!(
+            field.field_type.array_info,
+            ArrayType::Unbounded | ArrayType::Bounded(_) | ArrayType::FixedLength(_)
+        ) {
             // For vectors use smart_defaults "dynamic" style
             quote! {
                 #[default(_code = #default_val)]
@@ -170,7 +184,7 @@ fn generate_field_definition(
     } else {
         // Okay this is messy, so default isn't defined for fixed sized arrays > 32 in length
         // so we have to manually provide a default if one isn't provided for arrays that large
-        if let Some(Some(fixed_array_length)) = field.field_type.array_info {
+        if let ArrayType::FixedLength(fixed_array_length) = field.field_type.array_info {
             if fixed_array_length > 32 {
                 // Doing some evil indirection here with the _code directive and Deafult::default()
                 // to generate the default value for a single member of the array type, and then
@@ -188,8 +202,8 @@ fn generate_field_definition(
     // Until serde supports const generics we need to use serde_big_array for fixed size arrays
     // Larger than 32.
     const MAX_FIXED_ARRAY_LEN: usize = 32;
-    let serde_line = match field.field_type.array_info {
-        Some(None) => {
+    let serde_line = match &field.field_type.array_info {
+        ArrayType::Unbounded | ArrayType::Bounded(_) => {
             // Special case for Vec<u8>, which massively benefit from optimizations in serde_bytes
             // This makes deserializing an Image ~97% faster
             if field.field_type.field_type == "uint8" {
@@ -198,7 +212,7 @@ fn generate_field_definition(
                 quote! {}
             }
         }
-        Some(Some(fixed_array_len)) if fixed_array_len > MAX_FIXED_ARRAY_LEN => {
+        ArrayType::FixedLength(fixed_array_len) if *fixed_array_len > MAX_FIXED_ARRAY_LEN => {
             quote! { #[serde(with = "::roslibrust::codegen::BigArray")] }
         }
         _ => quote! {},
@@ -234,7 +248,7 @@ fn generate_constant_field_definition(
     let constant_value = ros_literal_to_rust_literal(
         &constant.constant_type,
         &constant.constant_value,
-        None,
+        &ArrayType::NotArray,
         version,
     )?;
     Ok(quote! { pub const #constant_name: #constant_rust_type = #constant_value; })
@@ -265,7 +279,7 @@ pub fn generate_mod(
 fn ros_literal_to_rust_literal(
     ros_type: &str,
     literal: &RosLiteral,
-    array_info: Option<Option<usize>>,
+    array_info: &ArrayType,
     version: RosVersion,
 ) -> Result<TokenStream, Error> {
     // TODO: The naming of all the functions under this tree seems inaccurate
@@ -277,12 +291,13 @@ fn ros_literal_to_rust_literal(
 // Wraps a serde_json deserialize call with our style of error handling.
 fn generic_parse_value<T: DeserializeOwned + ToTokens + std::fmt::Debug>(
     value: &str,
-    is_vec: bool,
+    is_vec: bool, // TODO should probably take ArrayType here
 ) -> Result<TokenStream, Error> {
     if is_vec {
         let parsed: Vec<T> = serde_json::from_str(value).map_err(|e|
             Error::with(format!("Failed to parse a literal value in a message file to the corresponding rust type: {value} to {}", std::any::type_name::<T>()).as_str(), e)
         )?;
+        // TODO LIKELY BUG HERE what about a constant for a fixed length array?
         let vec_str = format!("vec!{parsed:?}");
         Ok(quote! { #vec_str })
     } else {
@@ -308,25 +323,28 @@ fn generic_parse_value<T: DeserializeOwned + ToTokens + std::fmt::Debug>(
 fn parse_ros_value(
     ros_type: &str,
     value: &str,
-    array_info: Option<Option<usize>>,
+    array_info: &ArrayType,
     version: RosVersion,
 ) -> Result<TokenStream, Error> {
-    let is_vec = array_info.is_some();
+    let is_list = matches!(
+        array_info,
+        ArrayType::Unbounded | ArrayType::FixedLength(_) | ArrayType::Bounded(_)
+    );
     match ros_type {
-        "bool" => generic_parse_value::<bool>(value, is_vec),
-        "float64" => generic_parse_value::<f64>(value, is_vec),
-        "float32" => generic_parse_value::<f32>(value, is_vec),
-        "uint8" | "char" | "byte" => generic_parse_value::<u8>(value, is_vec),
-        "int8" => generic_parse_value::<i8>(value, is_vec),
-        "uint16" => generic_parse_value::<u16>(value, is_vec),
-        "int16" => generic_parse_value::<i16>(value, is_vec),
-        "uint32" => generic_parse_value::<u32>(value, is_vec),
-        "int32" => generic_parse_value::<i32>(value, is_vec),
-        "uint64" => generic_parse_value::<u64>(value, is_vec),
-        "int64" => generic_parse_value::<i64>(value, is_vec),
+        "bool" => generic_parse_value::<bool>(value, is_list),
+        "float64" => generic_parse_value::<f64>(value, is_list),
+        "float32" => generic_parse_value::<f32>(value, is_list),
+        "uint8" | "char" | "byte" => generic_parse_value::<u8>(value, is_list),
+        "int8" => generic_parse_value::<i8>(value, is_list),
+        "uint16" => generic_parse_value::<u16>(value, is_list),
+        "int16" => generic_parse_value::<i16>(value, is_list),
+        "uint32" => generic_parse_value::<u32>(value, is_list),
+        "int32" => generic_parse_value::<i32>(value, is_list),
+        "uint64" => generic_parse_value::<u64>(value, is_list),
+        "int64" => generic_parse_value::<i64>(value, is_list),
         "string" => {
             // String is a special case because of quotes and to_string()
-            if is_vec {
+            if is_list {
                 // TODO there is a bug here, no idea how I should be attempting to convert / escape single quotes here...
                 let parsed: Vec<String> = serde_json::from_str(value).map_err(|e|
                     Error::with(format!("Failed to parse a literal value in a message file to the corresponding rust type: {value} to Vec<String>").as_str(), e)
@@ -342,7 +360,7 @@ fn parse_ros_value(
                     }
                     RosVersion::ROS2 => {
                         // For ROS2 value must be in quotes, and either single or double quotes are okay
-                        // Strings are no escaped (we think)
+                        // Strings are not escaped (we think)
                         let value = value.trim();
                         if value.len() < 2 {
                             // TODO would like to provide source file and callsite information for debug, but pretty hard to
