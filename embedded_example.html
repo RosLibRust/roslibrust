@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Chapter 1 - RosLibRust Documentation</title>
+        <title>Testing Tests - RosLibRust Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -175,12 +175,21 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="chapter-1"><a class="header" href="#chapter-1">Chapter 1</a></h1>
+                        <h1 id="testing-examples-work"><a class="header" href="#testing-examples-work">Testing Examples Work</a></h1>
+<p>This exists purely to show that tests in the book are being tested.</p>
+<pre><pre class="playground"><code class="language-rust edition2024">#[tokio::main]
+async fn main() {
+    let ros = roslibrust::mock::MockRos::new();
+
+}</code></pre></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="introduction.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
 
 
                         <div style="clear: both"></div>
@@ -189,6 +198,9 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="introduction.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
 
             </nav>
 

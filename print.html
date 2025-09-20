@@ -176,7 +176,144 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="chapter-1"><a class="header" href="#chapter-1">Chapter 1</a></h1>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p>RosLibRust is a library for interfacing with ROS1 and ROS2, built on Tokio.</p>
+<h2 id="why"><a class="header" href="#why">Why?</a></h2>
+<p>RosLibRust was designed to help solve several challenges in the ROS ecosystem:</p>
+<ol>
+<li>The need for <code>async</code> clients. At the time RosLibRust was written there was no <code>async</code> for ROS1 at all.</li>
+<li>The need for pure rust clients.
+<ol>
+<li>RosLibRust nodes can be built on a system with only a rust compiler. Official rust docker images are <a href="https://hub.docker.com/_/rust">~500mb</a>.</li>
+<li>Once compiled a RosLibRust node is a fully statically linked executable that can be run on any system. A RosLibRust ros1 publisher node is &lt;10MB compiled and can be deployed in 5MB alpine docker image. Show me any other ROS node that I can deploy in &lt;15 MB of size.</li>
+</ol>
+</li>
+<li>The ROS1 -&gt; ROS2 migration was painful. While many concepts in ROS remained very similar, the API and build changes were invasive. A API abstraction layer should have made this easier.</li>
+<li>ROS is pretty painful for both Unit and Integration testing.</li>
+</ol>
+<h2 id="how-does-roslibrust-solve-these-problems"><a class="header" href="#how-does-roslibrust-solve-these-problems">How does RosLibRust solve these problems?</a></h2>
+<p>At a high level what RosLibRust provides is:</p>
+<ul>
+<li><a href="introduction.html#an-abstract-api-for-ros">An abstract API for ROS</a></li>
+<li><a href="introduction.html#backend-implementations">Implementations of the abstract API for ROS1, ROS2, and rosbridge</a></li>
+<li><a href="introduction.html#mock-implementation-for-testing">A mock implementation of ROS for testing that allows deterministic "time traveling" tests</a></li>
+<li><a href="introduction.html#pure-rust-type-generation">Pure rust generation of types from ROS's .msg/.srv files that is ROS version agnostic</a></li>
+</ul>
+<p>These combine to make RosLibRust a powerful tool for building ROS nodes in rust.</p>
+<h3 id="an-abstract-api-for-ros"><a class="header" href="#an-abstract-api-for-ros">An Abstract API for ROS</a></h3>
+<p>At the heart of RosLibRust is a set of traits that define the API for interacting with ROS.
+These traits are defined in the <a href="https://docs.rs/roslibrust_common/latest/roslibrust_common/">roslibrust_common</a> crate.</p>
+<p>The most core trait is called <a href="https://docs.rs/roslibrust_common/latest/roslibrust_common/traits/trait.Ros.html">Ros</a>:</p>
+<pre><code class="language-rust ignore">/// Represents all "standard" ROS functionality generically supported by roslibrust
+///
+/// Implementors of this trait behave like typical ROS node handles.
+/// Cloning the handle does not create additional underlying connections, but instead simply returns another handle
+/// to interact with the underlying node.
+///
+/// Implementors of this trait are expected to be "self de-registering", when the last node handle for a given
+/// node is dropped, the underlying node is expected to be shut down and clean-up after itself
+pub trait Ros: 'static + Send + Sync + TopicProvider + ServiceProvider + Clone {}</code></pre>
+<p>This trait was designed to mimic how "Node Handles" work.
+Breaking down this trait:</p>
+<ul>
+<li><code>'static</code> - Something implementing this trait holds no references to non-static data. Making its lifetime very safe.</li>
+<li><code>Send</code> + <code>Sync</code> - Something implementing this trait is safe to send and <em>use</em> between threads.</li>
+<li><code>Clone</code> - Something implementing this trait can be cloned, this allows us to make more handles and distribute them amongst our node.</li>
+<li><code>TopicProvider</code> - Is another trait in roslibrust that allows us to create publishers and subscribers.</li>
+<li><code>ServiceProvider</code> - Is another trait in roslibrust that allows us to create service clients and servers.</li>
+</ul>
+<p>Taking a look at the <a href="https://docs.rs/roslibrust_common/latest/roslibrust_common/traits/trait.TopicProvider.html">TopicProvider</a> trait:</p>
+<pre><code class="language-rust ignore">/// This trait generically describes the capability of something to act as an async interface to a set of topics
+///
+/// This trait is largely based on ROS concepts, but could be extended to other protocols / concepts.
+/// Fundamentally, it assumes that topics are uniquely identified by a string name (likely an ASCII assumption is buried in here...).
+/// It assumes topics only carry one data type, but is not expected to enforce that.
+/// It assumes that all actions can fail due to a variety of causes, and by network interruption specifically.
+pub trait TopicProvider {
+    // These associated types makeup the other half of the API
+    // They are expected to be "self-deregistering", where dropping them results in unadvertise or unsubscribe operations as appropriate
+    // We require Publisher and Subscriber types to be Send + 'static so they can be sent into different tokio tasks once created
+    type Publisher&lt;T: RosMessageType&gt;: Publish&lt;T&gt; + Send + 'static;
+    type Subscriber&lt;T: RosMessageType&gt;: Subscribe&lt;T&gt; + Send + 'static;
+
+    /// Advertises a topic to be published to and returns a type specific publisher to use.
+    ///
+    /// The returned publisher is expected to be "self de-registering", where dropping the publisher results in the appropriate unadvertise operation.
+    fn advertise&lt;T: RosMessageType&gt;(
+        &amp;self,
+        topic: &amp;str,
+    ) -&gt; impl Future&lt;Output = Result&lt;Self::Publisher&lt;T&gt;&gt;&gt; + Send;
+
+    /// Subscribes to a topic and returns a type specific subscriber to use.
+    ///
+    /// The returned subscriber is expected to be "self de-registering", where dropping the subscriber results in the appropriate unsubscribe operation.
+    fn subscribe&lt;T: RosMessageType&gt;(
+        &amp;self,
+        topic: &amp;str,
+    ) -&gt; impl Future&lt;Output = Result&lt;Self::Subscriber&lt;T&gt;&gt;&gt; + Send;
+}</code></pre>
+<p>We see a fairly advanced trait by Rust standards, with the following key features:</p>
+<ul>
+<li>We leverage Rust's <a href="https://blog.logrocket.com/using-rust-gats-improve-code-app-performance/">Generic Associated Types (GATs)</a> to define the Publisher and Subscriber types returned by the trait functions.
+This means that the type (including the size) that a given implementation returns is completely different from other implementations.
+The only requirement is the type implements the <a href="https://docs.rs/roslibrust_common/latest/roslibrust_common/traits/trait.Publish.html">Publish</a> and <a href="https://docs.rs/roslibrust_common/latest/roslibrust_common/traits/trait.Subscribe.html">Subscribe</a> traits.</li>
+<li>While at first glance they might not look like it. The <code>advertise</code> and <code>subscribe</code> functions are actually <code>async fn</code> and return Futures.
+This means we don't have to block our application on waiting for a connection to be established.</li>
+<li>The advertise and subscribe functions are further generic over the message type. This is familiar to ROS users, but further compounds the complexity of the trait.</li>
+</ul>
+<p>To finish the chain let's look at one more trait, <a href="https://docs.rs/roslibrust_common/latest/roslibrust_common/traits/trait.Publish.html">Publish</a>:</p>
+<pre><code class="language-rust ignore">/// Indicates that something is a publisher and has our expected publish
+/// Implementors of this trait are expected to auto-cleanup the publisher when dropped
+pub trait Publish&lt;T: RosMessageType&gt; {
+    // Note: this is really just syntactic de-sugared `async fn`
+    // However see: https://blog.rust-lang.org/2023/12/21/async-fn-rpit-in-traits.html
+    // This generates a warning is rust as of writing due to ambiguity around the "Send-ness" of the return type
+    // We only plan to work with multi-threaded work stealing executors (e.g. tokio) so we're manually specifying Send
+    fn publish(&amp;self, data: &amp;T) -&gt; impl Future&lt;Output = Result&lt;()&gt;&gt; + Send;
+}</code></pre>
+<p>Publish finally provides the <code>publish</code> function that we use to send messages on a topic, which is again <code>async</code> and generic over the message type.
+The combination of these traits is fairly complicated, but at the end of the day enables us to write code that is extremely agnostic to the underlying ROS implementation.
+Furthermore, there is <strong>NO PERFORMANCE PENALTY</strong> for this abstraction.
+Due to how monomorphic generics work in rust the compiler is able to completely erase the generic types at compile time, and optimize the code as if we had written it directly for the specific type.</p>
+<p>What's the catch? Slightly worse compile times, but you only pay for what you use.
+If you create a generic node that uses the <code>Ros</code> trait, and use it with multiple backend implementations,
+there will be separate compilations of the node for each backend.</p>
+<h3 id="backend-implementations"><a class="header" href="#backend-implementations">Backend Implementations</a></h3>
+<p>Okay so RosLibRust has this abstract API? How can we actually use it?</p>
+<p>RosLibRust provides several implementations of the <code>Ros</code> trait:</p>
+<ul>
+<li><a href="https://docs.rs/roslibrust_ros1/latest/roslibrust_ros1/">roslibrust_ros1</a> - Implements the TCPROS protocol that was the backbone of ROS1</li>
+<li><a href="https://docs.rs/roslibrust_zenoh/latest/roslibrust_zenoh/">roslibrust_zenoh</a> - Implements a variant of ROS1 communication used by <a href="https://github.com/eclipse-zenoh/zenoh-plugin-ros1">zenoh-ros1-bridge</a></li>
+<li><a href="https://docs.rs/roslibrust_rosbridge/latest/roslibrust_rosbridge/">roslibrust_rosbridge</a> - Implements the <a href="https://github.com/RobotWebTools/rosbridge_suite">rosbridge_suite</a> websocket protocol</li>
+<li>COMING SOON <a href="https://docs.rs/roslibrust_ros2/latest/roslibrust_ros2/">roslibrust_ros2</a> - Implements the Zenoh communication used by <a href="https://github.com/ros2/rmw_zenoh">rmw_zenoh</a> in ROS2 from Kilted onwards</li>
+<li><a href="https://docs.rs/roslibrust_mock/latest/roslibrust_mock/">roslibrust_mock</a> - Implements a mock ROS perfect for testing</li>
+</ul>
+<p>Typically we don't depend on these crates directly, but instead use them by enabling their corresponding features on <code>roslibrust</code>.</p>
+<pre><code class="language-toml">[dependencies]
+roslibrust = { version = "0.15", features = ["ros1"] }
+</code></pre>
+<p>The full list of features is:</p>
+<ul>
+<li><code>ros1</code> - Enables the <a href="https://docs.rs/roslibrust_ros1/latest/roslibrust_ros1/">roslibrust_ros1</a> backend</li>
+<li><code>zenoh</code> - Enables the <a href="https://docs.rs/roslibrust_zenoh/latest/roslibrust_zenoh/">roslibrust_zenoh</a> backend</li>
+<li><code>rosbridge</code> - Enables the <a href="https://docs.rs/roslibrust_rosbridge/latest/roslibrust_rosbridge/">roslibrust_rosbridge</a> backend</li>
+<li><code>mock</code> - Enables the <a href="https://docs.rs/roslibrust_mock/latest/roslibrust_mock/">roslibrust_mock</a> backend</li>
+<li><code>ros2</code> - COMING SOON Enables the <a href="https://docs.rs/roslibrust_ros2/latest/roslibrust_ros2/">roslibrust_ros2</a> backend</li>
+<li><code>codegen</code> - Provides access to the <a href="https://docs.rs/roslibrust_codegen/latest/roslibrust_codegen/">roslibrust_codegen</a> crate for generating ROS message types in build.rs.</li>
+<li><code>macro</code> - Provides access to the <a href="https://docs.rs/roslibrust_codegen_macro/latest/roslibrust_codegen_macro/">roslibrust_codegen_macro</a> crate for generating ROS message types using a proc-macro.</li>
+<li><code>all</code> - Enables all of the above features.</li>
+</ul>
+<h3 id="pure-rust-type-generation"><a class="header" href="#pure-rust-type-generation">Pure Rust Type Generation</a></h3>
+<p>coming soon</p>
+<h3 id="mock-implementation-for-testing"><a class="header" href="#mock-implementation-for-testing">Mock Implementation for Testing</a></h3>
+<p>coming soon</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="testing-examples-work"><a class="header" href="#testing-examples-work">Testing Examples Work</a></h1>
+<p>This exists purely to show that tests in the book are being tested.</p>
+<pre><pre class="playground"><code class="language-rust edition2024">#[tokio::main]
+async fn main() {
+    let ros = roslibrust::mock::MockRos::new();
+
+}</code></pre></pre>
 
                     </main>
 
