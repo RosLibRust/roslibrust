@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Introduction - RosLibRust Documentation</title>
+        <title>Introduction - RosLibRust Guides</title>
 
 
         <!-- Custom HTML head -->
@@ -138,7 +138,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">RosLibRust Documentation</h1>
+                    <h1 class="menu-title">RosLibRust Guides</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -176,8 +176,16 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p>RosLibRust is a library for interfacing with ROS1 and ROS2, built on Tokio.</p>
-<h2 id="why"><a class="header" href="#why">Why?</a></h2>
+<p>RosLibRust is an alternative to the various existing ROS clients.
+RosLibRust may be a great fit for your project, or you may benefit from one of the other existing clients.</p>
+<ul>
+<li><a href="https://github.com/ros2-rust/ros2_rust">ros2rust</a> is ideal if you want to release ROS2 packages to the community, or want to add Rust to an existing ROS2 project. But requires a full ROS2 installation.</li>
+<li><a href="https://github.com/adnanademovic/rosrust">rosrust</a> is a solid ROS1 option, but doesn't support <code>async</code> and is un-maintained.</li>
+<li><a href="https://docs.rs/ros2-client/latest/ros2_client/">ros2_client</a> is a pure rust client for ROS2 that supports <code>async</code>. However, it can only talk DDS and not Zenoh that ROS2 is migrating to.</li>
+</ul>
+<p>RosLibRust is ideal for systems like facility control systems and cloud tools that need to interact with a variety of ROS systems, and don't want to "become ROS" themselves.
+RosLibRust has one API that supports a broad range of ROS versions and protocols.</p>
+<h2 id="why-was-roslibrust-created"><a class="header" href="#why-was-roslibrust-created">Why was RosLibRust created?</a></h2>
 <p>RosLibRust was designed to help solve several challenges in the ROS ecosystem:</p>
 <ol>
 <li>The need for <code>async</code> clients. At the time RosLibRust was written there was no <code>async</code> for ROS1 at all.</li>
@@ -303,18 +311,35 @@ roslibrust = { version = "0.15", features = ["ros1"] }
 <li><code>all</code> - Enables all of the above features.</li>
 </ul>
 <h3 id="pure-rust-type-generation"><a class="header" href="#pure-rust-type-generation">Pure Rust Type Generation</a></h3>
-<p>coming soon</p>
+<p>RosLibRust has implemented a full parser and code-generator for ROS message types.
+This allows us to generate Rust types from ROS .msg/.srv files at compile time.
+The generated types are fully compatible with all RosLibRust backends.
+Meaning a ROS1 .msg file can be used with ROS2 and vice versa.</p>
+<p>The rosbridge backend support "generic" types with parsing fallbacks, see <a href="https://github.com/RosLibRust/roslibrust/blob/master/roslibrust/examples/generic_message.rs">generic message example</a></p>
+<p>A <code>build.rs</code> file can be used to automatically generate Rust types at build time from ROS .msg/.srv files.
+See <a href="https://github.com/RosLibRust/roslibrust/tree/master/example_package">example_package</a> for a full example.</p>
+<p>A proc-macro is also provided for generating types at compile time, see <a href="https://github.com/RosLibRust/roslibrust/tree/master/example_package_macro">example_package_macro</a> for an example.</p>
+<p>This breaks tooling free from needing any ROS installation.</p>
 <h3 id="mock-implementation-for-testing"><a class="header" href="#mock-implementation-for-testing">Mock Implementation for Testing</a></h3>
-<p>coming soon</p>
+<p>A major challenge for incorporating ROS into larger systems is testing.
+Traditionally testing ROS nodes involves either:</p>
+<ol>
+<li>Breaking all the "ROS Logic" and other logic apart and indpendently testing them.</li>
+<li>Launching a full ROS system in a testing environment and interacting with it.</li>
+</ol>
+<p>The first approach leads to "extra abstraction" and often causes timing and messaging related bugs to be missed.
+The second approach is brittle, slow, and often a bottle neck for test times.</p>
+<p>RosLibRust provides a mock implementation of ROS for testing that allows deterministic "time traveling" tests.
+See <a href="extended_getting_started.html#writing-tests-for-our-node">extended getting started guide</a> for an example.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-
-                            <a rel="next prefetch" href="embedded_example.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <i class="fa fa-angle-right"></i>
+                            <a rel="prev" href="extended_getting_started.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
                             </a>
+
 
                         <div style="clear: both"></div>
                     </nav>
@@ -322,10 +347,10 @@ roslibrust = { version = "0.15", features = ["ros1"] }
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-
-                    <a rel="next prefetch" href="embedded_example.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <i class="fa fa-angle-right"></i>
+                    <a rel="prev" href="extended_getting_started.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
                     </a>
+
             </nav>
 
         </div>
