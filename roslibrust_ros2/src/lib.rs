@@ -147,7 +147,27 @@ impl roslibrust_common::ServiceProvider for ZenohClient {
         topic: &str,
         request: T::Request,
     ) -> Result<T::Response> {
-        todo!()
+        struct Fake<T>(T);
+        impl<T: RosServiceType> ZService for Fake<T> {
+            type Request = T::Request;
+            type Response = T::Response;
+        }
+
+        let service_client = self
+            .node
+            .create_client::<Fake<T>>(topic)
+            .build()
+            .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))?;
+
+        // TODO Make this Async
+        service_client
+            .send_request(&request)
+            .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))?;
+
+        service_client
+            .take_response_async()
+            .await
+            .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))
     }
 
     async fn service_client<T: RosServiceType + 'static>(
@@ -317,7 +337,6 @@ mod tests {
         }
 
         // Test is currently failing... Want to merge this code and then file issues to gradually fix
-        #[ignore]
         #[tokio::test(flavor = "multi_thread")]
         async fn test_service_server_callable() {
             let client = ZenohClient::new("test_service_server_callable_node")
@@ -364,6 +383,29 @@ mod tests {
 
             // Protection to make sure we don't leave a ros2 service call running
             srv_call_cmd.kill().unwrap()
+        }
+
+        /// Tests calling a service with ros2 against the /rosapi/topics endpoint
+        /// Requires rosapi node to be running before this
+        #[tokio::test(flavor = "multi_thread")]
+        async fn test_service_call_rosapi() {
+            // NOT WORKING: SETUP LOGGER
+            // Note: using ros1 message definition, but same for ros2, just don't have it in assets yet
+            use roslibrust_test::ros1::rosapi::*;
+
+            let client = ZenohClient::new("test_service_call_rosapi_node")
+                .await
+                .unwrap();
+
+            let response = tokio::time::timeout(
+                std::time::Duration::from_secs(2),
+                client.call_service::<Topics>("/rosapi/topics", TopicsRequest {}),
+            )
+            .await
+            .expect("Failed to get topics within 2 seconds")
+            .expect("Should get valid response");
+
+            assert!(!response.topics.is_empty());
         }
     }
 }
