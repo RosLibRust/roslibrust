@@ -558,12 +558,12 @@ mod test {
     }
 }</code></pre>
 <p>To understand this test you should first read Tokio's <a href="https://tokio.rs/tokio/topics/testing">testing guide</a>.</p>
-<p>The key points from the tokio testing guide are:</p>
+<p>The key points are:</p>
 <ul>
-<li>Tokio's runtime can determine when all futures are blocked on "time pasing"</li>
+<li>Tokio's runtime can tell when all futures are block on "time pasing"</li>
 <li>When this happens it can determine which future will complete "soonest"</li>
-<li>It then "fast forwards" time to that soonest point and polls all futures until things are again blocked on "time passing"</li>
-<li>This allows us to deterministically test our code that is driven by time in an "as fast as possible" simulation</li>
+<li>It can then "fast forward" time to that point and poll all futures again</li>
+<li>This allows us to deterministically test our code that is driven by time "as fast as possible"</li>
 </ul>
 <p>We can run this test with <code>cargo test</code> and see the following:</p>
 <pre><code class="language-txt">running 1 test
