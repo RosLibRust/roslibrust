@@ -314,9 +314,6 @@ mod tests {
             pub_cmd.kill().unwrap();
         }
 
-        // This test is currently flaky!!! Gotta work this out with ros-z
-        // About 1/5 runs it will fail with "Failed to receive message within 2 seconds"
-        #[ignore]
         #[tokio::test(flavor = "multi_thread")]
         async fn test_pubsub_basic() {
             let client = ZenohClient::new("test_publish_basic_node").await.unwrap();
@@ -326,9 +323,7 @@ mod tests {
                 .await
                 .unwrap();
 
-            let client2 = ZenohClient::new("test_publish_basic_node2").await.unwrap();
-
-            let mut subscriber = client2
+            let mut subscriber = client
                 .subscribe::<roslibrust_test::ros2::std_msgs::String>("/chatter")
                 .await
                 .unwrap();
