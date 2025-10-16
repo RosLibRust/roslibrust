@@ -398,6 +398,7 @@ tokio = { version = "1", features = ["full"] }
 [dev-dependencies]
 # For testing you'll want to use the "mock" backend if you specify it here, it won't affect your production builds
 roslibrust = { version = "0.15", features = ["mock"] }
+tokio = { version = "1", features = ["test-util"] }
 
 # What crates your code needs to run it's build.rs file
 [build-dependencies]
@@ -460,7 +461,7 @@ cd my_package
 # Make a folder to hold our messages
 mkdir assets
 # Clone the common interfaces into that folder
-git submodules add https://github.com/ros2/common_interfaces assets/common_interfaces
+git submodule add https://github.com/ros2/common_interfaces assets/common_interfaces
 </code></pre>
 <div class="warning">
 <p>Warning: ROS messages can refer to other messages in their contents.
@@ -472,7 +473,7 @@ that same repository. To fix this we'll also need to clone the <code>rcl_interfa
 <pre><code class="language-bash"># Make sure we're in the root of our package
 cd my_package
 # Clone the rcl_interfaces repository into our assets folder
-git submodules add https://github.com/ros2/rcl_interfaces assets/rcl_interfaces
+git submodule add https://github.com/ros2/rcl_interfaces assets/rcl_interfaces
 </code></pre>
 <p>Now we just need to modify the <code>search_paths</code> variable in our <code>build.rs</code> file to point at our new messages:</p>
 <pre><code class="language-rust ignore">let search_paths = vec![
@@ -501,7 +502,7 @@ Rust luckily has some convenient macros for bringing generated code "into scope"
 <p>Once we've added that line to <code>main.rs</code> all our generated messages will be available to us in the rest of our code.</p>
 <p>For this example we'll keep it simple and leave that line in <code>main.rs</code>, but in larger projects it is recommended to move the generated types to either a msgs module or a separate msgs crate in a workspace.</p>
 <h2 id="writing-our-first-node"><a class="header" href="#writing-our-first-node">Writing Our First Node</a></h2>
-<p>Your now ready to actually write some code that uses RosLibRust!</p>
+<p>You're now ready to actually write some code that uses RosLibRust!</p>
 <p>We're going to start with a basic example of publishing to a topic.</p>
 <p>Modify <code>src/main.rs</code> to look like the following:</p>
 <pre><code class="language-rust ignore">// Bring generated messages into scope:
