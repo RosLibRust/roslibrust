@@ -45,7 +45,7 @@ pub use smart_default::SmartDefault; // Used in generated code for default value
 pub struct Ros2Hash([u8; 32]);
 
 impl Ros2Hash {
-    fn to_hash_string(&self) -> String {
+    pub fn to_hash_string(&self) -> String {
         format!("RIHS01_{}", hex::encode(&self.0))
     }
 }
@@ -70,17 +70,17 @@ impl ToTokens for Ros2Hash {
 
 #[derive(Clone, Debug)]
 pub struct MessageFile {
-    pub(crate) parsed: ParsedMessageFile,
-    pub(crate) md5sum: String,
+    pub parsed: ParsedMessageFile,
+    pub md5sum: String,
     // Type Hash following the ros2 RIHS01 standard stored as bytes
-    pub(crate) ros2_hash: Ros2Hash,
+    pub ros2_hash: Ros2Hash,
     // This is the expanded definition of the message for use in message_definition field of
     // a connection header.
     // See how https://wiki.ros.org/ROS/TCPROS references gendeps --cat
     // See https://wiki.ros.org/roslib/gentools for an example of the output
-    pub(crate) definition: String,
+    pub definition: String,
     // If true this message has no dynamic sized members and fits in a fixed size in memory
-    pub(crate) is_fixed_encoding_length: bool,
+    pub is_fixed_encoding_length: bool,
 }
 
 impl MessageFile {
