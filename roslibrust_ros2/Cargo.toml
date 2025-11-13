@@ -15,10 +15,11 @@ ros-z = { git = "https://github.com/ZettaScaleLabs/ros-z.git" }
 log = "0.4"
 # Used for cancellation token
 tokio-util = "0.7"
+# Needed for now because of ros-z type incompatibility
+serde = { workspace = true }
 
 [dev-dependencies]
 roslibrust_test = { path = "../roslibrust_test" }
-serde = { workspace = true }
 
 [features]
 # Used to enable tests that rely on a locally running ros2 rmw_zenohd

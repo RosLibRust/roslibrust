@@ -23,6 +23,7 @@ use crate::{
 ///  - Calculate the sha256 hash of the JSON string (utf-8)
 ///  - Generate a string of the format RIHS01_<hex hash>
 ///
+#[allow(unused)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct TypeDescriptionFile {
     type_description_msg: TypeDescriptionMsg,
@@ -69,6 +70,7 @@ pub struct FieldType {
 
 /// Sub-component of the ROS2 JSON file format for hashing
 /// Should not be used for other purposes
+#[allow(unused)]
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct TypeHash {
     type_name: String,
