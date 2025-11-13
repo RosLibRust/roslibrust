@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- ROS1 backend now exposes `subscribe_any` to allow subscribing to any topic and receiving raw bytes instead of a deserialized message.
+
 ### Fixed
 
 - MockRos ServiceClients now work correctly if created before the service server is advertised.
