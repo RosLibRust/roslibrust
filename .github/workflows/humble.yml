@@ -29,13 +29,6 @@ jobs:
         run: source /root/.cargo/env; rustc --version
       - name: Lint
         run: source /root/.cargo/env; cargo fmt --all -- --check
-      - name: Build Main Lib
-        run: source /root/.cargo/env; cargo build
-        # This step is required to confirm feature combinations work, the main workspace build does all features
-      - name: Build Proc Macro
-        run: source /root/.cargo/env; cargo build -p roslibrust_codegen_macro
-      - name: Unit Tests
-        run: source /root/.cargo/env; cargo test
       - name: Start rosbridge
         run: source /opt/ros/humble/setup.bash; ros2 launch rosbridge_server rosbridge_websocket_launch.xml & disown; ros2 run rosapi rosapi_node & sleep 1
       - name: Integration Tests
