@@ -52,6 +52,7 @@ mod service_client;
 pub use service_client::ServiceClient;
 mod subscriber;
 pub use subscriber::Subscriber;
+pub use subscriber::SubscriberAny;
 mod service_server;
 pub use service_server::ServiceServer;
 mod tcpros;

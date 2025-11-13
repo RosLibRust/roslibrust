@@ -108,6 +108,15 @@ impl NodeHandle {
         Ok(Publisher::new(topic_name, sender, shutdown))
     }
 
+    /// Subscribe to a topic as a raw byte stream with no automatic deserialization.
+    ///
+    /// This will return the raw bytes of the message as received over the wire, not including the 4 byte overall length header.
+    ///
+    /// For publishing a string message "hello", the returned bytes would be:
+    ///       [0x05, 0x00, 0x00, 0x00, // field length = 5
+    ///        0x68, 0x65, 0x6c, 0x6c, 0x6f] // "hello"
+    ///
+    /// See: [https://wiki.ros.org/ROS/TCPROS] for more information on the wire format.
     pub async fn subscribe_any(
         &self,
         topic_name: &str,
@@ -120,6 +129,12 @@ impl NodeHandle {
         Ok(SubscriberAny::new(receiver))
     }
 
+    /// Subscribe to a topic with automatic deserialization to the given type.
+    ///
+    /// This function will return an error if the rosmaster cannot be contacted.
+    ///
+    /// This function may be called multiple times on the same topic and each subscriber will receive a unique copy of the message.
+    /// This function may be called multiple times on the same topic with different message types, deserialization will be attempted individually for them.
     pub async fn subscribe<T: roslibrust_common::RosMessageType>(
         &self,
         topic_name: &str,
