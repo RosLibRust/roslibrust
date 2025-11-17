@@ -483,9 +483,10 @@ mod integration_tests {
     // Test image roundtrip, had reported issues with images over rosbridge
     #[test_log::test(tokio::test)]
     async fn test_image_roundtrip() {
-        let client = ClientHandle::new_with_options(ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT))
-            .await
-            .expect("Failed to construct client");
+        let client =
+            ClientHandle::new_with_options(ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT))
+                .await
+                .expect("Failed to construct client");
 
         let publisher = client
             .advertise("/test_message_roundtrip")
@@ -507,10 +508,7 @@ mod integration_tests {
             data: vec![0; 5 * 5 * 3],
         };
 
-        publisher
-            .publish(&msg)
-            .await
-            .expect("Failed to publish");
+        publisher.publish(&msg).await.expect("Failed to publish");
 
         let received = subscriber.next().await;
 
