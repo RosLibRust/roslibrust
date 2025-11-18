@@ -1,6 +1,6 @@
 services:
   rosbridge_rolling:
-    image: carter12s/roslibrust-ci-rolling:rust_1_90
+    image: carter12s/roslibrust-ci-rolling:rust_1_91
     # ports:
     #   - "9090:9090"
     network_mode: host # For developing ros2 backend
