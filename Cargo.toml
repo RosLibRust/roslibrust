@@ -25,3 +25,6 @@ serde = { version = "1.0", features = ["derive"] }
 # For now this is how we keep from repeating the verison everywhere
 roslibrust_serde_rosmsg = "0.5.1"
 test-log = "0.2"
+
+# Set openssl to use vendored version for cross-compilation
+openssl-sys = { version = "0.9", features = ["vendored"] }

@@ -1,0 +1,13 @@
+# Cross-compilation configuration for aarch64-unknown-linux-gnu
+
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"
+
+# Environment variables for OpenSSL vendored build
+# These ensure that openssl-sys builds from source with the correct cross-compiler
+[target.aarch64-unknown-linux-gnu.env]
+CC = "aarch64-linux-gnu-gcc"
+CXX = "aarch64-linux-gnu-g++"
+AR = "aarch64-linux-gnu-ar"
+CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER = "aarch64-linux-gnu-gcc"
+

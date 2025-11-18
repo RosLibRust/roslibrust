@@ -32,6 +32,8 @@ regex = { version = "1.9" }
 byteorder = "1.4"
 thiserror = "2.0"
 anyhow = "1.0"
+# Force vendored OpenSSL for cross-compilation
+openssl-sys = { workspace = true }
 
 [dev-dependencies]
 # Used for message definitions in tests
