@@ -10,7 +10,7 @@ Steps:
 - Edit change log
 - Revise the version numbers in Cargo.toml files
 - Commit the changes
-- Publish all crates using `cargo publish --workspace`
+- Publish all crates using `./publish_all.sh` which invokes publish in the correct order
 - Push to master
 - Tag and push tag
 
