@@ -1,7 +1,7 @@
 {
     "name": "Kilted",
     "workspaceFolder": "/roslibrust",
-    "service": "rosbridge",
+    "service": "rosbridge_kilted",
     "dockerComposeFile": "../../docker/kilted_compose.yaml",
     "customizations": {
     "vscode": {

@@ -1,5 +1,5 @@
 services:
-  rosbridge:
+  rosbridge_humble:
     image: carter12s/roslibrust-ci-humble:rust_1_90
     ports:
       - "9090:9090"

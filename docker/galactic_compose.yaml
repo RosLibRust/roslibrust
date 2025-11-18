@@ -1,5 +1,5 @@
 services:
-  rosbridge:
+  rosbridge_galactic:
     image: carter12s/roslibrust-ci-galactic:rust_1_90
     ports:
       - "9090:9090"

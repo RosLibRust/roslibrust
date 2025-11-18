@@ -1,7 +1,7 @@
 {
     "name": "Humble",
     "workspaceFolder": "/roslibrust",
-    "service": "rosbridge",
+    "service": "rosbridge_humble",
     "dockerComposeFile": "../../docker/humble_compose.yaml",
     "customizations": {
     "vscode": {

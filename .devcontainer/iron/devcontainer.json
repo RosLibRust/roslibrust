@@ -1,7 +1,7 @@
 {
     "name": "Iron",
     "workspaceFolder": "/roslibrust",
-    "service": "rosbridge",
+    "service": "rosbridge_iron",
     "dockerComposeFile": "../../docker/iron_compose.yaml",
     "customizations": {
     "vscode": {
