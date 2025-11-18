@@ -1,6 +1,6 @@
 services:
   rosbridge:
-    image: carter12s/roslibrust-ci-kilted:latest
+    image: carter12s/roslibrust-ci-kilted:rust_1_90
     # ports:
     #   - "9090:9090"
     network_mode: host # For developing ros2 backend
@@ -8,5 +8,5 @@ services:
     # Version without rosbridge for zenoh testing
     command: bash -c "source /opt/ros/kilted/setup.bash; ros2 run rmw_zenoh_cpp rmw_zenohd"
     volumes:
-      # Mounting in the repo for access to some files, while testing things
+      # Mounting in the repo for internal development, and devcontainer access
       - ../:/roslibrust

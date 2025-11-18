@@ -6,7 +6,7 @@
 include!(concat!(env!("OUT_DIR"), "/messages.rs"));
 
 // Bring in traits we need from roslibrust
-use roslibrust::traits::{Publish, Ros, Subscribe};
+use roslibrust::traits::{Publish, Ros};
 
 use std::sync::Arc;
 use tokio::sync::Mutex;

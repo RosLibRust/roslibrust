@@ -2987,6 +2987,7 @@ name = "roslibrust_codegen"
 version = "0.16.0"
 dependencies = [
  "anyhow",
+ "base64 0.22.1",
  "chrono",
  "env_logger 0.10.2",
  "hex",
@@ -3122,6 +3123,7 @@ dependencies = [
  "roslibrust_codegen_macro",
  "roslibrust_common",
  "roslibrust_test",
+ "serde",
  "serde_json",
  "test-log",
  "tokio",
@@ -3131,9 +3133,9 @@ dependencies = [
 
 [[package]]
 name = "roslibrust_serde_rosmsg"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ce8ff385202b488c2cb350e7fe6601264c78e63f28fb0b3488dee822a1d8616"
+checksum = "be06f0fda624d8f8088d2231ef562e585edf1d57f7d5bb9db3f05ff219118b9c"
 dependencies = [
  "byteorder",
  "error-chain",

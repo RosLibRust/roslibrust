@@ -1,0 +1,17 @@
+{
+    "name": "Galactic",
+    "workspaceFolder": "/roslibrust",
+    "service": "rosbridge",
+    "dockerComposeFile": "../../docker/galactic_compose.yaml",
+    "customizations": {
+    "vscode": {
+      "extensions": [
+        // Rust language server support
+        "rust-lang.rust-analyzer",
+        // Debug support:
+        "vadimcn.vscode-lldb",
+    ]
+    }
+  }
+}
+

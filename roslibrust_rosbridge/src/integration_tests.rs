@@ -479,4 +479,55 @@ mod integration_tests {
         let received = subscriber.next().await;
         assert_eq!(received, Header::default());
     }
+
+    // Test image roundtrip, had reported issues with images over rosbridge
+    #[test_log::test(tokio::test)]
+    async fn test_image_roundtrip() {
+        let client =
+            ClientHandle::new_with_options(ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT))
+                .await
+                .expect("Failed to construct client");
+
+        let publisher = client
+            .advertise("/test_message_roundtrip")
+            .await
+            .expect("Failed to advertise");
+
+        let subscriber = client
+            .subscribe::<sensor_msgs::Image>("/test_message_roundtrip")
+            .await
+            .expect("Failed to subscribe");
+
+        #[cfg(feature = "ros1_test")]
+        let msg = sensor_msgs::Image {
+            header: Header {
+                seq: 1,
+                stamp: Default::default(),
+                frame_id: "".to_string(),
+            },
+            height: 5,
+            width: 5,
+            encoding: "rgb8".to_string(),
+            is_bigendian: 0,
+            step: 5 * 3,
+            data: vec![0; 5 * 5 * 3],
+        };
+
+        #[cfg(feature = "ros2_test")]
+        let msg = sensor_msgs::Image {
+            header: Header::default(),
+            height: 5,
+            width: 5,
+            encoding: "rgb8".to_string(),
+            is_bigendian: 0,
+            step: 5 * 3,
+            data: vec![0; 5 * 5 * 3],
+        };
+
+        publisher.publish(&msg).await.expect("Failed to publish");
+
+        let received = subscriber.next().await;
+
+        assert_eq!(received, msg, "Messages do not match");
+    }
 }

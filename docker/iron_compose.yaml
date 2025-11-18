@@ -1,7 +1,10 @@
 services:
   rosbridge:
-    image: carter12s/roslibrust-ci-iron:latest
+    image: carter12s/roslibrust-ci-iron:rust_1_90
     # ports:
     #   - "9090:9090"
     network_mode: host # For developing ros2 backend
     command: bash -c "source /opt/ros/iron/setup.bash; ros2 launch rosbridge_server rosbridge_websocket_launch.xml & disown; ros2 run rosapi rosapi_node --ros-args --log-level debug"
+    volumes:
+      # Mounting in the repo for access to some files, while testing things
+      - ../:/roslibrust

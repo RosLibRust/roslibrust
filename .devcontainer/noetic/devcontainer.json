@@ -1,0 +1,17 @@
+{
+    "name": "Noetic",
+    "workspaceFolder": "/roslibrust",
+    "service": "rosbridge",
+    "dockerComposeFile": "../../docker/noetic_compose.yaml",
+    "customizations": {
+    "vscode": {
+      "extensions": [
+        // Rust language server support
+        "rust-lang.rust-analyzer",
+        // Debug support:
+        "vadimcn.vscode-lldb",
+    ]
+    }
+  }
+}
+

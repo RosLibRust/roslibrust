@@ -5537,7 +5537,7 @@ pub mod ros2_test_msgs {
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
     pub struct BoundedInt {
-        #[serde(with = "::roslibrust::codegen::serde_bytes")]
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
         pub r#data: ::std::vec::Vec<u8>,
     }
     impl ::roslibrust::RosMessageType for BoundedInt {
@@ -6267,7 +6267,7 @@ float32[] values"####;
     pub struct CompressedImage {
         pub r#header: std_msgs::Header,
         pub r#format: ::std::string::String,
-        #[serde(with = "::roslibrust::codegen::serde_bytes")]
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
         pub r#data: ::std::vec::Vec<u8>,
     }
     impl ::roslibrust::RosMessageType for CompressedImage {
@@ -6507,7 +6507,7 @@ uint32 nanosec"####;
         pub r#encoding: ::std::string::String,
         pub r#is_bigendian: u8,
         pub r#step: u32,
-        #[serde(with = "::roslibrust::codegen::serde_bytes")]
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
         pub r#data: ::std::vec::Vec<u8>,
     }
     impl ::roslibrust::RosMessageType for Image {
@@ -7785,7 +7785,7 @@ uint32 nanosec"####;
         pub r#is_bigendian: bool,
         pub r#point_step: u32,
         pub r#row_step: u32,
-        #[serde(with = "::roslibrust::codegen::serde_bytes")]
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
         pub r#data: ::std::vec::Vec<u8>,
         pub r#is_dense: bool,
     }
@@ -10486,7 +10486,7 @@ uint8 data"####;
     #[serde(crate = "::roslibrust::codegen::serde")]
     pub struct UInt8MultiArray {
         pub r#layout: self::MultiArrayLayout,
-        #[serde(with = "::roslibrust::codegen::serde_bytes")]
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
         pub r#data: ::std::vec::Vec<u8>,
     }
     impl ::roslibrust::RosMessageType for UInt8MultiArray {
@@ -18582,7 +18582,7 @@ uint8 command_type"####;
     #[serde(crate = "::roslibrust::codegen::serde")]
     pub struct MeshFile {
         pub r#filename: ::std::string::String,
-        #[serde(with = "::roslibrust::codegen::serde_bytes")]
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
         pub r#data: ::std::vec::Vec<u8>,
     }
     impl ::roslibrust::RosMessageType for MeshFile {

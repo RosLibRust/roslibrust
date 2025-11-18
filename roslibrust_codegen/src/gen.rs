@@ -206,10 +206,11 @@ fn generate_field_definition(
     const MAX_FIXED_ARRAY_LEN: usize = 32;
     let serde_line = match &field.field_type.array_info {
         ArrayType::Unbounded | ArrayType::Bounded(_) => {
-            // Special case for Vec<u8>, which massively benefit from optimizations in serde_bytes
-            // This makes deserializing an Image ~97% faster
+            // Special case for Vec<u8>, which massively benefit from optimizations
+            // We use a custom serde module that handles both base64 (rosbridge) and arrays (other formats)
+            // This makes deserializing an Image ~97% faster while supporting rosbridge's base64 encoding
             if field.field_type.field_type == "uint8" {
-                quote! { #[serde(with = "::roslibrust::codegen::serde_bytes")] }
+                quote! { #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")] }
             } else {
                 quote! {}
             }
