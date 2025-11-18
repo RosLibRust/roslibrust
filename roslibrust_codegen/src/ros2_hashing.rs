@@ -1,7 +1,7 @@
 //! Module for calculating the ROS2 hash of a message definition via https://github.com/ros-infrastructure/rep/pull/381/files
 
 use anyhow::bail;
-use log::{debug, error, trace};
+use log::*;
 use serde::Serialize;
 use serde_json::ser::Formatter;
 use std::{

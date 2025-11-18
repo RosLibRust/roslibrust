@@ -498,6 +498,22 @@ mod integration_tests {
             .await
             .expect("Failed to subscribe");
 
+        #[cfg(feature = "ros1_test")]
+        let msg = sensor_msgs::Image {
+            header: Header {
+                seq: 1,
+                stamp: Default::default(),
+                frame_id: "".to_string(),
+            },
+            height: 5,
+            width: 5,
+            encoding: "rgb8".to_string(),
+            is_bigendian: 0,
+            step: 5 * 3,
+            data: vec![0; 5 * 5 * 3],
+        };
+
+        #[cfg(feature = "ros2_test")]
         let msg = sensor_msgs::Image {
             header: Header::default(),
             height: 5,

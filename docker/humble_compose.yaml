@@ -1,6 +1,9 @@
 services:
   rosbridge:
-    image: carter12s/roslibrust-ci-humble:latest
+    image: carter12s/roslibrust-ci-humble:rust_1_90
     ports:
       - "9090:9090"
     command: bash -c "source /opt/ros/humble/setup.bash; ros2 launch rosbridge_server rosbridge_websocket_launch.xml & disown; ros2 run rosapi rosapi_node --ros-args --log-level debug"
+    volumes:
+      # Mounting in the repo for access to some files, while testing things
+      - ../:/roslibrust

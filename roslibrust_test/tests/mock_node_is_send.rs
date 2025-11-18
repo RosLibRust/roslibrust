@@ -7,6 +7,7 @@ use roslibrust::traits::*;
 use roslibrust_test::ros1::*;
 
 // Very basic node that holds a bunch of ros types generically
+#[allow(unused)]
 struct Node<T: Ros> {
     ros: T,
     publisher: T::Publisher<std_msgs::String>,

@@ -1,10 +1,13 @@
 services:
   rosbridge:
-    image: carter12s/roslibrust-ci-noetic:rust-1-72
+    image: carter12s/roslibrust-ci-noetic:rust_1_90
     # network_mode host required for ros1 testing
     network_mode: host
     # ports:
-      # - "9090:9090"
-      # Pass through the ros master port for native ros1 testing
-      # - "11311:11311"
+    # - "9090:9090"
+    # Pass through the ros master port for native ros1 testing
+    # - "11311:11311"
     command: bash -c "source /opt/ros/noetic/setup.bash; roslaunch rosbridge_server rosbridge_websocket.launch & disown; rosrun rosapi rosapi_node"
+    volumes:
+      # Mounting in the repo for access to some files, while testing things
+      - ../:/roslibrust

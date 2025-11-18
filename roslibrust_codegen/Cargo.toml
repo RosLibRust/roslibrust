@@ -31,6 +31,7 @@ xml-rs = "0.8"
 smart-default = "0.7"
 serde-big-array = "0.5"
 serde_bytes = "0.11"
+base64 = "0.22"
 chrono = { version = "0.4", optional = true }
 # Used for ROS2 hash calculation
 sha2 = "0.10"
