@@ -1,5 +1,5 @@
 services:
-  rosbridge:
+  rosbridge_kilted:
     image: carter12s/roslibrust-ci-kilted:rust_1_90
     # ports:
     #   - "9090:9090"
@@ -10,3 +10,5 @@ services:
     volumes:
       # Mounting in the repo for internal development, and devcontainer access
       - ../:/roslibrust
+      # Mount in sibling ros-z repo so we can also test it within the docker image
+      - ../../ros-z:/ros-z

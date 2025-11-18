@@ -1,7 +1,7 @@
 {
     "name": "Galactic",
     "workspaceFolder": "/roslibrust",
-    "service": "rosbridge",
+    "service": "rosbridge_galactic",
     "dockerComposeFile": "../../docker/galactic_compose.yaml",
     "customizations": {
     "vscode": {

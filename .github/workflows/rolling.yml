@@ -1,0 +1,39 @@
+# Note: each job is in a separate workflow to support individual CI badges in the readme
+name: Rolling
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  HOME: /root
+  # Coupled with our use of the test_log crate this should give us good CI output on failure
+  RUST_LOG: debug
+
+jobs:
+  rolling:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    container: carter12s/roslibrust-ci-rolling:rust_1_91
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: 'true'
+      - name: Lint
+        run: source /root/.cargo/env; cargo fmt --all -- --check
+      - name: Start services and run integration tests
+        run: |
+          source /opt/ros/rolling/setup.bash
+          ros2 launch rosbridge_server rosbridge_websocket_launch.xml &
+          ros2 run rosapi rosapi_node &
+          ros2 run rmw_zenoh_cpp rmw_zenohd -l tcp/0.0.0.0:7447 > zenoh.log 2>&1 &
+          sleep 2
+          source /root/.cargo/env
+          cargo test --features ros2_zenoh_test,ros2_test -- --test-threads 1
+

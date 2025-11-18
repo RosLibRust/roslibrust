@@ -1,7 +1,7 @@
 {
     "name": "Noetic",
     "workspaceFolder": "/roslibrust",
-    "service": "rosbridge",
+    "service": "rosbridge_noetic",
     "dockerComposeFile": "../../docker/noetic_compose.yaml",
     "customizations": {
     "vscode": {

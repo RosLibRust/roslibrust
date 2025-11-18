@@ -1,8 +1,8 @@
 {
-    "name": "Kilted",
+    "name": "Rolling",
     "workspaceFolder": "/roslibrust",
-    "service": "rosbridge_kilted",
-    "dockerComposeFile": "../../docker/kilted_compose.yaml",
+    "service": "rosbridge_rolling",
+    "dockerComposeFile": "../../docker/rolling_compose.yaml",
     "customizations": {
     "vscode": {
       "extensions": [
@@ -14,3 +14,4 @@
     }
   }
 }
+
