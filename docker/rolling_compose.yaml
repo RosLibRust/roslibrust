@@ -1,0 +1,15 @@
+services:
+  rosbridge_rolling:
+    image: carter12s/roslibrust-ci-rolling:rust_1_90
+    # ports:
+    #   - "9090:9090"
+    network_mode: host # For developing ros2 backend
+    # command: bash -c "source /opt/ros/rolling/setup.bash; ros2 run rmw_zenoh_cpp rmw_zenohd & disown; ros2 launch rosbridge_server rosbridge_websocket_launch.xml & disown; ros2 run rosapi rosapi_node --ros-args --log-level debug"
+    # Version without rosbridge for zenoh testing
+    command: bash -c "source /opt/ros/rolling/setup.bash; ros2 run rmw_zenoh_cpp rmw_zenohd"
+    volumes:
+      # Mounting in the repo for internal development, and devcontainer access
+      - ../:/roslibrust
+      # Mount in sibling ros-z repo so we can also test it within the docker image
+      - ../../ros-z:/ros-z
+

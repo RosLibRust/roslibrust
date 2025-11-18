@@ -5,6 +5,7 @@
 [![Humble](https://github.com/roslibrust/roslibrust/actions/workflows/humble.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/humble.yml)
 [![Iron](https://github.com/roslibrust/roslibrust/actions/workflows/iron.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/iron.yml)
 [![Kilted](https://github.com/roslibrust/roslibrust/actions/workflows/kilted.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/kilted.yml)
+[![Rolling](https://github.com/roslibrust/roslibrust/actions/workflows/rolling.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/rolling.yml)
 [![License:MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Documentation about the crate is on [docs.rs](https://docs.rs/roslibrust/latest/roslibrust/),
