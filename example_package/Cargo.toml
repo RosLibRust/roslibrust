@@ -2,6 +2,7 @@
 name = "example_package"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 # What crates your code needs when built regularly (e.g. `cargo build` or `cargo run`)
 [dependencies]

@@ -10,17 +10,7 @@ Steps:
 - Edit change log
 - Revise the version numbers in Cargo.toml files
 - Commit the changes
-- Note: Have not gotten `cargo publish --workspace` to work yet
-- Publish each crate individually using `cargo publish` in this order
-  - roslibrust_common
-  - roslibrust_codegen
-  - roslibrust_codegen_macro
-  - roslibrust_mock
-  - roslibrust_ros1
-  - roslibrust_rosbridge
-  - roslibrust_zenoh
-  - roslibrust
-  - roslibrust_genmsg
+- Publish all crates using `cargo publish --workspace`
 - Push to master
 - Tag and push tag
 
@@ -31,12 +21,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Fixed
+
+### Changed
+
+## 0.17.0 - November 18th, 2025
+
+### Added
+
 - ROS1 backend now exposes `subscribe_any` to allow subscribing to any topic and receiving raw bytes instead of a deserialized message.
 
 ### Fixed
 
 - MockRos ServiceClients now work correctly if created before the service server is advertised.
 - MockRos ServiceClients now perform a yield_now() before calling a service to help avoid race conditions in tests.
+- Rosbridge backend was having serialization issues with uint8[] and char[] due to undocumented behavior of rosbridge_server using base64 encoding for uint8[] and char[] arrays. This has been fixed.
 
 ### Changed
 
