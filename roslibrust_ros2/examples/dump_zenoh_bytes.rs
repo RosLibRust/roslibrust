@@ -21,7 +21,7 @@ async fn attempt_subscribe() {
     let session = make_ros_zenoh().await;
 
     // Have to create a liveliness token for ourselves
-    let id = session.zid().clone();
+    let id = session.zid();
 
     // Note: As far as I can tell we don't actually need to declare liveliness tokens for this to work.
     // I think those are just needed for our node to show up correctly in rmw_ tooling

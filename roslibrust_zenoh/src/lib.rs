@@ -142,7 +142,7 @@ fn mangle_service(service: &str, type_str: &str, md5sum: &str) -> (String, Strin
     let type_str = hex::encode(type_str.as_bytes());
     (
         format!("{type_str}/{md5sum}"),
-        format!("{service}").to_string(),
+        service.to_string(),
     )
 }
 
@@ -402,6 +402,7 @@ mod tests {
 
     #[test]
     #[should_panic]
+    #[allow(clippy::unnecessary_literal_unwrap)]
     fn confirm_client_handle_impls_ros() {
         struct MyClient<T: Ros> {
             _client: T,

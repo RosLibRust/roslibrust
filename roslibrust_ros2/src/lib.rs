@@ -320,6 +320,7 @@ mod tests {
                 .await
                 .unwrap();
 
+            #[allow(clippy::zombie_processes)]
             let mut pub_cmd = std::process::Command::new("ros2")
                 .arg("topic")
                 .arg("pub")
@@ -397,6 +398,7 @@ mod tests {
                 .await
                 .unwrap();
 
+            #[allow(clippy::zombie_processes)]
             let mut srv_call_cmd = std::process::Command::new("ros2")
                 .arg("service")
                 .arg("call")
@@ -457,11 +459,11 @@ mod tests {
                 .expect("Service call should succeed");
 
             // Verify the response
-            assert_eq!(response.success, true);
+            assert!(response.success);
             assert_eq!(response.message, "You set my bool!");
 
             // Verify the server state was updated
-            assert_eq!(state.load(std::sync::atomic::Ordering::SeqCst), true);
+            assert!(state.load(std::sync::atomic::Ordering::SeqCst));
         }
     }
 }

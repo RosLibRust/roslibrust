@@ -50,7 +50,7 @@ async fn determine_addr() -> Result<(Ipv4Addr, String), RosMasterError> {
             RosMasterError::HostIpResolutionFailure(format!("This host's hostname is a string that cannot be validly converted into a Rust type, and therefore we cannot convert it into an IpAddrv4: {e:?}"))
         })?;
     let ip = hostname_to_ipv4(&name).await?;
-    return Ok((ip, name));
+    Ok((ip, name))
 }
 
 /// Given a the name of a host use's std::net::ToSocketAddrs to perform a DNS lookup and return the resulting IP address.
@@ -115,7 +115,7 @@ impl From<NodeError> for Error {
                 Error::Unexpected(anyhow!("Channel closed, something was dropped?"))
             }
             NodeError::InvalidName(e) => Error::InvalidName(e.to_string()),
-            NodeError::XmlRpcError(e) => Error::SerializationError(e.to_string().into()),
+            NodeError::XmlRpcError(e) => Error::SerializationError(e.to_string()),
             NodeError::IoError(e) => Error::IoError(e),
         }
     }

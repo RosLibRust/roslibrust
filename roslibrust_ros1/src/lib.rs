@@ -170,6 +170,7 @@ mod test {
     // Prove that we've implemented the topic provider trait fully for NodeHandle
     #[test]
     #[should_panic]
+    #[allow(clippy::unnecessary_literal_unwrap)]
     fn topic_provider_can_be_used_with_ros1() {
         struct MyClient<T: TopicProvider> {
             _client: T,
@@ -188,6 +189,7 @@ mod test {
 
     #[test]
     #[should_panic]
+    #[allow(clippy::unnecessary_literal_unwrap)]
     fn confirm_node_handle_impls_ros() {
         struct MyClient<T: Ros> {
             _client: T,

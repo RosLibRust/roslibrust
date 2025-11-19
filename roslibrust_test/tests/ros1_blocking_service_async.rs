@@ -50,7 +50,7 @@ mod ros1_test {
 
         rx.recv().await.unwrap();
 
-        assert_eq!(response.success, true);
+        assert!(response.success);
         assert_eq!(response.message, "You triggered me!");
     }
 }

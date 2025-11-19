@@ -130,48 +130,48 @@ impl ConnectionHeader {
 
         let caller_id_str = format!("callerid={}", self.caller_id);
         header_data.write_u32::<LittleEndian>(caller_id_str.len() as u32)?;
-        header_data.write(caller_id_str.as_bytes())?;
+        header_data.write_all(caller_id_str.as_bytes())?;
 
         let latching_str = format!("latching={}", if self.latching { 1 } else { 0 });
         header_data.write_u32::<LittleEndian>(latching_str.len() as u32)?;
-        header_data.write(latching_str.as_bytes())?;
+        header_data.write_all(latching_str.as_bytes())?;
 
         if let Some(md5sum) = self.md5sum.as_ref() {
             let md5sum = format!("md5sum={}", md5sum);
             header_data.write_u32::<LittleEndian>(md5sum.len() as u32)?;
-            header_data.write(md5sum.as_bytes())?;
+            header_data.write_all(md5sum.as_bytes())?;
         }
 
         let msg_definition = format!("message_definition={}", self.msg_definition);
         header_data.write_u32::<LittleEndian>(msg_definition.len() as u32)?;
-        header_data.write(msg_definition.as_bytes())?;
+        header_data.write_all(msg_definition.as_bytes())?;
 
         if to_publisher {
             let tcp_nodelay = format!("tcp_nodelay={}", if self.tcp_nodelay { 1 } else { 0 });
             header_data.write_u32::<LittleEndian>(tcp_nodelay.len() as u32)?;
-            header_data.write(tcp_nodelay.as_bytes())?;
+            header_data.write_all(tcp_nodelay.as_bytes())?;
         }
 
         if let Some(topic) = self.topic.as_ref() {
             let topic = format!("topic={}", topic);
             header_data.write_u32::<LittleEndian>(topic.len() as u32)?;
-            header_data.write(topic.as_bytes())?;
+            header_data.write_all(topic.as_bytes())?;
         }
 
         if let Some(service) = self.service.as_ref() {
             let service = format!("service={}", service);
             header_data.write_u32::<LittleEndian>(service.len() as u32)?;
-            header_data.write(service.as_bytes())?;
+            header_data.write_all(service.as_bytes())?;
         }
 
         let topic_type = format!("type={}", self.topic_type);
         header_data.write_u32::<LittleEndian>(topic_type.len() as u32)?;
-        header_data.write(topic_type.as_bytes())?;
+        header_data.write_all(topic_type.as_bytes())?;
 
         if let Some(persistent) = self.persistent {
             let persistent = format!("persistent={}", if persistent { 1 } else { 0 });
             header_data.write_u32::<LittleEndian>(persistent.len() as u32)?;
-            header_data.write(persistent.as_bytes())?;
+            header_data.write_all(persistent.as_bytes())?;
         }
 
         // Now that we know the length, stick its value in the first 4 bytes
@@ -311,7 +311,7 @@ mod test {
         let header = ConnectionHeader::from_bytes(&bytes).unwrap();
         assert_eq!(header.msg_definition, "string data\n\n");
         assert_eq!(header.caller_id, "/rostopic_4767_1316912741557");
-        assert_eq!(header.latching, true);
+        assert!(header.latching);
         assert_eq!(header.topic, Some("/chatter".to_owned()));
         assert_eq!(header.topic_type, "std_msgs/String");
     }

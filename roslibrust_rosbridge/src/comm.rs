@@ -39,9 +39,9 @@ impl Display for Ops {
 }
 
 // TODO should replace this with impl Serialize
-impl Into<&str> for &Ops {
-    fn into(self) -> &'static str {
-        match self {
+impl From<&Ops> for &str {
+    fn from(val: &Ops) -> Self {
+        match val {
             // These are unimplemented features of the library right now
             // Leaving them unimplemented here to try to catch bugs
             // TODO implement these
@@ -235,7 +235,7 @@ impl RosBridgeComm for Writer {
         let msg = Message::Text(msg.to_string());
         self.send(msg)
             .await
-            .map_err(|e| Error::IoError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+            .map_err(|e| Error::IoError(std::io::Error::other(e)))?;
         Ok(())
     }
 

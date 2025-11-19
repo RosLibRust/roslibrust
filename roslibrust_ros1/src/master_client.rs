@@ -57,8 +57,7 @@ impl SystemState {
         entry
             .nodes
             .iter()
-            .find(|name| name.as_str().eq(node))
-            .is_some()
+            .any(|name| name.as_str().eq(node))
     }
 
     /// Helper function for checking if a node is registered as a subscriber of a given topic.
@@ -70,8 +69,7 @@ impl SystemState {
         entry
             .nodes
             .iter()
-            .find(|name| name.as_str().eq(node))
-            .is_some()
+            .any(|name| name.as_str().eq(node))
     }
 
     pub fn is_service_provider(&self, topic: &str, node: &str) -> bool {
@@ -85,8 +83,7 @@ impl SystemState {
         entry
             .nodes
             .iter()
-            .find(|name| name.as_str().eq(node))
-            .is_some()
+            .any(|name| name.as_str().eq(node))
     }
 }
 
@@ -308,9 +305,10 @@ impl MasterClient {
     /// This does not include topics which have been subscribed to, but have no publisher according
     /// to ROS's documentation.
     /// - subgraph: Restrict topic names to match within the specified subgraph.
-    ///             Subgraph namespace is resolved relative to the caller's namespace.
-    ///             Use empty string to specify all names.
-    /// Returns a Vec of tuples of (topic name, topic type)
+    ///   Subgraph namespace is resolved relative to the caller's namespace.
+    ///   Use empty string to specify all names.
+    ///
+    ///   Returns a Vec of tuples of (topic name, topic type)
     pub async fn get_published_topics(
         &self,
         subgraph: impl Into<String>,

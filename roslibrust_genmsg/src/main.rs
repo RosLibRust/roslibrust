@@ -62,9 +62,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let msg_source = generated_source
                 .iter()
                 .find(|msg| msg.message_name == short_name && msg.package_name == args.package)
-                .expect(
-                    format!("Could not find message: {}/{}", args.package, short_name).as_str(),
-                );
+                .unwrap_or_else(|| panic!("Could not find message: {}/{}", args.package, short_name));
             write_source_file(
                 &args.output,
                 &format!("{short_name}.h"),
@@ -281,7 +279,7 @@ mod test {
         "#;
         assert_eq!(
             remove_whitespace(&transform_stamped.message_source),
-            remove_whitespace(&current_source)
+            remove_whitespace(current_source)
         );
     }
 }

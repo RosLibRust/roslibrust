@@ -4,10 +4,8 @@
 /// NOTE: these aren't stored in "tests" dir as many tests need access to private functions like publish()
 #[cfg(test)]
 #[cfg(feature = "running_bridge")]
+#[cfg(not(all(feature = "ros1_test", feature = "ros2_test")))]
 mod integration_tests {
-    // Note sure exactly where this check should live, but here works
-    #[cfg(all(feature = "ros1_test", feature = "ros2_test"))]
-    compile_error!("Cannot build with both ros1_test and ros2_test enabled at the same time");
 
     use std::sync::Arc;
 

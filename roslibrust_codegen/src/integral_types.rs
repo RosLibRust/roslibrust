@@ -160,12 +160,7 @@ impl TryFrom<chrono::DateTime<chrono::Utc>> for Time {
 impl TryFrom<Time> for chrono::DateTime<chrono::Utc> {
     type Error = SimpleError;
     fn try_from(val: Time) -> Result<Self, Self::Error> {
-        let secs = match i64::try_from(val.secs) {
-            Ok(val) => val,
-            Err(e) => {
-                bail!("Failed to convert ROS time to chrono time, secs could not fit in i64: {e:?}")
-            }
-        };
+        let secs = i64::from(val.secs);
         let nsecs = match u32::try_from(val.nsecs) {
             Ok(val) => val,
             Err(e) => bail!(

@@ -37,7 +37,7 @@ impl Name {
                 len => Name {
                     inner: format!(
                         "{}/{}",
-                        components[1..len - 1].into_iter().fold(
+                        components[1..len - 1].iter().fold(
                             String::new(),
                             |mut name, component| {
                                 name.push('/');

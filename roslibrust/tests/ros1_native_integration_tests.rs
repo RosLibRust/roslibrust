@@ -36,7 +36,7 @@ mod tests {
             .await
             .unwrap();
 
-        let msg_raw: Vec<u8> = vec![8, 0, 0, 0, 4, 0, 0, 0, 116, 101, 115, 116].to_vec();
+        let msg_raw: Vec<u8> = [8, 0, 0, 0, 4, 0, 0, 0, 116, 101, 115, 116].to_vec();
         publisher.publish(&msg_raw).await.unwrap();
 
         let res =
@@ -283,9 +283,9 @@ mod tests {
 
         let server_fn = |request: test_msgs::AddTwoIntsRequest| {
             info!("Got request: {request:?}");
-            return Ok(test_msgs::AddTwoIntsResponse {
+            Ok(test_msgs::AddTwoIntsResponse {
                 sum: request.a + request.b,
-            });
+            })
         };
 
         // Create the server
@@ -328,9 +328,9 @@ mod tests {
 
         let server_fn = |request: test_msgs::AddTwoIntsRequest| {
             info!("Got request: {request:?}");
-            return Ok(test_msgs::AddTwoIntsResponse {
+            Ok(test_msgs::AddTwoIntsResponse {
                 sum: request.a + request.b,
-            });
+            })
         };
 
         // Create the server
@@ -397,7 +397,7 @@ mod tests {
 
         let server_fn = |request| {
             info!("Got request: {request:?}");
-            return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "test message").into());
+            Err(std::io::Error::new(std::io::ErrorKind::NotFound, "test message").into())
         };
 
         // Create the server
