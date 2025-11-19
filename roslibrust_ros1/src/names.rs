@@ -37,14 +37,13 @@ impl Name {
                 len => Name {
                     inner: format!(
                         "{}/{}",
-                        components[1..len - 1].into_iter().fold(
-                            String::new(),
-                            |mut name, component| {
+                        components[1..len - 1]
+                            .iter()
+                            .fold(String::new(), |mut name, component| {
                                 name.push('/');
                                 name.push_str(component);
                                 name
-                            },
-                        ),
+                            },),
                         self.inner
                     ),
                 },

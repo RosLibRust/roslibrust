@@ -44,18 +44,12 @@ pub use serde_bytes;
 pub use smart_default::SmartDefault; // Used in generated code for default values // Used in generated code for faster Vec<u8> serialization
 
 /// A unique hash per message type calculated via the RIHS01 Ros2 methodology
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Ros2Hash([u8; 32]);
 
 impl Ros2Hash {
     pub fn to_hash_string(&self) -> String {
-        format!("RIHS01_{}", hex::encode(&self.0))
-    }
-}
-
-impl Default for Ros2Hash {
-    fn default() -> Self {
-        Self([0; 32])
+        format!("RIHS01_{}", hex::encode(self.0))
     }
 }
 
@@ -176,7 +170,7 @@ impl MessageFile {
                     .field_type
                     .package_name
                     .as_ref()
-                    .expect(&format!("Expected package name for field {field:#?}"));
+                    .unwrap_or_else(|| panic!("Expected package name for field {field:#?}"));
                 let field_full_name = format!("{field_package}/{field_type}");
                 let sub_message = graph.get(field_full_name.as_str())?;
                 let sub_md5sum = Self::compute_md5sum(&sub_message.parsed, graph)?;
@@ -471,7 +465,7 @@ impl PartialEq for ConstantInfo {
 /// modified would trigger re-generation of the source. This function is designed to
 /// be used either in a build.rs file or via the roslibrust_codegen_macro crate.
 /// * `additional_search_paths` - A list of additional paths to search beyond those
-/// found in ROS_PACKAGE_PATH environment variable.
+///   found in ROS_PACKAGE_PATH environment variable.
 pub fn find_and_generate_ros_messages(
     additional_search_paths: Vec<PathBuf>,
 ) -> Result<(TokenStream, Vec<PathBuf>), Error> {
@@ -522,7 +516,7 @@ pub fn generate_ros_messages_for_packages(
     let msg_paths = packages
         .iter()
         .flat_map(|package| {
-            utils::get_message_files(&package).map(|msgs| {
+            utils::get_message_files(package).map(|msgs| {
                 msgs.into_iter()
                     .map(|msg| (package.clone(), msg))
                     .collect::<Vec<_>>()
@@ -544,8 +538,9 @@ pub fn generate_ros_messages_for_packages(
 ///
 /// * `search_paths` - A list of paths to search.
 ///
+#[allow(clippy::type_complexity)]
 pub fn find_and_parse_ros_messages(
-    search_paths: &Vec<PathBuf>,
+    search_paths: &[PathBuf],
 ) -> Result<
     (
         Vec<ParsedMessageFile>,
@@ -555,7 +550,7 @@ pub fn find_and_parse_ros_messages(
     Error,
 > {
     let search_paths  = search_paths
-        .into_iter()
+        .iter()
         .map(|path| {
             path.canonicalize().map_err(
             |e| {
@@ -623,33 +618,27 @@ pub fn generate_rust_ros_message_definitions(
     let mut modules_to_struct_definitions: BTreeMap<String, Vec<TokenStream>> = BTreeMap::new();
 
     // Convert messages files into rust token streams and insert them into BTree organized by package
-    messages
-        .into_iter()
-        .map(|message| {
-            let pkg_name = message.parsed.package.clone();
-            let definition = generate_struct(message)?;
-            if let Some(entry) = modules_to_struct_definitions.get_mut(&pkg_name) {
-                entry.push(definition);
-            } else {
-                modules_to_struct_definitions.insert(pkg_name, vec![definition]);
-            }
-            Ok(())
-        })
-        .collect::<Result<(), Error>>()?;
+    messages.into_iter().try_for_each(|message| {
+        let pkg_name = message.parsed.package.clone();
+        let definition = generate_struct(message)?;
+        if let Some(entry) = modules_to_struct_definitions.get_mut(&pkg_name) {
+            entry.push(definition);
+        } else {
+            modules_to_struct_definitions.insert(pkg_name, vec![definition]);
+        }
+        Ok::<(), Error>(())
+    })?;
     // Do the same for services
-    services
-        .into_iter()
-        .map(|service| {
-            let pkg_name = service.parsed.package.clone();
-            let definition = generate_service(service)?;
-            if let Some(entry) = modules_to_struct_definitions.get_mut(&pkg_name) {
-                entry.push(definition);
-            } else {
-                modules_to_struct_definitions.insert(pkg_name, vec![definition]);
-            }
-            Ok(())
-        })
-        .collect::<Result<(), Error>>()?;
+    services.into_iter().try_for_each(|service| {
+        let pkg_name = service.parsed.package.clone();
+        let definition = generate_service(service)?;
+        if let Some(entry) = modules_to_struct_definitions.get_mut(&pkg_name) {
+            entry.push(definition);
+        } else {
+            modules_to_struct_definitions.insert(pkg_name, vec![definition]);
+        }
+        Ok::<(), Error>(())
+    })?;
     // Now generate modules to wrap all of the TokenStreams in a module for each package
     let all_pkgs = modules_to_struct_definitions
         .keys()
@@ -777,6 +766,7 @@ pub fn resolve_dependency_graph(
 /// The returned collection will contain all messages files including those buried with the
 /// service or action files, and will have fully expanded and resolved referenced types in other packages.
 /// * `msg_paths` -- List of tuple (Package, Path to File) for each file to parse
+#[allow(clippy::type_complexity)]
 pub(crate) fn parse_ros_files(
     msg_paths: Vec<(Package, PathBuf)>,
 ) -> Result<

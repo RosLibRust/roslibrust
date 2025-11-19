@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let msg_definition = r#"string data"#;
 
     let publisher = node
-        .advertise_any("/chatter", "std_msgs/String", &msg_definition, 100, false)
+        .advertise_any("/chatter", "std_msgs/String", msg_definition, 100, false)
         .await?;
 
     // Data taken from example in:

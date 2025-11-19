@@ -286,23 +286,21 @@ fn convert_to_type_description(
     for field in &parsed.fields {
         let nested_type_name = if field.field_type.is_primitive() {
             "".to_string()
-        } else {
-            if service_naming {
-                const SPECIAL_SUFFIX: &[&str] = &["_Request", "_Response", "_Event"];
-                if SPECIAL_SUFFIX
-                    .iter()
-                    .any(|s| field.field_type.field_type.ends_with(s))
-                {
-                    format!(
-                        "{}/srv/{}",
-                        field.field_type.source_package, field.field_type.field_type
-                    )
-                } else {
-                    field.get_ros2_full_type_name()
-                }
+        } else if service_naming {
+            const SPECIAL_SUFFIX: &[&str] = &["_Request", "_Response", "_Event"];
+            if SPECIAL_SUFFIX
+                .iter()
+                .any(|s| field.field_type.field_type.ends_with(s))
+            {
+                format!(
+                    "{}/srv/{}",
+                    field.field_type.source_package, field.field_type.field_type
+                )
             } else {
                 field.get_ros2_full_type_name()
             }
+        } else {
+            field.get_ros2_full_type_name()
         };
 
         // Check if there is a length limit on array contents
@@ -347,8 +345,7 @@ fn convert_to_type_description(
         }
     }
     let referenced_type_descriptions = referenced_type_descriptions
-        .into_iter()
-        .map(|(_, v)| v)
+        .into_values()
         .collect::<Vec<_>>();
 
     Ok(TypeDescriptionMsg {
@@ -367,7 +364,7 @@ fn convert_to_type_description(
 pub fn to_ros2_json<T: Serialize>(v: T) -> String {
     let mut buf = Vec::new();
     {
-        let mut ser = serde_json::Serializer::with_formatter(&mut buf, Ros2Formatter::default());
+        let mut ser = serde_json::Serializer::with_formatter(&mut buf, Ros2Formatter);
         v.serialize(&mut ser).unwrap();
     }
     String::from_utf8(buf).unwrap()
@@ -640,7 +637,7 @@ mod tests {
         ];
         for (test_file, expected_hash) in test_data {
             let parsed: super::TypeDescriptionFile = serde_json::from_str(test_file)
-                .expect(format!("Failed to parse test file {test_file}").as_str());
+                .unwrap_or_else(|_| panic!("Failed to parse test file {test_file}"));
             let hash = parsed.type_hashes[0].hash_string.clone();
 
             assert_eq!(hash, expected_hash,);
@@ -720,7 +717,7 @@ mod tests {
 
         for (test_file, expected_hash) in test_data {
             let parsed: super::TypeDescriptionFile = serde_json::from_str(test_file)
-                .expect(format!("Failed to parse test file {test_file}").as_str());
+                .unwrap_or_else(|_| panic!("Failed to parse test file {test_file}"));
             let hash = parsed.type_hashes[0].hash_string.clone();
 
             assert_eq!(hash, expected_hash,);

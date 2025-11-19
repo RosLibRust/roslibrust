@@ -131,8 +131,8 @@ pub fn packages_from_path(mut path: PathBuf, depth: u16) -> io::Result<Vec<Packa
 pub fn get_message_files(pkg: &Package) -> io::Result<Vec<PathBuf>> {
     Ok(message_files_from_path(pkg.path.as_path(), "msg")?
         .into_iter()
-        .chain(message_files_from_path(pkg.path.as_path(), "srv")?.into_iter())
-        .chain(message_files_from_path(pkg.path.as_path(), "action")?.into_iter())
+        .chain(message_files_from_path(pkg.path.as_path(), "srv")?)
+        .chain(message_files_from_path(pkg.path.as_path(), "action")?)
         .collect())
 }
 

@@ -68,9 +68,12 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
 
     c.bench_function("image_bench", |b| {
-        b.to_async(&runtime).iter(|| async {
-            let mut context = context.lock().unwrap();
-            bench_iteration(&mut context).await
+        b.to_async(&runtime).iter(|| {
+            #[allow(clippy::await_holding_lock)]
+            async {
+                let mut context = context.lock().unwrap();
+                bench_iteration(&mut context).await
+            }
         })
     });
 }

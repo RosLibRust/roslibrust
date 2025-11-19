@@ -50,11 +50,18 @@ type ServiceStore = RwLock<BTreeMap<String, TypeErasedCallback>>;
 ///
 /// Implements [TopicProvider] and [ServiceProvider] to provide basic ros functionality.
 #[derive(Clone)]
+#[allow(clippy::type_complexity)]
 pub struct MockRos {
     // We could probably achieve some fancier type erasure than actually serializing the data
     // but this ends up being pretty simple
     topics: Arc<RwLock<BTreeMap<String, (Channel::Sender<Vec<u8>>, Channel::Receiver<Vec<u8>>)>>>,
     services: Arc<ServiceStore>,
+}
+
+impl Default for MockRos {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MockRos {
@@ -334,7 +341,7 @@ mod tests {
         let request = std_srvs::SetBoolRequest { data: true };
 
         let response = client.call(&request).await.unwrap();
-        assert_eq!(response.success, true);
+        assert!(response.success);
         assert_eq!(response.message, "You set my bool!");
     }
 
@@ -398,7 +405,7 @@ mod tests {
         // should work now
         let request = std_srvs::SetBoolRequest { data: true };
         let response = client.call(&request).await.unwrap();
-        assert_eq!(response.success, true);
+        assert!(response.success);
         assert_eq!(response.message, "You set my bool!");
     }
 
@@ -434,7 +441,7 @@ mod tests {
         // Prior to introducing a yield_now() in ServiceClient::call() this would fail consistently
         let request = std_srvs::SetBoolRequest { data: true };
         let response = client.call(&request).await.unwrap();
-        assert_eq!(response.success, true);
+        assert!(response.success);
         assert_eq!(response.message, "You set my bool!");
     }
 }

@@ -158,7 +158,7 @@ pub(crate) struct PublisherHandle {
 impl<T: RosServiceType> Service<T> for crate::ServiceClient<T> {
     async fn call(&self, request: &T::Request) -> Result<T::Response> {
         // TODO sort out the reference vs clone stuff here
-        ServiceClient::call(&self, request.clone()).await
+        ServiceClient::call(self, request.clone()).await
     }
 }
 
@@ -234,10 +234,7 @@ impl<T: Send + Sync> MapError for std::result::Result<T, tokio_tungstenite::tung
     fn map_to_roslibrust(self) -> Result<T> {
         match self {
             Ok(t) => Ok(t),
-            Err(e) => Err(Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                e,
-            ))),
+            Err(e) => Err(Error::IoError(std::io::Error::other(e))),
         }
     }
 }
@@ -249,6 +246,7 @@ mod test {
     // Prove that we've implemented the topic provider trait fully for ClientHandle
     #[test]
     #[should_panic]
+    #[allow(clippy::unnecessary_literal_unwrap)]
     fn topic_provider_can_be_used_at_compile_time() {
         struct MyClient<T: TopicProvider> {
             _client: T,
@@ -266,6 +264,7 @@ mod test {
 
     #[test]
     #[should_panic]
+    #[allow(clippy::unnecessary_literal_unwrap)]
     fn confirm_client_handle_impls_ros() {
         struct MyClient<T: Ros> {
             _client: T,

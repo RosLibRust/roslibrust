@@ -68,14 +68,10 @@ impl<T: RosServiceType> ServiceClient<T> {
                 );
                 let response: T::Response = roslibrust_serde_rosmsg::from_slice(&result_payload)
                     .map_err(|err| Error::SerializationError(err.to_string()))?;
-                return Ok(response);
+                Ok(response)
             }
-            Ok(Err(err)) => {
-                return Err(err);
-            }
-            Err(_err) => {
-                return Err(Error::Disconnected);
-            }
+            Ok(Err(err)) => Err(err),
+            Err(_err) => Err(Error::Disconnected),
         }
     }
 }
@@ -111,7 +107,7 @@ impl ServiceClientLink {
 
         let (call_tx, call_rx) = mpsc::unbounded_channel::<CallServiceRequest>();
 
-        let stream = establish_connection(&node_name, &service_name, &service_uri, header).await.map_err(|err| {
+        let stream = establish_connection(node_name, service_name, service_uri, header).await.map_err(|err| {
             log::error!("Failed to establish connection to service URI {service_uri} for service {service_name}: {err}");
             Error::from(err)
         })?;
@@ -136,16 +132,8 @@ impl ServiceClientLink {
         mut call_rx: UnboundedReceiver<CallServiceRequest>,
     ) {
         // Listen on a receiver for calls to forward to the service
-        loop {
-            match call_rx.recv().await {
-                Some(request) => {
-                    Self::handle_service_call(&mut stream, &service_name, request).await
-                }
-                None => {
-                    // Channel closed
-                    break;
-                }
-            }
+        while let Some(request) = call_rx.recv().await {
+            Self::handle_service_call(&mut stream, &service_name, request).await
         }
     }
 
@@ -210,10 +198,9 @@ impl ServiceClientLink {
                     )
                 })?;
             // TODO probably specific error type for this
-            Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failure response from service server: {err_msg}"),
-            ))
+            Err(std::io::Error::other(format!(
+                "Failure response from service server: {err_msg}"
+            )))
         }
     }
 }

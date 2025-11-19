@@ -144,6 +144,7 @@ impl ServiceServerLink {
 
     /// Each TCP connection made to the service server is processed in a separate task
     /// This function handles a single TCP connection
+    #[allow(clippy::too_many_arguments)]
     async fn handle_tcp_connection(
         mut stream: tokio::net::TcpStream,
         peer_addr: SocketAddr,

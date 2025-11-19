@@ -44,6 +44,7 @@ impl XmlRpcServerHandle {
 }
 
 impl XmlRpcServer {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(
         host_addr: Ipv4Addr,
         node_server: NodeServerHandle,
@@ -58,7 +59,7 @@ impl XmlRpcServer {
             }
         });
         let host_addr = SocketAddr::from((host_addr, 0));
-        let server = hyper::server::Server::try_bind(&host_addr.into())?;
+        let server = hyper::server::Server::try_bind(&host_addr)?;
         let server = server.serve(make_svc);
         let addr = server.local_addr();
 
@@ -78,32 +79,32 @@ impl XmlRpcServer {
     async fn respond_inner(
         node_server: NodeServerHandle,
         body: hyper::Request<Body>,
-    ) -> Result<Response<Body>, Response<Body>> {
+    ) -> Result<Response<Body>, Box<Response<Body>>> {
         // Await the bytes of the body
         let body = hyper::body::to_bytes(body).await.map_err(|e| {
-            Self::make_error_response(
+            Box::new(Self::make_error_response(
                 e,
                 "Failed to get bytes from http request on xmlrpc server, request ignored",
                 StatusCode::BAD_REQUEST,
-            )
+            ))
         })?;
 
         // Parse as string
         let body = String::from_utf8(body.to_vec()).map_err(|e| {
-            Self::make_error_response(
+            Box::new(Self::make_error_response(
                 e,
                 "Failed to parse http body as valid utf8 string, request ignored",
                 StatusCode::BAD_REQUEST,
-            )
+            ))
         })?;
 
         // Parse as xmlrpc request
         let (method_name, args) = serde_xmlrpc::request_from_str(&body).map_err(|e| {
-            Self::make_error_response(
+            Box::new(Self::make_error_response(
                 e,
                 "Failed to parse valid xmlrpc method request out of body, request ignored",
                 StatusCode::BAD_REQUEST,
-            )
+            ))
         })?;
 
         // Match on allowable functions
@@ -112,11 +113,11 @@ impl XmlRpcServer {
                 debug!("getMasterUri called by {args:?}");
                 match node_server.get_master_uri().await {
                     Ok(uri) => Self::to_response(uri),
-                    Err(e) => Err(Self::make_error_response(
+                    Err(e) => Err(Box::new(Self::make_error_response(
                         e,
                         "Unable to retrieve master URI",
                         StatusCode::INTERNAL_SERVER_ERROR,
-                    )),
+                    ))),
                 }
             }
             "getPid" => {
@@ -134,13 +135,13 @@ impl XmlRpcServer {
                     Ok(subs) => {
                         match serde_xmlrpc::to_value(subs) {
                             Ok(subs) => Self::to_response(subs),
-                            Err(e) => Err(Self::make_error_response(
+                            Err(e) => Err(Box::new(Self::make_error_response(
                                 e,
                                 "Subscriptions contained names which could not be validly serialized to xmlrpc",
-                                StatusCode::INTERNAL_SERVER_ERROR))
+                                StatusCode::INTERNAL_SERVER_ERROR)))
                         }
                     },
-                    Err(e) => Err(Self::make_error_response(e, "Unable to get subscriptions", StatusCode::INTERNAL_SERVER_ERROR))
+                    Err(e) => Err(Box::new(Self::make_error_response(e, "Unable to get subscriptions", StatusCode::INTERNAL_SERVER_ERROR)))
                 }
             }
             "getPublications" => {
@@ -148,12 +149,12 @@ impl XmlRpcServer {
                 match node_server.get_publications().await {
                     Ok(pubs) => match serde_xmlrpc::to_value(pubs) {
                         Ok(pubs) => Self::to_response(pubs),
-                        Err(e) => Err(Self::make_error_response(
+                        Err(e) => Err(Box::new(Self::make_error_response(
                             e,
                             "Publications contained names which could not be validly serialized to xmlrpc",
-                            StatusCode::INTERNAL_SERVER_ERROR))
+                            StatusCode::INTERNAL_SERVER_ERROR)))
                     },
-                    Err(e) => Err(Self::make_error_response(e, "Unable to get publications", StatusCode::INTERNAL_SERVER_ERROR))
+                    Err(e) => Err(Box::new(Self::make_error_response(e, "Unable to get publications", StatusCode::INTERNAL_SERVER_ERROR)))
                 }
             }
             "paramUpdate" => {
@@ -242,10 +243,10 @@ impl XmlRpcServer {
             _ => {
                 let error_str = format!("Client attempted call function {method_name} which is not implemented by the Node's xmlrpc server.");
                 warn!("{error_str}");
-                return Ok(Response::builder()
+                Ok(Response::builder()
                     .status(StatusCode::NOT_IMPLEMENTED)
                     .body(Body::from(error_str))
-                    .unwrap());
+                    .unwrap())
             }
         }
     }
@@ -276,7 +277,9 @@ impl XmlRpcServer {
     }
 
     // Helper function for converting serde_xmlrpc stuff into responses
-    fn to_response(v: impl Into<serde_xmlrpc::Value>) -> Result<Response<Body>, Response<Body>> {
+    fn to_response(
+        v: impl Into<serde_xmlrpc::Value>,
+    ) -> Result<Response<Body>, Box<Response<Body>>> {
         serde_xmlrpc::response_to_string(
             vec![serde_xmlrpc::Value::Array(vec![
                 1.into(),
@@ -286,11 +289,11 @@ impl XmlRpcServer {
             .into_iter(),
         )
         .map_err(|e| {
-            Self::make_error_response(
+            Box::new(Self::make_error_response(
                 e,
                 "Failed to serialize response data into valid xml",
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )
+            ))
         })
         .map(|body| {
             Response::builder()
@@ -322,7 +325,7 @@ impl XmlRpcServer {
         // Call our inner function and unwrap error type into response
         match Self::respond_inner(node_server, body).await {
             Ok(body) => Ok(body),
-            Err(body) => Ok(body),
+            Err(body) => Ok(*body),
         }
     }
 }

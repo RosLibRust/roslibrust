@@ -322,7 +322,7 @@ fn generic_parse_value<T: DeserializeOwned + ToTokens + std::fmt::Debug>(
 /// `ros_type` -- Expects the string key of the determined rust type to hold the value. Should come from one of the type map constants.
 /// `value` -- Expects the trimmed string containing only the value expression
 /// `is_vec` -- True iff the type is an array type
-/// TODO I'd like this to take FieldType, but want it to also work with constants...
+///   TODO I'd like this to take FieldType, but want it to also work with constants...
 fn parse_ros_value(
     ros_type: &str,
     value: &str,
@@ -370,7 +370,7 @@ fn parse_ros_value(
                             // Maybe we wrap that in calling function?
                             bail!("String constant must at least include start and end quotes, cannot be empty: {value}");
                         }
-                        let first = value.chars().nth(0).unwrap(); // Unwrap is okay due to previous length check
+                        let first = value.chars().next().unwrap(); // Unwrap is okay due to previous length check
                         let last = value.chars().last().unwrap(); // Unwrap is okay due to previous length check
                         if first != last || !(first == '\'' || first == '\"') {
                             bail!("ROS2 String constant was found that was not enclosed in single or double quotes: {value}");

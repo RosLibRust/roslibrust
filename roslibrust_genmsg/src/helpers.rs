@@ -104,5 +104,5 @@ pub fn fixed_size_array_size(value: Value) -> Value {
     } else {
         0
     };
-    Value::from_serialize(&fixed_size)
+    Value::from_serialize(fixed_size)
 }

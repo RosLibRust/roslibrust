@@ -92,7 +92,10 @@ impl ClientHandle {
 
         // Spawn the spin task
         // The internal stubborn spin task continues to try to reconnect on failure
-        let _ = tokio::task::spawn(stubborn_spin(inner_weak, is_disconnected.clone()));
+        drop(tokio::task::spawn(stubborn_spin(
+            inner_weak,
+            is_disconnected.clone(),
+        )));
 
         Ok(ClientHandle {
             inner,
@@ -386,10 +389,10 @@ impl ClientHandle {
                 // We failed to parse the value as an expected type, before just giving up, try to parse as string
                 // if we got a string it indicates a server side error, otherwise we got the wrong datatype back
                 match serde_json::from_value(msg) {
-                    Ok(s) => return Err(Error::ServerError(s)),
+                    Ok(s) => Err(Error::ServerError(s)),
                     Err(_) => {
                         // Return the error from the original parse
-                        return Err(Error::SerializationError(e.to_string()));
+                        Err(Error::SerializationError(e.to_string()))
                     }
                 }
             }
@@ -685,10 +688,7 @@ impl Client {
             match stream.next().await {
                 Some(Ok(msg)) => msg,
                 Some(Err(e)) => {
-                    return Err(Error::IoError(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        e,
-                    )));
+                    return Err(Error::IoError(std::io::Error::other(e)));
                 }
                 None => {
                     return Err(Error::Unexpected(anyhow!("Wtf does none mean here?")));
@@ -824,9 +824,6 @@ async fn connect(url: &str) -> Result<Socket> {
     let attempt = tokio_tungstenite::connect_async(url).await;
     match attempt {
         Ok((stream, _response)) => Ok(stream),
-        Err(e) => Err(Error::IoError(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            e,
-        ))),
+        Err(e) => Err(Error::IoError(std::io::Error::other(e))),
     }
 }

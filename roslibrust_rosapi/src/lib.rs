@@ -438,14 +438,12 @@ mod test {
     #[test_log::test(tokio::test)]
     async fn rosapi_get_node_details() {
         let api = fixture_client().await;
-        assert!(
-            api.get_node_details("/rosapi")
-                .await
-                .expect("Failed to get node details for rosapi")
-                .services
-                .len()
-                > 0
-        );
+        assert!(!api
+            .get_node_details("/rosapi")
+            .await
+            .expect("Failed to get node details for rosapi")
+            .services
+            .is_empty());
     }
 
     #[test_log::test(tokio::test)]
@@ -463,7 +461,7 @@ mod test {
     #[test_log::test(tokio::test)]
     async fn rosapi_param_roundtrip() {
         let api = fixture_client().await;
-        const PARAM_NAME: &'static str = "/rosapi_param_roundtrip";
+        const PARAM_NAME: &str = "/rosapi_param_roundtrip";
         // Set the parameter
         api.set_param(PARAM_NAME, 1.0.to_string())
             .await

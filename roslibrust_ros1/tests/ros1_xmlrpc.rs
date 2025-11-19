@@ -79,7 +79,7 @@ mod tests {
         log::info!("Got post advertise publications");
 
         assert_eq!(publications.len(), 1);
-        let (topic, topic_type) = publications.iter().nth(0).unwrap();
+        let (topic, topic_type) = publications.first().unwrap();
         assert_eq!(topic, "/test_topic");
         assert_eq!(topic_type, std_msgs::String::ROS_TYPE_NAME);
         Ok(())

@@ -93,7 +93,7 @@ impl PublisherAny {
     /// See ros1_publish_any.rs example for more details.
     /// Body length should be included as first four bytes.
     // TODO this no longer needs to be (or should be) async
-    pub async fn publish(&self, data: &Vec<u8>) -> Result<(), PublisherError> {
+    pub async fn publish(&self, data: &[u8]) -> Result<(), PublisherError> {
         // TODO this is a pretty dumb...
         // because of the internal channel used for re-direction this future doesn't
         // actually complete when the data is sent, but merely when it is queued to be sent
@@ -122,6 +122,7 @@ impl Publication {
     /// Spawns a new publication and sets up all tasks to run it
     /// Returns a handle to the publication and a mpsc::Sender to send messages to be published
     /// Dropping the Sender will (eventually) result in the publication being dropped and all tasks being canceled
+    #[allow(clippy::too_many_arguments)]
     pub(crate) async fn new(
         node_name: &Name,
         latching: bool,

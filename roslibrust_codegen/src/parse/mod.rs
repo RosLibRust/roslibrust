@@ -173,7 +173,7 @@ fn parse_field_type(
                 }
             },
             source_package: pkg.name.clone(),
-            field_type: field_type,
+            field_type,
             array_info,
             string_capacity,
         })
@@ -194,8 +194,8 @@ fn parse_field_type(
 /// Returns the field_type and the string_capacity if it is a bounded string
 /// Otherwise returns the original type and None for the capacity
 fn parse_bounded_string(type_str: &str) -> Result<(String, Option<usize>), Error> {
-    if type_str.starts_with("string<=") {
-        let capacity = type_str[8..].parse::<usize>().map_err(|err| {
+    if let Some(stripped) = type_str.strip_prefix("string<=") {
+        let capacity = stripped.parse::<usize>().map_err(|err| {
             Error::new(format!(
                 "Unable to parse capacity of bounded string: {type_str}: {err}"
             ))

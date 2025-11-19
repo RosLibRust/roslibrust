@@ -186,20 +186,20 @@ mod tests {
         {
             let msg_type = "bad_msgs/Empty";
             let def = "";
-            let _md5sum = from_message_definition(msg_type.into(), def.into()).unwrap_err();
+            let _md5sum = from_message_definition(msg_type, def).unwrap_err();
         }
 
         {
             let msg_type = "bad_msgs/CommentSpacesOnly";
             let def =
                 "# message with only comments and whitespace\n# another line comment\n\n    \n";
-            let _md5sum = from_message_definition(msg_type.into(), def.into()).unwrap_err();
+            let _md5sum = from_message_definition(msg_type, def).unwrap_err();
         }
 
         {
             let msg_type = "fake_msgs/MissingSectionMsg";
             let def = "string name\nstring msg\n================================================================================\n# message with only comments and whitespace\n# another line comment\n\n    \n";
-            let _md5sum = from_message_definition(msg_type.into(), def.into()).unwrap_err();
+            let _md5sum = from_message_definition(msg_type, def).unwrap_err();
         }
 
         {
@@ -226,7 +226,7 @@ uint32 seq
 #Two-integer timestamp that is expressed as:
 time stamp
 ";
-            let _md5sum = from_message_definition(msg_type.into(), def.into()).unwrap_err();
+            let _md5sum = from_message_definition(msg_type, def).unwrap_err();
         }
 
         {
@@ -234,7 +234,7 @@ time stamp
             let expected = "96c44a027b586ee888fe95ac325151ae";
             let msg_type = "fake_msgs/CommentSpacesOnlySection";
             let def = "string name\nstring msg\n================================================================================\nMSG: foo/bar\n# message with only comments and whitespace\n# another line comment\n\n    \n";
-            let md5sum = from_message_definition(msg_type.into(), def.into()).unwrap();
+            let md5sum = from_message_definition(msg_type, def).unwrap();
             println!("{msg_type}, computed {md5sum}, expected {expected}");
             assert_eq!(md5sum, expected, "{msg_type}");
         }
@@ -253,7 +253,7 @@ f
 
 vjk
 "#;
-            let _md5sum = from_message_definition(msg_type.into(), def.into()).unwrap_err();
+            let _md5sum = from_message_definition(msg_type, def).unwrap_err();
         }
 
         // TODO(lucasw) it would be nice to pull these out of the real messages, but to avoid
@@ -441,7 +441,7 @@ bool do_rectify
 
 "#;
             let expected = "c9a58c1b0b154e0e6da7578cb991d214";
-            let md5sum = from_message_definition(msg_type, def.into()).unwrap();
+            let md5sum = from_message_definition(msg_type, def).unwrap();
             println!("{msg_type}, computed {md5sum}, expected {expected}");
             assert_eq!(md5sum, expected, "{msg_type}");
         }
@@ -450,7 +450,7 @@ bool do_rectify
             let msg_type = "std_msgs/Header";
             let def = "# Standard metadata for higher-level stamped data types.\n# This is generally used to communicate timestamped data \n# in a particular coordinate frame.\n# \n# sequence ID: consecutively increasing ID \nuint32 seq\n#Two-integer timestamp that is expressed as:\n# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')\n# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')\n# time-handling sugar is provided by the client library\ntime stamp\n#Frame this data is associated with\nstring frame_id\n";
             let expected = "2176decaecbce78abc3b96ef049fabed";
-            let md5sum = from_message_definition(msg_type, def.into()).unwrap();
+            let md5sum = from_message_definition(msg_type, def).unwrap();
             println!("{msg_type}, computed {md5sum}, expected {expected}");
             assert_eq!(md5sum, expected, "{msg_type}");
         }
@@ -459,7 +459,7 @@ bool do_rectify
             let msg_type = "rosgraph_msgs/Log";
             let def = "##\n## Severity level constants\n##\nbyte DEBUG=1 #debug level\nbyte INFO=2  #general level\nbyte WARN=4  #warning level\nbyte ERROR=8 #error level\nbyte FATAL=16 #fatal/critical level\n##\n## Fields\n##\nHeader header\nbyte level\nstring name # name of the node\nstring msg # message \nstring file # file the message came from\nstring function # function the message came from\nuint32 line # line the message came from\nstring[] topics # topic names that the node publishes\n\n================================================================================\nMSG: std_msgs/Header\n# Standard metadata for higher-level stamped data types.\n# This is generally used to communicate timestamped data \n# in a particular coordinate frame.\n# \n# sequence ID: consecutively increasing ID \nuint32 seq\n#Two-integer timestamp that is expressed as:\n# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')\n# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')\n# time-handling sugar is provided by the client library\ntime stamp\n#Frame this data is associated with\nstring frame_id\n";
             let expected = "acffd30cd6b6de30f120938c17c593fb";
-            let md5sum = from_message_definition(msg_type, def.into()).unwrap();
+            let md5sum = from_message_definition(msg_type, def).unwrap();
             println!("{msg_type}, computed {md5sum}, expected {expected}");
             assert_eq!(md5sum, expected, "{msg_type}");
         }
@@ -468,7 +468,7 @@ bool do_rectify
             let msg_type = "nav_msgs/Odometry";
             let def = "# This represents an estimate of a position and velocity in free space.  \n# The pose in this message should be specified in the coordinate frame given by header.frame_id.\n# The twist in this message should be specified in the coordinate frame given by the child_frame_id\nHeader header\nstring child_frame_id\ngeometry_msgs/PoseWithCovariance pose\ngeometry_msgs/TwistWithCovariance twist\n\n================================================================================\nMSG: std_msgs/Header\n# Standard metadata for higher-level stamped data types.\n# This is generally used to communicate timestamped data \n# in a particular coordinate frame.\n# \n# sequence ID: consecutively increasing ID \nuint32 seq\n#Two-integer timestamp that is expressed as:\n# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')\n# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')\n# time-handling sugar is provided by the client library\ntime stamp\n#Frame this data is associated with\nstring frame_id\n\n================================================================================\nMSG: geometry_msgs/PoseWithCovariance\n# This represents a pose in free space with uncertainty.\n\nPose pose\n\n# Row-major representation of the 6x6 covariance matrix\n# The orientation parameters use a fixed-axis representation.\n# In order, the parameters are:\n# (x, y, z, rotation about X axis, rotation about Y axis, rotation about Z axis)\nfloat64[36] covariance\n\n================================================================================\nMSG: geometry_msgs/Pose\n# A representation of pose in free space, composed of position and orientation. \nPoint position\nQuaternion orientation\n\n================================================================================\nMSG: geometry_msgs/Point\n# This contains the position of a point in free space\nfloat64 x\nfloat64 y\nfloat64 z\n\n================================================================================\nMSG: geometry_msgs/Quaternion\n# This represents an orientation in free space in quaternion form.\n\nfloat64 x\nfloat64 y\nfloat64 z\nfloat64 w\n\n================================================================================\nMSG: geometry_msgs/TwistWithCovariance\n# This expresses velocity in free space with uncertainty.\n\nTwist twist\n\n# Row-major representation of the 6x6 covariance matrix\n# The orientation parameters use a fixed-axis representation.\n# In order, the parameters are:\n# (x, y, z, rotation about X axis, rotation about Y axis, rotation about Z axis)\nfloat64[36] covariance\n\n================================================================================\nMSG: geometry_msgs/Twist\n# This expresses velocity in free space broken into its linear and angular parts.\nVector3  linear\nVector3  angular\n\n================================================================================\nMSG: geometry_msgs/Vector3\n# This represents a vector in free space. \n# It is only meant to represent a direction. Therefore, it does not\n# make sense to apply a translation to it (e.g., when applying a \n# generic rigid transformation to a Vector3, tf2 will only apply the\n# rotation). If you want your data to be translatable too, use the\n# geometry_msgs/Point message instead.\n\nfloat64 x\nfloat64 y\nfloat64 z";
             let expected = "cd5e73d190d741a2f92e81eda573aca7";
-            let md5sum = from_message_definition(msg_type, def.into()).unwrap();
+            let md5sum = from_message_definition(msg_type, def).unwrap();
             println!("{msg_type}, computed {md5sum}, expected {expected}");
             assert_eq!(md5sum, expected);
         }
@@ -537,7 +537,7 @@ float64 w
 
 "#;
             let expected = "94810edda583a504dfda3829e70d7eec";
-            let md5sum = from_message_definition(msg_type, def.into()).unwrap();
+            let md5sum = from_message_definition(msg_type, def).unwrap();
             println!("{msg_type}, computed {md5sum}, expected {expected}");
             assert_eq!(md5sum, expected);
         }
@@ -722,7 +722,7 @@ uint32 count     # How many elements in the field
 
 "#;
             let expected = "05c51d9aea1fb4cfdc8effb94f197b6f";
-            let md5sum = from_message_definition(msg_type, def.into()).unwrap();
+            let md5sum = from_message_definition(msg_type, def).unwrap();
             println!("{msg_type}, computed {md5sum}, expected {expected}");
             assert_eq!(md5sum, expected, "{msg_type}");
         }
