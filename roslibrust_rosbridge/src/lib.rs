@@ -234,9 +234,7 @@ impl<T: Send + Sync> MapError for std::result::Result<T, tokio_tungstenite::tung
     fn map_to_roslibrust(self) -> Result<T> {
         match self {
             Ok(t) => Ok(t),
-            Err(e) => Err(Error::IoError(std::io::Error::other(
-                e,
-            ))),
+            Err(e) => Err(Error::IoError(std::io::Error::other(e))),
         }
     }
 }

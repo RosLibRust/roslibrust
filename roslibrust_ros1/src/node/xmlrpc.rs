@@ -277,7 +277,9 @@ impl XmlRpcServer {
     }
 
     // Helper function for converting serde_xmlrpc stuff into responses
-    fn to_response(v: impl Into<serde_xmlrpc::Value>) -> Result<Response<Body>, Box<Response<Body>>> {
+    fn to_response(
+        v: impl Into<serde_xmlrpc::Value>,
+    ) -> Result<Response<Body>, Box<Response<Body>>> {
         serde_xmlrpc::response_to_string(
             vec![serde_xmlrpc::Value::Array(vec![
                 1.into(),

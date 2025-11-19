@@ -92,7 +92,10 @@ impl ClientHandle {
 
         // Spawn the spin task
         // The internal stubborn spin task continues to try to reconnect on failure
-        drop(tokio::task::spawn(stubborn_spin(inner_weak, is_disconnected.clone())));
+        drop(tokio::task::spawn(stubborn_spin(
+            inner_weak,
+            is_disconnected.clone(),
+        )));
 
         Ok(ClientHandle {
             inner,
@@ -685,9 +688,7 @@ impl Client {
             match stream.next().await {
                 Some(Ok(msg)) => msg,
                 Some(Err(e)) => {
-                    return Err(Error::IoError(std::io::Error::other(
-                        e,
-                    )));
+                    return Err(Error::IoError(std::io::Error::other(e)));
                 }
                 None => {
                     return Err(Error::Unexpected(anyhow!("Wtf does none mean here?")));
@@ -823,8 +824,6 @@ async fn connect(url: &str) -> Result<Socket> {
     let attempt = tokio_tungstenite::connect_async(url).await;
     match attempt {
         Ok((stream, _response)) => Ok(stream),
-        Err(e) => Err(Error::IoError(std::io::Error::other(
-            e,
-        ))),
+        Err(e) => Err(Error::IoError(std::io::Error::other(e))),
     }
 }

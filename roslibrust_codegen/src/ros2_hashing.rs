@@ -287,22 +287,21 @@ fn convert_to_type_description(
         let nested_type_name = if field.field_type.is_primitive() {
             "".to_string()
         } else if service_naming {
-                const SPECIAL_SUFFIX: &[&str] = &["_Request", "_Response", "_Event"];
-                if SPECIAL_SUFFIX
-                    .iter()
-                    .any(|s| field.field_type.field_type.ends_with(s))
-                {
-                    format!(
-                        "{}/srv/{}",
-                        field.field_type.source_package, field.field_type.field_type
-                    )
-                } else {
-                    field.get_ros2_full_type_name()
-                }
+            const SPECIAL_SUFFIX: &[&str] = &["_Request", "_Response", "_Event"];
+            if SPECIAL_SUFFIX
+                .iter()
+                .any(|s| field.field_type.field_type.ends_with(s))
+            {
+                format!(
+                    "{}/srv/{}",
+                    field.field_type.source_package, field.field_type.field_type
+                )
             } else {
                 field.get_ros2_full_type_name()
             }
-        ;
+        } else {
+            field.get_ros2_full_type_name()
+        };
 
         // Check if there is a length limit on array contents
         let capacity = match field.field_type.array_info {

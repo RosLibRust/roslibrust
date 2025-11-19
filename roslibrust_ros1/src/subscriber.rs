@@ -135,10 +135,12 @@ impl Subscription {
         publisher_uri: &str,
     ) -> Result<(), std::io::Error> {
         let is_new_connection = {
-            !self.known_publishers
+            !self
+                .known_publishers
                 .read()
                 .await
-                .iter().any(|publisher| publisher.as_str() == publisher_uri)
+                .iter()
+                .any(|publisher| publisher.as_str() == publisher_uri)
         };
 
         if is_new_connection {

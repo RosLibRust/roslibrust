@@ -169,8 +169,7 @@ impl NodeHandle {
         F: ServiceFn<T>,
     {
         let service_name = Name::new(service_name)?;
-        self
-            .inner
+        self.inner
             .register_service_server::<T, F>(&service_name, server)
             .await?;
         // Super important. Don't clone self or we create a STRONG NodeHandle that keeps the node alive

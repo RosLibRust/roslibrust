@@ -70,12 +70,8 @@ impl<T: RosServiceType> ServiceClient<T> {
                     .map_err(|err| Error::SerializationError(err.to_string()))?;
                 Ok(response)
             }
-            Ok(Err(err)) => {
-                Err(err)
-            }
-            Err(_err) => {
-                Err(Error::Disconnected)
-            }
+            Ok(Err(err)) => Err(err),
+            Err(_err) => Err(Error::Disconnected),
         }
     }
 }
@@ -202,9 +198,9 @@ impl ServiceClientLink {
                     )
                 })?;
             // TODO probably specific error type for this
-            Err(std::io::Error::other(
-                format!("Failure response from service server: {err_msg}"),
-            ))
+            Err(std::io::Error::other(format!(
+                "Failure response from service server: {err_msg}"
+            )))
         }
     }
 }

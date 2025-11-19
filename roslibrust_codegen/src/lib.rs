@@ -53,8 +53,6 @@ impl Ros2Hash {
     }
 }
 
-
-
 // Conversion from Ros2Hash to TokenStream for use in generated code
 impl ToTokens for Ros2Hash {
     fn to_tokens(&self, tokens: &mut TokenStream) {
@@ -620,31 +618,27 @@ pub fn generate_rust_ros_message_definitions(
     let mut modules_to_struct_definitions: BTreeMap<String, Vec<TokenStream>> = BTreeMap::new();
 
     // Convert messages files into rust token streams and insert them into BTree organized by package
-    messages
-        .into_iter()
-        .try_for_each(|message| {
-            let pkg_name = message.parsed.package.clone();
-            let definition = generate_struct(message)?;
-            if let Some(entry) = modules_to_struct_definitions.get_mut(&pkg_name) {
-                entry.push(definition);
-            } else {
-                modules_to_struct_definitions.insert(pkg_name, vec![definition]);
-            }
-            Ok::<(), Error>(())
-        })?;
+    messages.into_iter().try_for_each(|message| {
+        let pkg_name = message.parsed.package.clone();
+        let definition = generate_struct(message)?;
+        if let Some(entry) = modules_to_struct_definitions.get_mut(&pkg_name) {
+            entry.push(definition);
+        } else {
+            modules_to_struct_definitions.insert(pkg_name, vec![definition]);
+        }
+        Ok::<(), Error>(())
+    })?;
     // Do the same for services
-    services
-        .into_iter()
-        .try_for_each(|service| {
-            let pkg_name = service.parsed.package.clone();
-            let definition = generate_service(service)?;
-            if let Some(entry) = modules_to_struct_definitions.get_mut(&pkg_name) {
-                entry.push(definition);
-            } else {
-                modules_to_struct_definitions.insert(pkg_name, vec![definition]);
-            }
-            Ok::<(), Error>(())
-        })?;
+    services.into_iter().try_for_each(|service| {
+        let pkg_name = service.parsed.package.clone();
+        let definition = generate_service(service)?;
+        if let Some(entry) = modules_to_struct_definitions.get_mut(&pkg_name) {
+            entry.push(definition);
+        } else {
+            modules_to_struct_definitions.insert(pkg_name, vec![definition]);
+        }
+        Ok::<(), Error>(())
+    })?;
     // Now generate modules to wrap all of the TokenStreams in a module for each package
     let all_pkgs = modules_to_struct_definitions
         .keys()

@@ -8,8 +8,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     env_logger::init();
 
-    let nh = NodeHandle::new("http://localhost:11311", "talker_rs")
-        .await?;
+    let nh = NodeHandle::new("http://localhost:11311", "talker_rs").await?;
     let publisher = nh
         .advertise::<geometry_msgs::PointStamped>("/my_point", 1, false)
         .await?;

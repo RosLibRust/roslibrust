@@ -438,13 +438,12 @@ mod test {
     #[test_log::test(tokio::test)]
     async fn rosapi_get_node_details() {
         let api = fixture_client().await;
-        assert!(
-            !api.get_node_details("/rosapi")
-                .await
-                .expect("Failed to get node details for rosapi")
-                .services
-                .is_empty()
-        );
+        assert!(!api
+            .get_node_details("/rosapi")
+            .await
+            .expect("Failed to get node details for rosapi")
+            .services
+            .is_empty());
     }
 
     #[test_log::test(tokio::test)]

@@ -54,10 +54,7 @@ impl SystemState {
         let Some(entry) = self.publishers.iter().find(|entry| entry.topic.eq(topic)) else {
             return false;
         };
-        entry
-            .nodes
-            .iter()
-            .any(|name| name.as_str().eq(node))
+        entry.nodes.iter().any(|name| name.as_str().eq(node))
     }
 
     /// Helper function for checking if a node is registered as a subscriber of a given topic.
@@ -66,10 +63,7 @@ impl SystemState {
         let Some(entry) = self.subscribers.iter().find(|entry| entry.topic.eq(topic)) else {
             return false;
         };
-        entry
-            .nodes
-            .iter()
-            .any(|name| name.as_str().eq(node))
+        entry.nodes.iter().any(|name| name.as_str().eq(node))
     }
 
     pub fn is_service_provider(&self, topic: &str, node: &str) -> bool {
@@ -80,10 +74,7 @@ impl SystemState {
         else {
             return false;
         };
-        entry
-            .nodes
-            .iter()
-            .any(|name| name.as_str().eq(node))
+        entry.nodes.iter().any(|name| name.as_str().eq(node))
     }
 }
 

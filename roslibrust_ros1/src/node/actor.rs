@@ -176,9 +176,8 @@ impl NodeServerHandle {
             latching,
         })?;
         let received = receiver.await?;
-        received.map_err(|_err| {
-            NodeError::IoError(io::Error::from(io::ErrorKind::ConnectionAborted))
-        })
+        received
+            .map_err(|_err| NodeError::IoError(io::Error::from(io::ErrorKind::ConnectionAborted)))
     }
 
     /// Registers a publisher with the underlying node server
@@ -216,9 +215,8 @@ impl NodeServerHandle {
             latching,
         })?;
         let received = receiver.await?;
-        received.map_err(|_err| {
-            NodeError::IoError(io::Error::from(io::ErrorKind::ConnectionAborted))
-        })
+        received
+            .map_err(|_err| NodeError::IoError(io::Error::from(io::ErrorKind::ConnectionAborted)))
     }
 
     pub(crate) async fn unregister_publisher(&self, topic: &str) -> Result<(), NodeError> {
@@ -616,10 +614,7 @@ impl Node {
                 protocols,
             } => {
                 // TODO: Should move the actual implementation similar to RegisterPublisher
-                if protocols
-                    .iter()
-                    .any(|proto| proto.as_str() == "TCPROS")
-                {
+                if protocols.iter().any(|proto| proto.as_str() == "TCPROS") {
                     if let Some((_key, publishing_channel)) =
                         self.publishers.iter().find(|(key, _pub)| *key == &topic)
                     {
