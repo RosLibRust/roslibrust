@@ -9,22 +9,66 @@ use crate::utils::RosVersion;
 use crate::{bail, ArrayType, Error};
 use crate::{ConstantInfo, FieldInfo, MessageFile, RosLiteral, ServiceFile};
 
-fn derive_attrs() -> Vec<syn::Attribute> {
-    vec![
-        parse_quote! { #[derive(::roslibrust::codegen::Deserialize)] },
-        parse_quote! { #[derive(::roslibrust::codegen::Serialize)] },
-        parse_quote! { #[derive(::roslibrust::codegen::SmartDefault)] },
+/// Configuration options for code generation
+#[derive(Debug, Clone)]
+pub struct CodegenOptions {
+    /// Whether to include the DEFINITION field in generated code (default: true)
+    /// The DEFINITION field can be quite large and may not be needed in all cases
+    pub generate_definition: bool,
+    /// Whether to use roslibrust's re-exported serde (default: true)
+    pub roslibrust_serde: bool,
+}
+
+impl Default for CodegenOptions {
+    fn default() -> Self {
+        Self {
+            generate_definition: true,
+            roslibrust_serde: true,
+        }
+    }
+}
+
+fn derive_attrs(options: &CodegenOptions, _has_large_array: bool) -> Vec<syn::Attribute> {
+    let mut attrs = vec![
         parse_quote! { #[derive(Debug)] },
         parse_quote! { #[derive(Clone)] },
         parse_quote! { #[derive(PartialEq)] },
-        parse_quote! { #[serde(crate = "::roslibrust::codegen::serde")] },
-    ]
+    ];
+
+    if options.roslibrust_serde {
+        // Use roslibrust's re-exported serde with SmartDefault
+        attrs.insert(
+            0,
+            parse_quote! { #[derive(::roslibrust::codegen::Deserialize)] },
+        );
+        attrs.insert(
+            1,
+            parse_quote! { #[derive(::roslibrust::codegen::Serialize)] },
+        );
+        attrs.insert(
+            2,
+            parse_quote! { #[derive(::roslibrust::codegen::SmartDefault)] },
+        );
+        attrs.push(parse_quote! { #[serde(crate = "::roslibrust::codegen::serde")] });
+    } else {
+        // Use standard Rust serde with SmartDefault (SmartDefault works with any serde)
+        attrs.insert(0, parse_quote! { #[derive(serde::Deserialize)] });
+        attrs.insert(1, parse_quote! { #[derive(serde::Serialize)] });
+        attrs.insert(2, parse_quote! { #[derive(smart_default::SmartDefault)] });
+    }
+
+    attrs
 }
 
 /// Generates the service for a given service file
 /// The service definition defines a struct representing the service an an implementation
 /// of the RosServiceType trait for that struct
-pub fn generate_service(service: ServiceFile) -> Result<TokenStream, Error> {
+pub fn generate_service(
+    service: ServiceFile,
+    options: Option<&CodegenOptions>,
+) -> Result<TokenStream, Error> {
+    let default_options = CodegenOptions::default();
+    let options = options.unwrap_or(&default_options);
     let service_type_name = service.get_full_name();
     let service_md5sum = service.md5sum;
     // Optional for now until we get all the hashing sorted out
@@ -34,8 +78,8 @@ pub fn generate_service(service: ServiceFile) -> Result<TokenStream, Error> {
     let request_name = format_ident!("{}", service.parsed.request_type.name);
     let response_name = format_ident!("{}", service.parsed.response_type.name);
 
-    let request_msg = generate_struct(service.request)?;
-    let response_msg = generate_struct(service.response)?;
+    let request_msg = generate_struct(service.request, Some(options))?;
+    let response_msg = generate_struct(service.response, Some(options))?;
     Ok(quote! {
 
         #request_msg
@@ -62,10 +106,21 @@ pub fn generate_raw_string_literal(value: &str) -> TokenStream {
     TokenStream::from_str(&wrapped).unwrap()
 }
 
-pub fn generate_struct(msg: MessageFile) -> Result<TokenStream, Error> {
+pub fn generate_struct(
+    msg: MessageFile,
+    options: Option<&CodegenOptions>,
+) -> Result<TokenStream, Error> {
+    let default_options = CodegenOptions::default();
+    let options = options.unwrap_or(&default_options);
     let ros_type_name = msg.get_full_name();
     let ros2_type_name = msg.parsed.get_ros2_dds_type_name();
-    let attrs = derive_attrs();
+
+    // Check if any field has a fixed array > 32 (which doesn't impl Default)
+    let has_large_array = msg.parsed.fields.iter().any(
+        |field| matches!(field.field_type.array_info, ArrayType::FixedLength(len) if len > 32),
+    );
+
+    let attrs = derive_attrs(options, has_large_array);
     let fields = msg
         .parsed
         .fields
@@ -75,6 +130,7 @@ pub fn generate_struct(msg: MessageFile) -> Result<TokenStream, Error> {
                 field,
                 &msg.parsed.package,
                 msg.parsed.version.unwrap_or(RosVersion::ROS1),
+                options,
             )
         })
         .collect::<Result<Vec<TokenStream>, _>>()?;
@@ -96,8 +152,31 @@ pub fn generate_struct(msg: MessageFile) -> Result<TokenStream, Error> {
     let definition = msg.definition;
     let ros2_hash = msg.ros2_hash;
 
-    // Raw here is only used to make the generated code look better.
-    let raw_message_definition = generate_raw_string_literal(&definition);
+    // Generate the trait impl conditionally based on options
+    let trait_impl = if options.generate_definition {
+        // Include DEFINITION field
+        let raw_message_definition = generate_raw_string_literal(&definition);
+        quote! {
+            impl ::roslibrust::RosMessageType for #struct_name {
+                const ROS_TYPE_NAME: &'static str = #ros_type_name;
+                const MD5SUM: &'static str = #md5sum;
+                const DEFINITION: &'static str = #raw_message_definition;
+                const ROS2_HASH: &'static [u8; 32] = &#ros2_hash;
+                const ROS2_TYPE_NAME: &'static str = #ros2_type_name;
+            }
+        }
+    } else {
+        // Omit DEFINITION field
+        quote! {
+            impl ::roslibrust::RosMessageType for #struct_name {
+                const ROS_TYPE_NAME: &'static str = #ros_type_name;
+                const MD5SUM: &'static str = #md5sum;
+                const DEFINITION: &'static str = "";
+                const ROS2_HASH: &'static [u8; 32] = &#ros2_hash;
+                const ROS2_TYPE_NAME: &'static str = #ros2_type_name;
+            }
+        }
+    };
 
     let mut base = quote! {
         #[allow(non_snake_case)]
@@ -107,13 +186,7 @@ pub fn generate_struct(msg: MessageFile) -> Result<TokenStream, Error> {
             #(#fields )*
         }
 
-        impl ::roslibrust::RosMessageType for #struct_name {
-            const ROS_TYPE_NAME: &'static str = #ros_type_name;
-            const MD5SUM: &'static str = #md5sum;
-            const DEFINITION: &'static str = #raw_message_definition;
-            const ROS2_HASH: &'static [u8; 32] = &#ros2_hash;
-            const ROS2_TYPE_NAME: &'static str = #ros2_type_name;
-        }
+        #trait_impl
     };
 
     // Only if we have constants append the impl
@@ -132,6 +205,7 @@ fn generate_field_definition(
     field: FieldInfo,
     msg_pkg: &str,
     version: RosVersion,
+    options: &CodegenOptions,
 ) -> Result<TokenStream, Error> {
     let rust_field_type = match field.field_type.package_name {
         Some(ref pkg) => {
@@ -162,6 +236,8 @@ fn generate_field_definition(
 
     let field_name = format_ident!("r#{}", field.field_name);
     let property_line = quote! { pub #field_name: #rust_field_type, };
+
+    // SmartDefault attributes are needed regardless of generate_serde setting
     let default_line = if let Some(ref default_val) = field.default {
         let default_val = ros_literal_to_rust_literal(
             &field.field_type.field_type,
@@ -200,25 +276,42 @@ fn generate_field_definition(
             quote! {}
         }
     };
-    // This is the largest size of fixed sized array for which macros automatically implement traits
-    // Until serde supports const generics we need to use serde_big_array for fixed size arrays
-    // Larger than 32.
+    // Rust's derive macros automatically implement traits for arrays up to length 32.
+    // For larger arrays, we need special handling via BigArray.
     const MAX_FIXED_ARRAY_LEN: usize = 32;
+
+    let is_uint8_field = field.field_type.field_type == "uint8";
+
     let serde_line = match &field.field_type.array_info {
+        // Dynamic-length arrays (Vec<T>)
         ArrayType::Unbounded | ArrayType::Bounded(_) => {
-            // Special case for Vec<u8>, which massively benefit from optimizations
-            // We use a custom serde module that handles both base64 (rosbridge) and arrays (other formats)
-            // This makes deserializing an Image ~97% faster while supporting rosbridge's base64 encoding
-            if field.field_type.field_type == "uint8" {
-                quote! { #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")] }
+            if is_uint8_field {
+                if options.roslibrust_serde {
+                    // Use roslibrust's custom module that handles both base64 (rosbridge) and binary
+                    quote! { #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")] }
+                } else {
+                    // Use standard serde_bytes for efficient binary serialization
+                    quote! { #[serde(with = "serde_bytes")] }
+                }
             } else {
                 quote! {}
             }
         }
-        ArrayType::FixedLength(fixed_array_len) if *fixed_array_len > MAX_FIXED_ARRAY_LEN => {
+        // Fixed-length arrays larger than 32 need BigArray for trait implementations
+        ArrayType::FixedLength(len) if *len > MAX_FIXED_ARRAY_LEN => {
             quote! { #[serde(with = "::roslibrust::codegen::BigArray")] }
         }
-        _ => quote! {},
+        // Fixed-length arrays <= 32 have automatic trait implementations
+        ArrayType::FixedLength(_) => {
+            if is_uint8_field && !options.roslibrust_serde {
+                // Use serde_bytes for efficient serialization of byte arrays
+                quote! { #[serde(with = "serde_bytes")] }
+            } else {
+                quote! {}
+            }
+        }
+        // Non-array types need no special serde attributes
+        ArrayType::NotArray => quote! {},
     };
     Ok(quote! {
         #default_line
