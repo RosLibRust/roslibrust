@@ -12,7 +12,7 @@ use crate::{ConstantInfo, FieldInfo, MessageFile, RosLiteral, ServiceFile};
 /// Configuration options for code generation
 #[derive(Debug, Clone)]
 pub struct CodegenOptions {
-    /// Whether to include the DEFINITION field in generated code (default: false)
+    /// Whether to include the DEFINITION field in generated code (default: true)
     /// The DEFINITION field can be quite large and may not be needed in all cases
     pub generate_definition: bool,
     /// Whether to use roslibrust's re-exported serde (default: true)
@@ -22,7 +22,7 @@ pub struct CodegenOptions {
 impl Default for CodegenOptions {
     fn default() -> Self {
         Self {
-            generate_definition: false,
+            generate_definition: true,
             roslibrust_serde: true,
         }
     }
