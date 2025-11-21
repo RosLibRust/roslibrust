@@ -37,9 +37,18 @@ fn derive_attrs(options: &CodegenOptions, _has_large_array: bool) -> Vec<syn::At
 
     if options.roslibrust_serde {
         // Use roslibrust's re-exported serde with SmartDefault
-        attrs.insert(0, parse_quote! { #[derive(::roslibrust::codegen::Deserialize)] });
-        attrs.insert(1, parse_quote! { #[derive(::roslibrust::codegen::Serialize)] });
-        attrs.insert(2, parse_quote! { #[derive(::roslibrust::codegen::SmartDefault)] });
+        attrs.insert(
+            0,
+            parse_quote! { #[derive(::roslibrust::codegen::Deserialize)] },
+        );
+        attrs.insert(
+            1,
+            parse_quote! { #[derive(::roslibrust::codegen::Serialize)] },
+        );
+        attrs.insert(
+            2,
+            parse_quote! { #[derive(::roslibrust::codegen::SmartDefault)] },
+        );
         attrs.push(parse_quote! { #[serde(crate = "::roslibrust::codegen::serde")] });
     } else {
         // Use standard Rust serde with SmartDefault (SmartDefault works with any serde)
@@ -107,9 +116,9 @@ pub fn generate_struct(
     let ros2_type_name = msg.parsed.get_ros2_dds_type_name();
 
     // Check if any field has a fixed array > 32 (which doesn't impl Default)
-    let has_large_array = msg.parsed.fields.iter().any(|field| {
-        matches!(field.field_type.array_info, ArrayType::FixedLength(len) if len > 32)
-    });
+    let has_large_array = msg.parsed.fields.iter().any(
+        |field| matches!(field.field_type.array_info, ArrayType::FixedLength(len) if len > 32),
+    );
 
     let attrs = derive_attrs(options, has_large_array);
     let fields = msg
