@@ -8,16 +8,20 @@
 //!
 //! Directly depending on this crate is not recommended. Instead access it via roslibrust with the `codegen` feature enabled.
 
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    fmt::{Debug, Display},
+    path::PathBuf,
+};
+
 use log::*;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use simple_error::{bail, SimpleError as Error};
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use std::fmt::{Debug, Display};
-use std::path::PathBuf;
 use utils::Package;
 
 mod gen;
+pub use gen::CodegenOptions;
 use gen::*;
 mod parse;
 use parse::*;
@@ -314,6 +318,10 @@ impl ServiceFile {
         self.md5sum.clone()
     }
 
+    pub fn get_ros2_hash(&self) -> &Ros2Hash {
+        &self.ros2_hash
+    }
+
     fn compute_md5sum(
         parsed: &ParsedServiceFile,
         graph: &BTreeMap<String, MessageFile>,
@@ -504,7 +512,8 @@ fn tokenize_messages_and_services(
     let srv_iter = services.iter().map(|s| s.parsed.path.clone());
     let action_iter = actions.iter().map(|a| a.path.clone());
     let dependent_paths = msg_iter.chain(srv_iter).chain(action_iter).collect();
-    let source = generate_rust_ros_message_definitions(messages, services)?;
+    let source =
+        generate_rust_ros_message_definitions(messages, services, &CodegenOptions::default())?;
     Ok((source, dependent_paths))
 }
 
@@ -611,16 +620,18 @@ pub fn find_and_parse_ros_messages(
 ///
 /// * `messages` - Collection of ROS message definition data.
 /// * `services` - Collection of ROS service definition data.
+/// * `options` - Code generation options.
 pub fn generate_rust_ros_message_definitions(
     messages: Vec<MessageFile>,
     services: Vec<ServiceFile>,
+    options: &CodegenOptions,
 ) -> Result<TokenStream, Error> {
     let mut modules_to_struct_definitions: BTreeMap<String, Vec<TokenStream>> = BTreeMap::new();
 
     // Convert messages files into rust token streams and insert them into BTree organized by package
     messages.into_iter().try_for_each(|message| {
         let pkg_name = message.parsed.package.clone();
-        let definition = generate_struct(message)?;
+        let definition = generate_struct(message, Some(options))?;
         if let Some(entry) = modules_to_struct_definitions.get_mut(&pkg_name) {
             entry.push(definition);
         } else {
@@ -631,7 +642,7 @@ pub fn generate_rust_ros_message_definitions(
     // Do the same for services
     services.into_iter().try_for_each(|service| {
         let pkg_name = service.parsed.package.clone();
-        let definition = generate_service(service)?;
+        let definition = generate_service(service, Some(options))?;
         if let Some(entry) = modules_to_struct_definitions.get_mut(&pkg_name) {
             entry.push(definition);
         } else {
