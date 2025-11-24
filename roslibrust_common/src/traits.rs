@@ -86,8 +86,8 @@ pub trait Service<T: RosServiceType> {
 
 /// This trait is analogous to TopicProvider, but instead provides the capability to create service servers and service clients
 pub trait ServiceProvider {
-    type ServiceClient<T: RosServiceType>: Service<T> + Send + 'static;
-    type ServiceServer: Send + 'static;
+    type ServiceClient<T: RosServiceType>: Service<T> + Send + Sync + 'static;
+    type ServiceServer: Send + Sync + 'static;
 
     /// A "oneshot" service call good for low frequency calls or where the service_provider may not always be available.
     fn call_service<T: RosServiceType>(
