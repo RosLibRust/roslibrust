@@ -58,8 +58,8 @@ pub trait TopicProvider {
     // These associated types makeup the other half of the API
     // They are expected to be "self-deregistering", where dropping them results in unadvertise or unsubscribe operations as appropriate
     // We require Publisher and Subscriber types to be Send + 'static so they can be sent into different tokio tasks once created
-    type Publisher<T: RosMessageType>: Publish<T> + Send + 'static;
-    type Subscriber<T: RosMessageType>: Subscribe<T> + Send + 'static;
+    type Publisher<T: RosMessageType>: Publish<T> + Send + Sync + 'static;
+    type Subscriber<T: RosMessageType>: Subscribe<T> + Send + Sync + 'static;
 
     /// Advertises a topic to be published to and returns a type specific publisher to use.
     ///
