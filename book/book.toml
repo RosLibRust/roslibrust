@@ -5,7 +5,7 @@ src = "src"
 title = "RosLibRust Guides"
 
 [rust]
-edition = "2024"
+edition = "2021"
 
 [preprocessor.keeper]
 command = "mdbook-keeper"
