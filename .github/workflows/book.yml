@@ -30,10 +30,6 @@ jobs:
         with:
           mdbook-version: "latest"
 
-      # Used to manage dependencies for tests in book
-      - name: Install keeper
-        run: cargo install mdbook-keeper
-
       # Make sure build and run tests
       - run: mdbook build
 
