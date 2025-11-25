@@ -1,6 +1,6 @@
 [package]
 name = "roslibrust_genmsg"
-version = "0.17.0"
+version = "0.18.0"
 edition = "2021"
 license = "MIT"
 readme = "../README.md"
@@ -20,7 +20,7 @@ path = "src/main.rs"
 [dependencies]
 log = { workspace = true }
 serde = { workspace = true }
-roslibrust_codegen = { path = "../roslibrust_codegen", version = "0.17" }
+roslibrust_codegen = { path = "../roslibrust_codegen", version = "0.18" }
 clap = { version = "4.1", features = ["derive"] }
 env_logger = "0.11"
 itertools = "0.12"

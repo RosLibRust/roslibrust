@@ -1,6 +1,6 @@
 [package]
 name = "roslibrust_zenoh"
-version = "0.17.0"
+version = "0.18.0"
 edition = "2021"
 authors = [ "carter <carterjschultz@gmail.com>" ]
 license = "MIT"
@@ -14,7 +14,7 @@ categories = ["science::robotics"]
 roslibrust_serde_rosmsg = { workspace = true }
 log = { workspace = true }
 tokio = { workspace = true }
-roslibrust_common = { path = "../roslibrust_common", version = "0.17" }
+roslibrust_common = { path = "../roslibrust_common", version = "0.18" }
 zenoh = "1.0"
 hex = "0.4"
 anyhow = "1.0"

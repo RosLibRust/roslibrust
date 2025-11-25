@@ -1,6 +1,6 @@
 [package]
 name = "roslibrust_mock"
-version = "0.17.0"
+version = "0.18.0"
 edition = "2021"
 authors = [ "carter <carterjschultz@gmail.com>" ]
 license = "MIT"
@@ -10,7 +10,7 @@ categories = ["science::robotics"]
 
 
 [dependencies]
-roslibrust_common = { path = "../roslibrust_common", version = "0.17" }
+roslibrust_common = { path = "../roslibrust_common", version = "0.18" }
 tokio = { workspace = true }
 # Used for serializing messages
 bincode = "1.3"

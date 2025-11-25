@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+## 0.18.0 - November 25th, 2025
+
+### Added
+
+### Fixed
+
+### Changed
+
 - The Subscriber, Publisher, ServiceServer, and ServiceClient associated types on TopicProvider and ServiceProvider now require + Sync for their bounds.
 This is specifically designed to make writing async nodes easier as holding a reference to one of these types across an await point is now valid.
 
@@ -234,7 +242,6 @@ filesystem paths that should trigger re-running code generation. Note: new files
 - Example for custom generic message usage with rosbridge
 - Example for async native ROS1 listener
 - Example for async native ROS1 publisher
-
 
 ### Fixed
 
