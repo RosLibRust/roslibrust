@@ -2,18 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-## Release Instructions
-
-Steps:
-
-- Starting on master
-- Edit change log
-- Revise the version numbers in Cargo.toml files
-- Commit the changes
-- Publish all crates using `./publish_all.sh` which invokes publish in the correct order
-- Push to master
-- Tag and push tag
-
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
@@ -24,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Changed
+
+- The Subscriber, Publisher, ServiceServer, and ServiceClient associated types on TopicProvider and ServiceProvider now require + Sync for their bounds.
+This is specifically designed to make writing async nodes easier as holding a reference to one of these types across an await point is now valid.
 
 ## 0.17.0 - November 18th, 2025
 
@@ -352,3 +343,17 @@ Initial public release
 ## 0.0.2 - Unreleased
 
 ## 0.0.1 - Unreleased
+
+## For Developers
+
+### Release Instructions
+
+Steps:
+
+- Starting on master
+- Edit change log
+- Revise the version numbers in Cargo.toml files
+- Commit the changes
+- Publish all crates using `./publish_all.sh` which invokes publish in the correct order
+- Push to master
+- Tag and push tag

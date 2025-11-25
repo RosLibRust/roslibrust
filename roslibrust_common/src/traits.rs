@@ -58,8 +58,8 @@ pub trait TopicProvider {
     // These associated types makeup the other half of the API
     // They are expected to be "self-deregistering", where dropping them results in unadvertise or unsubscribe operations as appropriate
     // We require Publisher and Subscriber types to be Send + 'static so they can be sent into different tokio tasks once created
-    type Publisher<T: RosMessageType>: Publish<T> + Send + 'static;
-    type Subscriber<T: RosMessageType>: Subscribe<T> + Send + 'static;
+    type Publisher<T: RosMessageType>: Publish<T> + Send + Sync + 'static;
+    type Subscriber<T: RosMessageType>: Subscribe<T> + Send + Sync + 'static;
 
     /// Advertises a topic to be published to and returns a type specific publisher to use.
     ///
@@ -86,8 +86,8 @@ pub trait Service<T: RosServiceType> {
 
 /// This trait is analogous to TopicProvider, but instead provides the capability to create service servers and service clients
 pub trait ServiceProvider {
-    type ServiceClient<T: RosServiceType>: Service<T> + Send + 'static;
-    type ServiceServer: Send + 'static;
+    type ServiceClient<T: RosServiceType>: Service<T> + Send + Sync + 'static;
+    type ServiceServer: Send + Sync + 'static;
 
     /// A "oneshot" service call good for low frequency calls or where the service_provider may not always be available.
     fn call_service<T: RosServiceType>(
