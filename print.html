@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-03debb0d.js";
+            window.path_to_searchindex_js = "searchindex-f9a41289.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-c3c2547b.js"></script>
@@ -823,8 +823,8 @@ pub trait TopicProvider {
     // These associated types makeup the other half of the API
     // They are expected to be "self-deregistering", where dropping them results in unadvertise or unsubscribe operations as appropriate
     // We require Publisher and Subscriber types to be Send + 'static so they can be sent into different tokio tasks once created
-    type Publisher&lt;T: RosMessageType&gt;: Publish&lt;T&gt; + Send + 'static;
-    type Subscriber&lt;T: RosMessageType&gt;: Subscribe&lt;T&gt; + Send + 'static;
+    type Publisher&lt;T: RosMessageType&gt;: Publish&lt;T&gt; + Send + Sync + 'static;
+    type Subscriber&lt;T: RosMessageType&gt;: Subscribe&lt;T&gt; + Send + Sync + 'static;
 
     /// Advertises a topic to be published to and returns a type specific publisher to use.
     ///
