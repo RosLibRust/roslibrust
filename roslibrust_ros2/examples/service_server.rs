@@ -1,16 +1,19 @@
 use log::*;
 use roslibrust_common::traits::*;
+// Required to get .build() method on ZContextBuilder
+use ros_z::Builder;
 
 #[tokio::main]
 async fn main() {
     env_logger::init();
 
-    let ctx = ZContextBuilder::default()
+    let ctx = ros_z::context::ZContextBuilder::default()
         .with_domain_id(0)
         .with_connect_endpoints(["tcp/[::]:7447"])
-        .build()?;
+        .build()
+        .unwrap();
 
-    let client = roslibrust_ros2::ZenohClient::new(ctx, "test_service_server_callable_node")
+    let client = roslibrust_ros2::ZenohClient::new(&ctx, "test_service_server_callable_node")
         .await
         .unwrap();
 

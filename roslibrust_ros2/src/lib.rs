@@ -310,18 +310,24 @@ mod tests {
     #[cfg(feature = "ros2_zenoh_test")]
     mod integration_tests {
         use crate::ZenohClient;
+        use ros_z::context::ZContext;
         use roslibrust_common::traits::*;
 
-        fn make_test_context() -> _ {
+        fn make_test_context() -> ZContext {
+            use ros_z::context::ZContextBuilder;
+            use ros_z::Builder;
+
             ZContextBuilder::default()
                 .with_domain_id(0)
                 .with_connect_endpoints(["tcp/[::]:7447"])
-                .build()?
+                .build()
+                .unwrap()
         }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn test_subscribe_basic() {
-            let client = ZenohClient::new(make_test_context(), "test_subscribe_basic_node")
+            let ctx = make_test_context();
+            let client = ZenohClient::new(&ctx, "test_subscribe_basic_node")
                 .await
                 .unwrap();
             let mut subscriber = client
@@ -354,7 +360,8 @@ mod tests {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn test_pubsub_basic() {
-            let client = ZenohClient::new(make_test_context(), "test_publish_basic_node")
+            let ctx = make_test_context();
+            let client = ZenohClient::new(&ctx, "test_publish_basic_node")
                 .await
                 .unwrap();
 
@@ -386,7 +393,8 @@ mod tests {
         #[ignore]
         #[tokio::test(flavor = "multi_thread")]
         async fn test_service_server_callable() {
-            let client = ZenohClient::new(make_test_context(), "test_service_server_callable_node")
+            let ctx = make_test_context();
+            let client = ZenohClient::new(&ctx, "test_service_server_callable_node")
                 .await
                 .unwrap();
 
@@ -435,8 +443,8 @@ mod tests {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn test_service_zenoh_to_zenoh() {
-            // Create service server
-            let node = ZenohClient::new(make_test_context(), "test_service_server_zenoh")
+            let ctx = make_test_context();
+            let node = ZenohClient::new(&ctx, "test_service_server_zenoh")
                 .await
                 .unwrap();
 
