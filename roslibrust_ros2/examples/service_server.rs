@@ -5,7 +5,12 @@ use roslibrust_common::traits::*;
 async fn main() {
     env_logger::init();
 
-    let client = roslibrust_ros2::ZenohClient::new("test_service_server_callable_node")
+    let ctx = ZContextBuilder::default()
+        .with_domain_id(0)
+        .with_connect_endpoints(["tcp/[::]:7447"])
+        .build()?;
+
+    let client = roslibrust_ros2::ZenohClient::new(ctx, "test_service_server_callable_node")
         .await
         .unwrap();
 
