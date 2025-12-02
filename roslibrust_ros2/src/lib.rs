@@ -3,13 +3,16 @@ use roslibrust_common::*;
 use std::result::Result as StdResult;
 
 use ros_z::{
-    context::ZContextBuilder,
+    context::ZContext,
     entity::{TypeHash, TypeInfo},
     msg::ZService,
     pubsub::{ZPub, ZSub},
     ros_msg::{ServiceTypeInfo, WithTypeInfo},
     Builder,
 };
+
+/// re-export ros_z for consumers
+pub use ros_z;
 
 /// Wrapper type that implements WithTypeInfo for RosMessageType
 /// This allows RosMessageType implementations to work with ros-z's type system
@@ -96,12 +99,9 @@ impl ZenohClient {
     // TODO don't love error type here... could work with ros_z to get better errors
     /// Creates a new node with the specified name and return a handle to it.
     pub async fn new(
+        ctx: &ZContext,
         name: impl AsRef<str>,
     ) -> StdResult<Self, Box<dyn std::error::Error + Send + Sync + 'static>> {
-        let ctx = ZContextBuilder::default()
-            .with_domain_id(0)
-            .with_connect_endpoints(["tcp/[::]:7447"])
-            .build()?;
         let node = ctx.create_node(name.as_ref()).build()?;
         Ok(Self { node })
     }
