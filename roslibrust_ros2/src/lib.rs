@@ -312,9 +312,18 @@ mod tests {
         use crate::ZenohClient;
         use roslibrust_common::traits::*;
 
+        fn make_test_context() -> _ {
+            ZContextBuilder::default()
+                .with_domain_id(0)
+                .with_connect_endpoints(["tcp/[::]:7447"])
+                .build()?
+        }
+
         #[tokio::test(flavor = "multi_thread")]
         async fn test_subscribe_basic() {
-            let client = ZenohClient::new("test_subscribe_basic_node").await.unwrap();
+            let client = ZenohClient::new(make_test_context(), "test_subscribe_basic_node")
+                .await
+                .unwrap();
             let mut subscriber = client
                 .subscribe::<roslibrust_test::ros2::std_msgs::String>("/chatter")
                 .await
@@ -345,7 +354,9 @@ mod tests {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn test_pubsub_basic() {
-            let client = ZenohClient::new("test_publish_basic_node").await.unwrap();
+            let client = ZenohClient::new(make_test_context(), "test_publish_basic_node")
+                .await
+                .unwrap();
 
             let publisher = client
                 .advertise::<roslibrust_test::ros2::std_msgs::String>("/chatter")
@@ -375,7 +386,7 @@ mod tests {
         #[ignore]
         #[tokio::test(flavor = "multi_thread")]
         async fn test_service_server_callable() {
-            let client = ZenohClient::new("test_service_server_callable_node")
+            let client = ZenohClient::new(make_test_context(), "test_service_server_callable_node")
                 .await
                 .unwrap();
 
@@ -425,7 +436,9 @@ mod tests {
         #[tokio::test(flavor = "multi_thread")]
         async fn test_service_zenoh_to_zenoh() {
             // Create service server
-            let node = ZenohClient::new("test_service_server_zenoh").await.unwrap();
+            let node = ZenohClient::new(make_test_context(), "test_service_server_zenoh")
+                .await
+                .unwrap();
 
             let state = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
             let state_copy = state.clone();
