@@ -32,7 +32,7 @@ impl NodeHandle {
         let _ = Name::new("test").unwrap().resolve_to_global(&name);
 
         // Follow ROS rules and determine our IP and hostname
-        let (addr, hostname) = super::determine_addr().await?;
+        let (addr, hostname) = super::determine_addr(master_uri).await?;
 
         let node = Node::new(master_uri, &hostname, &name, addr).await?;
         let nh = NodeHandle { inner: node };
