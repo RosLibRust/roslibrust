@@ -11,7 +11,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
     fmt::{Debug, Display},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use log::*;
@@ -54,6 +54,14 @@ pub struct Ros2Hash([u8; 32]);
 impl Ros2Hash {
     pub fn to_hash_string(&self) -> String {
         format!("RIHS01_{}", hex::encode(self.0))
+    }
+
+    pub fn from_string(hash_str: &str) -> Self {
+        // Remove "RIHS01_" prefix if present
+        let hex_str = hash_str.trim_start_matches("RIHS01_");
+        let mut bytes = [0u8; 32];
+        hex::decode_to_slice(hex_str, &mut bytes).expect("Invalid hex string");
+        Ros2Hash(bytes)
     }
 }
 
@@ -338,6 +346,53 @@ impl ServiceFile {
             parsed.get_full_name()
         );
         Some(format!("{md5sum:x}"))
+    }
+}
+
+/// Resolved action file with type hashes for ROS 2 action service wrappers
+pub struct ActionWithHashes {
+    pub parsed: ParsedActionFile,
+    pub send_goal_hash: Ros2Hash,
+    pub get_result_hash: Ros2Hash,
+    pub feedback_message_hash: Ros2Hash,
+}
+
+impl ActionWithHashes {
+    /// Creates an ActionWithHashes with type hashes loaded from ROS 2 JSON metadata
+    pub fn from_json_metadata(parsed: ParsedActionFile, json_path: &Path) -> Option<Self> {
+        use std::fs;
+
+        let json_content = fs::read_to_string(json_path).ok()?;
+        let json: serde_json::Value = serde_json::from_str(&json_content).ok()?;
+
+        let type_hashes = json.get("type_hashes")?.as_array()?;
+
+        // Helper to find hash by suffix
+        let find_hash = |suffix: &str| -> Option<Ros2Hash> {
+            type_hashes.iter().find_map(|type_hash| {
+                let type_name = type_hash.get("type_name")?.as_str()?;
+                let hash_string = type_hash.get("hash_string")?.as_str()?;
+
+                type_name
+                    .ends_with(suffix)
+                    .then(|| Ros2Hash::from_string(hash_string))
+            })
+        };
+
+        Some(ActionWithHashes {
+            parsed,
+            send_goal_hash: find_hash("_SendGoal")?,
+            get_result_hash: find_hash("_GetResult")?,
+            feedback_message_hash: find_hash("_FeedbackMessage")?,
+        })
+    }
+
+    pub fn get_package_name(&self) -> String {
+        self.parsed.package.clone()
+    }
+
+    pub fn get_short_name(&self) -> String {
+        self.parsed.name.clone()
     }
 }
 
@@ -834,6 +889,26 @@ pub(crate) fn parse_ros_files(
         }
     }
     Ok((parsed_messages, parsed_services, parsed_actions))
+}
+
+/// Resolves parsed actions into ActionWithHashes with type hashes from JSON metadata
+pub fn resolve_action_hashes(parsed_actions: Vec<ParsedActionFile>) -> Vec<ActionWithHashes> {
+    parsed_actions
+        .into_iter()
+        .filter_map(|parsed_action| {
+            // The JSON file should be in the same directory as the .action file
+            let json_path = parsed_action.path.with_extension("json");
+
+            ActionWithHashes::from_json_metadata(parsed_action.clone(), &json_path).or_else(|| {
+                log::warn!(
+                    "Failed to resolve action hashes for {}/{}",
+                    parsed_action.package,
+                    parsed_action.name
+                );
+                None
+            })
+        })
+        .collect()
 }
 
 #[cfg(test)]
