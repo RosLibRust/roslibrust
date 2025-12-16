@@ -13,3 +13,6 @@
 [submodule "assets/ros2_required_msgs/rcl_interfaces"]
 	path = assets/ros2_required_msgs/rcl_interfaces
 	url = https://github.com/ros2/rcl_interfaces.git
+[submodule "assets/ros2_required_msgs/unique_identifier_msgs"]
+	path = assets/ros2_required_msgs/unique_identifier_msgs
+	url = https://github.com/ros2/unique_identifier_msgs.git
