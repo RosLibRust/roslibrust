@@ -3,13 +3,16 @@ use roslibrust_common::*;
 use std::result::Result as StdResult;
 
 use ros_z::{
-    context::ZContextBuilder,
+    context::ZContext,
     entity::{TypeHash, TypeInfo},
     msg::ZService,
     pubsub::{ZPub, ZSub},
     ros_msg::{ServiceTypeInfo, WithTypeInfo},
     Builder,
 };
+
+/// re-export ros_z for consumers
+pub use ros_z;
 
 /// Wrapper type that implements WithTypeInfo for RosMessageType
 /// This allows RosMessageType implementations to work with ros-z's type system
@@ -96,12 +99,9 @@ impl ZenohClient {
     // TODO don't love error type here... could work with ros_z to get better errors
     /// Creates a new node with the specified name and return a handle to it.
     pub async fn new(
+        ctx: &ZContext,
         name: impl AsRef<str>,
     ) -> StdResult<Self, Box<dyn std::error::Error + Send + Sync + 'static>> {
-        let ctx = ZContextBuilder::default()
-            .with_domain_id(0)
-            .with_connect_endpoints(["tcp/[::]:7447"])
-            .build()?;
         let node = ctx.create_node(name.as_ref()).build()?;
         Ok(Self { node })
     }
@@ -310,11 +310,26 @@ mod tests {
     #[cfg(feature = "ros2_zenoh_test")]
     mod integration_tests {
         use crate::ZenohClient;
+        use ros_z::context::ZContext;
         use roslibrust_common::traits::*;
+
+        fn make_test_context() -> ZContext {
+            use ros_z::context::ZContextBuilder;
+            use ros_z::Builder;
+
+            ZContextBuilder::default()
+                .with_domain_id(0)
+                .with_connect_endpoints(["tcp/[::]:7447"])
+                .build()
+                .unwrap()
+        }
 
         #[tokio::test(flavor = "multi_thread")]
         async fn test_subscribe_basic() {
-            let client = ZenohClient::new("test_subscribe_basic_node").await.unwrap();
+            let ctx = make_test_context();
+            let client = ZenohClient::new(&ctx, "test_subscribe_basic_node")
+                .await
+                .unwrap();
             let mut subscriber = client
                 .subscribe::<roslibrust_test::ros2::std_msgs::String>("/chatter")
                 .await
@@ -345,7 +360,10 @@ mod tests {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn test_pubsub_basic() {
-            let client = ZenohClient::new("test_publish_basic_node").await.unwrap();
+            let ctx = make_test_context();
+            let client = ZenohClient::new(&ctx, "test_publish_basic_node")
+                .await
+                .unwrap();
 
             let publisher = client
                 .advertise::<roslibrust_test::ros2::std_msgs::String>("/chatter")
@@ -375,7 +393,8 @@ mod tests {
         #[ignore]
         #[tokio::test(flavor = "multi_thread")]
         async fn test_service_server_callable() {
-            let client = ZenohClient::new("test_service_server_callable_node")
+            let ctx = make_test_context();
+            let client = ZenohClient::new(&ctx, "test_service_server_callable_node")
                 .await
                 .unwrap();
 
@@ -424,8 +443,10 @@ mod tests {
 
         #[tokio::test(flavor = "multi_thread")]
         async fn test_service_zenoh_to_zenoh() {
-            // Create service server
-            let node = ZenohClient::new("test_service_server_zenoh").await.unwrap();
+            let ctx = make_test_context();
+            let node = ZenohClient::new(&ctx, "test_service_server_zenoh")
+                .await
+                .unwrap();
 
             let state = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
             let state_copy = state.clone();

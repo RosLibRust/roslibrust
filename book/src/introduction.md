@@ -3,7 +3,7 @@
 RosLibRust is an alternative to the various existing ROS clients.
 RosLibRust may be a great fit for your project, or you may benefit from one of the other existing clients.
 
-- [ros2rust](https://github.com/ros2-rust/ros2_rust) is ideal if you want to release ROS2 packages to the community, or want to add Rust to an existing ROS2 project. But requires a full ROS2 installation.
+- [ros2-rust](https://github.com/ros2-rust/ros2_rust) is ideal if you want to release ROS2 packages to the community, or want to add Rust to an existing ROS2 project. But requires a full ROS2 installation.
 - [rosrust](https://github.com/adnanademovic/rosrust) is a solid ROS1 option, but doesn't support `async` and is un-maintained.
 - [ros2_client](https://docs.rs/ros2-client/latest/ros2_client/) is a pure rust client for ROS2 that supports `async`. However, it can only talk DDS and not Zenoh that ROS2 is migrating to.
 
