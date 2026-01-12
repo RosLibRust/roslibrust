@@ -13,7 +13,7 @@ use roslibrust::Publish;
 // and the generated types from the macro above.
 async fn pub_counter(ros: impl roslibrust::Ros) {
     let publisher = ros
-        .advertise::<std_msgs::Int16>("example_counter")
+        .advertise::<std_msgs::Int16>("/example_counter")
         .await
         .unwrap();
     let mut counter = 0;
@@ -60,7 +60,7 @@ mod test {
 
         // Subscribe to the topic we're publishing to
         let mut subscriber = ros
-            .subscribe::<std_msgs::Int16>("example_counter")
+            .subscribe::<std_msgs::Int16>("/example_counter")
             .await
             .unwrap();
 

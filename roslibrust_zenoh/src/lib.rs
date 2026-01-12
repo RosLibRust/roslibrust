@@ -1,6 +1,7 @@
 //! A crate for interfacing to ROS1 via the [zenoh-ros1-plugin / zenoh-ros1-bridge](https://github.com/eclipse-zenoh/zenoh-plugin-ros1).
 //!
 //! It is not recommended to depend on this crate directly, but instead access it via [roslibrust](https://docs.rs/roslibrust/latest/roslibrust/) with the `zenoh` feature enabled.
+use roslibrust_common::topic_name::{GlobalTopicName, ToGlobalTopicName};
 use roslibrust_common::*;
 
 use log::*;
@@ -85,8 +86,12 @@ impl TopicProvider for ZenohClient {
 
     type Subscriber<T: RosMessageType> = ZenohSubscriber<T>;
 
-    async fn advertise<T: RosMessageType>(&self, topic: &str) -> Result<Self::Publisher<T>> {
-        let mangled_topic = mangle_topic(topic, T::ROS_TYPE_NAME, T::MD5SUM);
+    async fn advertise<MsgType: RosMessageType>(
+        &self,
+        topic: impl ToGlobalTopicName,
+    ) -> Result<Self::Publisher<MsgType>> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        let mangled_topic = mangle_topic(topic.as_ref(), MsgType::ROS_TYPE_NAME, MsgType::MD5SUM);
         let publisher = match self.session.declare_publisher(mangled_topic).await {
             Ok(publisher) => publisher,
             Err(e) => {
@@ -103,8 +108,12 @@ impl TopicProvider for ZenohClient {
         })
     }
 
-    async fn subscribe<T: RosMessageType>(&self, topic: &str) -> Result<Self::Subscriber<T>> {
-        let mangled_topic = mangle_topic(topic, T::ROS_TYPE_NAME, T::MD5SUM);
+    async fn subscribe<MsgType: RosMessageType>(
+        &self,
+        topic: impl ToGlobalTopicName,
+    ) -> Result<Self::Subscriber<MsgType>> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        let mangled_topic = mangle_topic(topic.as_ref(), MsgType::ROS_TYPE_NAME, MsgType::MD5SUM);
         let sub = match self.session.declare_subscriber(mangled_topic).await {
             Ok(sub) => sub,
             Err(e) => {
@@ -217,21 +226,24 @@ impl ServiceProvider for ZenohClient {
     type ServiceClient<T: RosServiceType> = ZenohServiceClient<T>;
     type ServiceServer = ZenohServiceServer;
 
-    async fn call_service<T: RosServiceType>(
+    async fn call_service<SrvType: RosServiceType>(
         &self,
-        topic: &str,
-        request: T::Request,
-    ) -> Result<T::Response> {
+        service: impl ToGlobalTopicName,
+        request: SrvType::Request,
+    ) -> Result<SrvType::Response> {
+        let service: GlobalTopicName = service.to_global_name()?;
         // TODO should be able to optimize this...
-        let client = self.service_client::<T>(topic).await?;
+        let client = ZenohClient::service_client::<SrvType>(self, service.as_ref()).await?;
         client.call(&request).await
     }
 
-    async fn service_client<T: RosServiceType + 'static>(
+    async fn service_client<SrvType: RosServiceType + 'static>(
         &self,
-        topic: &str,
-    ) -> Result<Self::ServiceClient<T>> {
-        let mangled_topic = mangle_topic(topic, T::ROS_SERVICE_NAME, T::MD5SUM);
+        service: impl ToGlobalTopicName,
+    ) -> Result<Self::ServiceClient<SrvType>> {
+        let service: GlobalTopicName = service.to_global_name()?;
+        let mangled_topic =
+            mangle_topic(service.as_ref(), SrvType::ROS_SERVICE_NAME, SrvType::MD5SUM);
 
         Ok(ZenohServiceClient {
             session: self.session.clone(),
@@ -240,12 +252,14 @@ impl ServiceProvider for ZenohClient {
         })
     }
 
-    async fn advertise_service<T: RosServiceType + 'static, F: ServiceFn<T>>(
+    async fn advertise_service<SrvType: RosServiceType + 'static, F: ServiceFn<SrvType>>(
         &self,
-        topic: &str,
+        service: impl ToGlobalTopicName,
         server: F,
     ) -> Result<Self::ServiceServer> {
-        let mangled_topic = mangle_topic(topic, T::ROS_SERVICE_NAME, T::MD5SUM);
+        let service: GlobalTopicName = service.to_global_name()?;
+        let mangled_topic =
+            mangle_topic(service.as_ref(), SrvType::ROS_SERVICE_NAME, SrvType::MD5SUM);
 
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
         let (shutdown_tx, mut shutdown_rx) = tokio::sync::oneshot::channel();
@@ -327,8 +341,9 @@ impl ServiceProvider for ZenohClient {
 
         // Note: I'm uncertain about "discovery_namespace" and just using * for now
         // Note: I'm uncertain about "bridge_namespace" and just using * for now
-        let (type_mangle, service_name) = mangle_service(topic, T::ROS_SERVICE_NAME, T::MD5SUM);
-        let zenoh_info_topic = format!("ros1_discovery_info/*/srv/{type_mangle}/*/{service_name}");
+        let (type_mangle, svc_name) =
+            mangle_service(service.as_ref(), SrvType::ROS_SERVICE_NAME, SrvType::MD5SUM);
+        let zenoh_info_topic = format!("ros1_discovery_info/*/srv/{type_mangle}/*/{svc_name}");
 
         let q2 = self
             .session

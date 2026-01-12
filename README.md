@@ -23,8 +23,8 @@ This allows writing generic behaviors like:
 use roslibrust::{TopicProvider, Publish, Subscribe};
 
 async fn relay<T: TopicProvider>(ros: T) -> roslibrust::Result<()> {
-    let mut subscriber = ros.subscribe::<std_msgs::String>("in").await?;
-    let mut publisher = ros.advertise::<std_msgs::String>("out").await?;
+    let mut subscriber = ros.subscribe::<std_msgs::String>("/in").await?;
+    let mut publisher = ros.advertise::<std_msgs::String>("/out").await?;
     while let Ok(msg) = subscriber.next().await {
         println!("Got message: {}", msg.data);
         publisher.publish(&msg).await?;

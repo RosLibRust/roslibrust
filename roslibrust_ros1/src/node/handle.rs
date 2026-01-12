@@ -116,7 +116,7 @@ impl NodeHandle {
     ///       [0x05, 0x00, 0x00, 0x00, // field length = 5
     ///        0x68, 0x65, 0x6c, 0x6c, 0x6f] // "hello"
     ///
-    /// See: [https://wiki.ros.org/ROS/TCPROS] for more information on the wire format.
+    /// See: <https://wiki.ros.org/ROS/TCPROS> for more information on the wire format.
     pub async fn subscribe_any(
         &self,
         topic_name: &str,

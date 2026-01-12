@@ -11,7 +11,7 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::{Deserialize, Deserializer, Serializer};
 
-/// Serialize a Vec<u8> as a base64 string
+/// Serialize a `Vec<u8>` as a base64 string
 ///
 /// This is compatible with rosbridge's protocol which expects uint8[] as base64.
 pub fn serialize<S>(bytes: &Vec<u8>, serializer: S) -> Result<S::Ok, S::Error>
@@ -29,7 +29,7 @@ where
     }
 }
 
-/// Deserialize a Vec<u8> from either a base64 string or binary format
+/// Deserialize a `Vec<u8>` from either a base64 string or binary format
 ///
 /// This allows the same generated code to work with:
 /// - Rosbridge (which sends base64 strings)

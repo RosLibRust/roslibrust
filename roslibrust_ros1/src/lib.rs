@@ -14,7 +14,7 @@
 //! use roslibrust_ros1::NodeHandle;
 //!
 //! async fn my_behavior(ros: impl TopicProvider) -> Result<()> {
-//!     let publisher = ros.advertise::<std_msgs::String>("my_topic").await?;
+//!     let publisher = ros.advertise::<std_msgs::String>("/my_topic").await?;
 //!     publisher.publish(&std_msgs::String { data: "Hello, world!".to_string() }).await?;
 //!     Ok(())
 //! }
@@ -29,6 +29,7 @@
 //! }
 //! ```
 
+use roslibrust_common::topic_name::{GlobalTopicName, ToGlobalTopicName};
 use roslibrust_common::Error;
 use roslibrust_common::{
     Publish, RosMessageType, RosServiceType, Service, ServiceFn, ServiceProvider, Subscribe,
@@ -69,22 +70,26 @@ impl TopicProvider for crate::NodeHandle {
     type Publisher<T: RosMessageType> = crate::Publisher<T>;
     type Subscriber<T: RosMessageType> = crate::Subscriber<T>;
 
-    async fn advertise<T: RosMessageType>(
+    async fn advertise<MsgType: RosMessageType>(
         &self,
-        topic: &str,
-    ) -> roslibrust_common::Result<Self::Publisher<T>> {
+        topic: impl ToGlobalTopicName,
+    ) -> roslibrust_common::Result<Self::Publisher<MsgType>> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
         // TODO MAJOR: consider promoting queue size, making unlimited default
-        self.advertise::<T>(topic.as_ref(), 10, false)
+        NodeHandle::advertise::<MsgType>(self, topic.as_ref(), 10, false)
             .await
             .map_err(|e| e.into())
     }
 
-    async fn subscribe<T: RosMessageType>(
+    async fn subscribe<MsgType: RosMessageType>(
         &self,
-        topic: &str,
-    ) -> roslibrust_common::Result<Self::Subscriber<T>> {
+        topic: impl ToGlobalTopicName,
+    ) -> roslibrust_common::Result<Self::Subscriber<MsgType>> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
         // TODO MAJOR: consider promoting queue size, making unlimited default
-        self.subscribe(topic, 10).await.map_err(|e| e.into())
+        NodeHandle::subscribe(self, topic.as_ref(), 10)
+            .await
+            .map_err(|e| e.into())
     }
 }
 
@@ -98,33 +103,35 @@ impl ServiceProvider for crate::NodeHandle {
     type ServiceClient<T: RosServiceType> = crate::ServiceClient<T>;
     type ServiceServer = crate::ServiceServer;
 
-    async fn call_service<T: RosServiceType>(
+    async fn call_service<SrvType: RosServiceType>(
         &self,
-        topic: &str,
-        request: T::Request,
-    ) -> roslibrust_common::Result<T::Response> {
+        service: impl ToGlobalTopicName,
+        request: SrvType::Request,
+    ) -> roslibrust_common::Result<SrvType::Response> {
+        let service: GlobalTopicName = service.to_global_name()?;
         // TODO should have a more optimized version of this...
-        let client = self.service_client::<T>(topic).await?;
+        let client = NodeHandle::service_client::<SrvType>(self, service.as_ref()).await?;
         client.call(&request).await
     }
 
-    async fn service_client<T: RosServiceType + 'static>(
+    async fn service_client<SrvType: RosServiceType + 'static>(
         &self,
-        topic: &str,
-    ) -> roslibrust_common::Result<Self::ServiceClient<T>> {
+        service: impl ToGlobalTopicName,
+    ) -> roslibrust_common::Result<Self::ServiceClient<SrvType>> {
+        let service: GlobalTopicName = service.to_global_name()?;
         // TODO bad error mapping here...
-        self.service_client::<T>(topic).await.map_err(|e| e.into())
+        NodeHandle::service_client::<SrvType>(self, service.as_ref())
+            .await
+            .map_err(|e| e.into())
     }
 
-    async fn advertise_service<T: RosServiceType + 'static, F>(
+    async fn advertise_service<SrvType: RosServiceType + 'static, F: ServiceFn<SrvType>>(
         &self,
-        topic: &str,
+        service: impl ToGlobalTopicName,
         server: F,
-    ) -> roslibrust_common::Result<Self::ServiceServer>
-    where
-        F: ServiceFn<T>,
-    {
-        self.advertise_service::<T, F>(topic, server)
+    ) -> roslibrust_common::Result<Self::ServiceServer> {
+        let service: GlobalTopicName = service.to_global_name()?;
+        NodeHandle::advertise_service::<SrvType, F>(self, service.as_ref(), server)
             .await
             .map_err(|e| e.into())
     }

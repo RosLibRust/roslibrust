@@ -3210,6 +3210,7 @@ dependencies = [
  "async-stream",
  "futures-core",
  "md5",
+ "regex",
  "serde",
  "thiserror 2.0.17",
 ]
