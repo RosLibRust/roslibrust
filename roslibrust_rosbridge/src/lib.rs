@@ -17,7 +17,7 @@
 //! use roslibrust_rosbridge::ClientHandle;
 //!
 //! async fn my_behavior(ros: impl TopicProvider) -> Result<()> {
-//!     let publisher = ros.advertise::<std_msgs::String>("my_topic").await?;
+//!     let publisher = ros.advertise::<std_msgs::String>("/my_topic").await?;
 //!     publisher.publish(&std_msgs::String { data: "Hello, world!".to_string() }).await?;
 //!     Ok(())
 //! }
@@ -32,6 +32,7 @@
 //! }
 //! ```
 
+use roslibrust_common::topic_name::{GlobalTopicName, ToGlobalTopicName};
 use roslibrust_common::*;
 
 // Subscriber is a transparent module, we directly expose internal types
@@ -166,30 +167,30 @@ impl ServiceProvider for crate::ClientHandle {
     type ServiceClient<T: RosServiceType> = crate::ServiceClient<T>;
     type ServiceServer = crate::ServiceHandle;
 
-    async fn call_service<T: RosServiceType>(
+    async fn call_service<SrvType: RosServiceType>(
         &self,
-        topic: &str,
-        request: T::Request,
-    ) -> Result<T::Response> {
-        self.call_service::<T>(topic, request).await
+        service: impl ToGlobalTopicName,
+        request: SrvType::Request,
+    ) -> Result<SrvType::Response> {
+        let service: GlobalTopicName = service.to_global_name()?;
+        ClientHandle::call_service::<SrvType>(self, service.as_ref(), request).await
     }
 
-    async fn service_client<T: RosServiceType + 'static>(
+    async fn service_client<SrvType: RosServiceType + 'static>(
         &self,
-        topic: &str,
-    ) -> Result<Self::ServiceClient<T>> {
-        self.service_client::<T>(topic).await
+        service: impl ToGlobalTopicName,
+    ) -> Result<Self::ServiceClient<SrvType>> {
+        let service: GlobalTopicName = service.to_global_name()?;
+        ClientHandle::service_client::<SrvType>(self, service.as_ref()).await
     }
 
-    async fn advertise_service<T: RosServiceType + 'static, F>(
+    async fn advertise_service<SrvType: RosServiceType + 'static, F: ServiceFn<SrvType>>(
         &self,
-        topic: &str,
+        service: impl ToGlobalTopicName,
         server: F,
-    ) -> Result<Self::ServiceServer>
-    where
-        F: ServiceFn<T>,
-    {
-        self.advertise_service(topic, server).await
+    ) -> Result<Self::ServiceServer> {
+        let service: GlobalTopicName = service.to_global_name()?;
+        ClientHandle::advertise_service(self, service.as_ref(), server).await
     }
 }
 
@@ -198,12 +199,20 @@ impl TopicProvider for crate::ClientHandle {
     type Publisher<T: RosMessageType> = crate::Publisher<T>;
     type Subscriber<T: RosMessageType> = crate::Subscriber<T>;
 
-    async fn advertise<T: RosMessageType>(&self, topic: &str) -> Result<Self::Publisher<T>> {
-        self.advertise::<T>(topic.as_ref()).await
+    async fn advertise<MsgType: RosMessageType>(
+        &self,
+        topic: impl ToGlobalTopicName,
+    ) -> Result<Self::Publisher<MsgType>> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        ClientHandle::advertise::<MsgType>(self, topic.as_ref()).await
     }
 
-    async fn subscribe<T: RosMessageType>(&self, topic: &str) -> Result<Self::Subscriber<T>> {
-        self.subscribe(topic).await
+    async fn subscribe<MsgType: RosMessageType>(
+        &self,
+        topic: impl ToGlobalTopicName,
+    ) -> Result<Self::Subscriber<MsgType>> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        ClientHandle::subscribe(self, topic.as_ref()).await
     }
 }
 

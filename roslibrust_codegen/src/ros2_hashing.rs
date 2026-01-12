@@ -1,4 +1,4 @@
-//! Module for calculating the ROS2 hash of a message definition via https://github.com/ros-infrastructure/rep/pull/381/files
+//! Module for calculating the ROS2 hash of a message definition via <https://github.com/ros-infrastructure/rep/pull/381/files>
 
 use anyhow::bail;
 use log::*;

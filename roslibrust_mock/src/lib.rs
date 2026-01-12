@@ -9,7 +9,7 @@
 //! use roslibrust_test::ros1::*;
 //!
 //! async fn my_ros_thing(ros: impl TopicProvider) -> Result<()> {
-//!     let my_publisher = ros.advertise::<std_msgs::String>("my_topic").await?;
+//!     let my_publisher = ros.advertise::<std_msgs::String>("/my_topic").await?;
 //!     my_publisher.publish(&std_msgs::String { data: "Hello, world!".to_string() }).await?;
 //!     Ok(())
 //! }
@@ -19,7 +19,7 @@
 //!     // Create a mock ros instance with new
 //!     let ros = roslibrust::mock::MockRos::new();
 //!     // Use it like ros:
-//!     let test_sub = ros.subscribe::<std_msgs::String>("my_topic").await?;
+//!     let test_sub = ros.subscribe::<std_msgs::String>("/my_topic").await?;
 //!     // Kick off our object under test
 //!     tokio::spawn(my_ros_thing(ros));
 //!     // Assert we got the message we expected
@@ -29,6 +29,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use roslibrust_common::topic_name::{GlobalTopicName, ToGlobalTopicName};
 use roslibrust_common::*;
 
 use tokio::sync::broadcast as Channel;
@@ -79,12 +80,17 @@ impl TopicProvider for MockRos {
     type Publisher<T: RosMessageType> = MockPublisher<T>;
     type Subscriber<T: RosMessageType> = MockSubscriber<T>;
 
-    async fn advertise<T: RosMessageType>(&self, topic: &str) -> Result<Self::Publisher<T>> {
+    async fn advertise<MsgType: RosMessageType>(
+        &self,
+        topic: impl ToGlobalTopicName,
+    ) -> Result<Self::Publisher<MsgType>> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        let topic_str = topic.as_ref();
         // Check if we already have this channel
         {
             let topics = self.topics.read().await;
-            if let Some((sender, _)) = topics.get(topic) {
-                debug!("Issued new publisher to existing topic {}", topic);
+            if let Some((sender, _)) = topics.get(topic_str) {
+                debug!("Issued new publisher to existing topic {}", topic_str);
                 return Ok(MockPublisher {
                     sender: sender.clone(),
                     _marker: Default::default(),
@@ -95,23 +101,25 @@ impl TopicProvider for MockRos {
         let tx_rx = Channel::channel(10);
         let tx_copy = tx_rx.0.clone();
         let mut topics = self.topics.write().await;
-        topics.insert(topic.to_string(), tx_rx);
-        debug!("Created new publisher and channel for topic {}", topic);
+        topics.insert(topic_str.to_string(), tx_rx);
+        debug!("Created new publisher and channel for topic {}", topic_str);
         Ok(MockPublisher {
             sender: tx_copy,
             _marker: Default::default(),
         })
     }
 
-    async fn subscribe<T: RosMessageType>(
+    async fn subscribe<MsgType: RosMessageType>(
         &self,
-        topic: &str,
-    ) -> roslibrust_common::Result<Self::Subscriber<T>> {
+        topic: impl ToGlobalTopicName,
+    ) -> Result<Self::Subscriber<MsgType>> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        let topic_str = topic.as_ref();
         // Check if we already have this channel
         {
             let topics = self.topics.read().await;
-            if let Some((_, receiver)) = topics.get(topic) {
-                debug!("Issued new subscriber to existing topic {}", topic);
+            if let Some((_, receiver)) = topics.get(topic_str) {
+                debug!("Issued new subscriber to existing topic {}", topic_str);
                 return Ok(MockSubscriber {
                     receiver: receiver.resubscribe(),
                     _marker: Default::default(),
@@ -122,8 +130,8 @@ impl TopicProvider for MockRos {
         let tx_rx = Channel::channel(10);
         let rx_copy = tx_rx.1.resubscribe();
         let mut topics = self.topics.write().await;
-        topics.insert(topic.to_string(), tx_rx);
-        debug!("Created new subscriber and channel for topic {}", topic);
+        topics.insert(topic_str.to_string(), tx_rx);
+        debug!("Created new subscriber and channel for topic {}", topic_str);
         Ok(MockSubscriber {
             receiver: rx_copy,
             _marker: Default::default(),
@@ -199,36 +207,36 @@ impl ServiceProvider for MockRos {
     type ServiceClient<T: RosServiceType> = MockServiceClient<T>;
     type ServiceServer = ();
 
-    async fn call_service<T: RosServiceType>(
+    async fn call_service<SrvType: RosServiceType>(
         &self,
-        topic: &str,
-        request: T::Request,
-    ) -> roslibrust_common::Result<T::Response> {
-        let client = self.service_client::<T>(topic).await?;
+        service: impl ToGlobalTopicName,
+        request: SrvType::Request,
+    ) -> Result<SrvType::Response> {
+        let service: GlobalTopicName = service.to_global_name()?;
+        let client = MockRos::service_client::<SrvType>(self, service.as_ref()).await?;
         client.call(&request).await
     }
 
-    async fn service_client<T: RosServiceType + 'static>(
+    async fn service_client<SrvType: RosServiceType + 'static>(
         &self,
-        topic: &str,
-    ) -> roslibrust_common::Result<Self::ServiceClient<T>> {
+        service: impl ToGlobalTopicName,
+    ) -> Result<Self::ServiceClient<SrvType>> {
+        let service: GlobalTopicName = service.to_global_name()?;
         // TODO this is currently infallible
         // We don't yet support a way to simulate ROS disconnecting in a test
         Ok(MockServiceClient {
             handle: Arc::downgrade(&self.services),
-            topic: topic.to_string(),
+            topic: String::from(service),
             _marker: Default::default(),
         })
     }
 
-    async fn advertise_service<T: RosServiceType + 'static, F>(
+    async fn advertise_service<SrvType: RosServiceType + 'static, F: ServiceFn<SrvType>>(
         &self,
-        topic: &str,
+        service: impl ToGlobalTopicName,
         server: F,
-    ) -> roslibrust_common::Result<Self::ServiceServer>
-    where
-        F: ServiceFn<T>,
-    {
+    ) -> Result<Self::ServiceServer> {
+        let service: GlobalTopicName = service.to_global_name()?;
         // Type erase the service function here
         let erased_closure = move |message: Vec<u8>| -> std::result::Result<
             Vec<u8>,
@@ -243,7 +251,7 @@ impl ServiceProvider for MockRos {
         };
         let erased_closure = Arc::new(erased_closure);
         let mut services = self.services.write().await;
-        services.insert(topic.to_string(), erased_closure);
+        services.insert(String::from(service), erased_closure);
 
         // We technically need to hand back a token that shuts the service down here
         // But we haven't implemented that yet in this mock
@@ -298,11 +306,11 @@ mod tests {
         let mock_ros = MockRos::new();
 
         let pub_handle = mock_ros
-            .advertise::<std_msgs::String>("test_topic")
+            .advertise::<std_msgs::String>("/test_topic")
             .await
             .unwrap();
         let mut sub_handle = mock_ros
-            .subscribe::<std_msgs::String>("test_topic")
+            .subscribe::<std_msgs::String>("/test_topic")
             .await
             .unwrap();
 
@@ -329,12 +337,12 @@ mod tests {
         };
 
         mock_topics
-            .advertise_service::<std_srvs::SetBool, _>("test_service", server_fn)
+            .advertise_service::<std_srvs::SetBool, _>("/test_service", server_fn)
             .await
             .unwrap();
 
         let client = mock_topics
-            .service_client::<std_srvs::SetBool>("test_service")
+            .service_client::<std_srvs::SetBool>("/test_service")
             .await
             .unwrap();
 
@@ -380,7 +388,7 @@ mod tests {
         // Test covers a bug case where clients wouldn't connect if created before servers
         let mock_ros = MockRos::new();
         let client = mock_ros
-            .service_client::<std_srvs::SetBool>("test_service")
+            .service_client::<std_srvs::SetBool>("/test_service")
             .await
             .unwrap();
 
@@ -398,7 +406,7 @@ mod tests {
             })
         };
         mock_ros
-            .advertise_service::<std_srvs::SetBool, _>("test_service", server_fn)
+            .advertise_service::<std_srvs::SetBool, _>("/test_service", server_fn)
             .await
             .unwrap();
 
@@ -416,7 +424,7 @@ mod tests {
         let mock_ros = MockRos::new();
 
         let client = mock_ros
-            .service_client::<std_srvs::SetBool>("test_service")
+            .service_client::<std_srvs::SetBool>("/test_service")
             .await
             .unwrap();
 
@@ -428,7 +436,7 @@ mod tests {
                 })
             };
             mock_ros
-                .advertise_service::<std_srvs::SetBool, _>("test_service", server_fn)
+                .advertise_service::<std_srvs::SetBool, _>("/test_service", server_fn)
                 .await
                 .unwrap();
 

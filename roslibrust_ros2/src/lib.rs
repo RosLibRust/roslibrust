@@ -111,11 +111,15 @@ impl roslibrust_common::TopicProvider for ZenohClient {
     type Publisher<T: RosMessageType> = ZenohPublisher<T>;
     type Subscriber<T: RosMessageType> = ZenohSubscriber<T>;
 
-    async fn advertise<T: RosMessageType>(&self, topic: &str) -> Result<Self::Publisher<T>> {
+    async fn advertise<MsgType: RosMessageType>(
+        &self,
+        topic: impl roslibrust_common::topic_name::ToGlobalTopicName + Send,
+    ) -> Result<Self::Publisher<MsgType>> {
+        let topic: roslibrust_common::GlobalTopicName = topic.to_global_name()?;
         let publisher = self
             .node
-            .create_pub::<RosMessageWrapper<T>>(topic)
-            .with_serdes::<WrapperSerdes<T>>()
+            .create_pub::<RosMessageWrapper<MsgType>>(topic.as_ref())
+            .with_serdes::<WrapperSerdes<MsgType>>()
             .build()
             // TODO better errors
             .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))?;
@@ -126,11 +130,15 @@ impl roslibrust_common::TopicProvider for ZenohClient {
         })
     }
 
-    async fn subscribe<T: RosMessageType>(&self, topic: &str) -> Result<Self::Subscriber<T>> {
+    async fn subscribe<MsgType: RosMessageType>(
+        &self,
+        topic: impl roslibrust_common::topic_name::ToGlobalTopicName + Send,
+    ) -> Result<Self::Subscriber<MsgType>> {
+        let topic: roslibrust_common::GlobalTopicName = topic.to_global_name()?;
         let sub = self
             .node
-            .create_sub::<RosMessageWrapper<T>>(topic)
-            .with_serdes::<WrapperSerdes<T>>()
+            .create_sub::<RosMessageWrapper<MsgType>>(topic.as_ref())
+            .with_serdes::<WrapperSerdes<MsgType>>()
             .build()
             // TODO better errors
             .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))?;
@@ -194,23 +202,25 @@ impl roslibrust_common::ServiceProvider for ZenohClient {
     type ServiceClient<T: RosServiceType> = ZenohServiceClient<T>;
     type ServiceServer = ZenohServiceServer;
 
-    async fn call_service<T: RosServiceType>(
+    async fn call_service<SrvType: RosServiceType>(
         &self,
-        topic: &str,
-        request: T::Request,
-    ) -> Result<T::Response> {
+        service: impl roslibrust_common::topic_name::ToGlobalTopicName + Send,
+        request: SrvType::Request,
+    ) -> Result<SrvType::Response> {
+        let service: roslibrust_common::GlobalTopicName = service.to_global_name()?;
         // Create a service client and call it once
-        let client = self.service_client::<T>(topic).await?;
+        let client = ZenohClient::service_client::<SrvType>(self, service.as_ref()).await?;
         client.call(&request).await
     }
 
-    async fn service_client<T: RosServiceType + 'static>(
+    async fn service_client<SrvType: RosServiceType + 'static>(
         &self,
-        topic: &str,
-    ) -> Result<Self::ServiceClient<T>> {
+        service: impl roslibrust_common::topic_name::ToGlobalTopicName + Send,
+    ) -> Result<Self::ServiceClient<SrvType>> {
+        let service: roslibrust_common::GlobalTopicName = service.to_global_name()?;
         let client = self
             .node
-            .create_client::<Fake<T>>(topic)
+            .create_client::<Fake<SrvType>>(service.as_ref())
             .build()
             .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))?;
 
@@ -220,14 +230,12 @@ impl roslibrust_common::ServiceProvider for ZenohClient {
         })
     }
 
-    async fn advertise_service<T: RosServiceType + 'static, F>(
+    async fn advertise_service<SrvType: RosServiceType + 'static, F: ServiceFn<SrvType>>(
         &self,
-        topic: &str,
+        service: impl roslibrust_common::topic_name::ToGlobalTopicName + Send,
         server: F,
-    ) -> Result<Self::ServiceServer>
-    where
-        F: ServiceFn<T>,
-    {
+    ) -> Result<Self::ServiceServer> {
+        let service: roslibrust_common::GlobalTopicName = service.to_global_name()?;
         // TODO: doing some really dome stuff here... to work around orphan rule and RosServiceType != ZService
         struct Fake<T>(T);
         impl<T: RosServiceType> ZService for Fake<T> {
@@ -240,9 +248,9 @@ impl roslibrust_common::ServiceProvider for ZenohClient {
             }
         }
 
-        let mut service = self
+        let mut svc = self
             .node
-            .create_service::<Fake<T>>(topic)
+            .create_service::<Fake<SrvType>>(service.as_ref())
             .build()
             .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))?;
 
@@ -250,20 +258,23 @@ impl roslibrust_common::ServiceProvider for ZenohClient {
 
         // Build a clone wrapper for the users's function
         let server = std::sync::Arc::new(server);
-        let topic = topic.to_string();
+        let service_name = String::from(service);
         let ct_copy = cancellation_token.clone();
         tokio::spawn(async move {
             let body_future = async {
                 loop {
-                    let req = service.take_request_async().await;
+                    let req = svc.take_request_async().await;
                     let (query, req) = match req {
                         Ok(req) => req,
                         Err(e) => {
-                            error!("Failed to take request in service {topic}: {e:?}");
+                            error!("Failed to take request in service {service_name}: {e:?}");
                             continue;
                         }
                     };
-                    debug!("Got request for service {topic} with key {:?}", query);
+                    debug!(
+                        "Got request for service {service_name} with key {:?}",
+                        query
+                    );
 
                     // Evaluate the server function inside a spawn_blocking to uphold trait expectations from roslibrust_common
                     let server_copy = server.clone();
@@ -272,19 +283,19 @@ impl roslibrust_common::ServiceProvider for ZenohClient {
                     let valid_response = match response {
                         Ok(Ok(response)) => response,
                         Ok(Err(e)) => {
-                            error!("Failed to handle request in service {topic}: {e:?}");
+                            error!("Failed to handle request in service {service_name}: {e:?}");
                             continue;
                         }
                         Err(e) => {
-                            error!("Failed to join task in service {topic}: {e:?}");
+                            error!("Failed to join task in service {service_name}: {e:?}");
                             continue;
                         }
                     };
-                    let send_result = service.send_response_async(&valid_response, &query).await;
+                    let send_result = svc.send_response_async(&valid_response, &query).await;
                     match send_result {
                         Ok(()) => {}
                         Err(e) => {
-                            error!("Failed to send response to service {topic}: {e:?}");
+                            error!("Failed to send response to service {service_name}: {e:?}");
                         }
                     };
                 }
@@ -295,7 +306,7 @@ impl roslibrust_common::ServiceProvider for ZenohClient {
                     // Shutdown
                 }
                 _ = body_future => {
-                    error!("Service task for {topic} exited unexpectedly");
+                    error!("Service task for {service_name} exited unexpectedly");
                 }
             }
         });

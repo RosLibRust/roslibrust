@@ -20,3 +20,5 @@ md5 = "0.7"
 futures-core = "0.3"
 # Used for implementation of into_stream for subscribers
 async-stream = "0.3"
+# Used for validation of topic names
+regex = "1.9"

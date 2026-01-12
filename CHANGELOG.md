@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Reorganized some of the module structure of roslibrust_common. User's pulling things from `roslibrust` will see no change.
+- All API calls that were taking a topic name as "&str" now take a "impl ToGlobalTopicName" instead.
+This allows for more ergonomic usage of the API, and allows us to extend the API to support substitutions in the future.
+The API is now more strict about the format of topic names. See the documentation for GlobalTopicName for more details.
+Previously names like "chatter" could be handled differently be different backends that may or may not have added a leading slash automatically.
+Now all names **MUST** be a fully resolved name.
+
 ## 0.18.0 - November 25th, 2025
 
 ### Added

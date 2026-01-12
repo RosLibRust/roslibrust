@@ -20,15 +20,15 @@ impl<T: Ros> Node<T> {
     // Basic node impl that constructs the types
     async fn new(ros: T) -> Self {
         let publisher = ros
-            .advertise::<std_msgs::String>("test_topic")
+            .advertise::<std_msgs::String>("/test_topic")
             .await
             .unwrap();
         let subscriber = ros
-            .subscribe::<std_msgs::String>("test_topic")
+            .subscribe::<std_msgs::String>("/test_topic")
             .await
             .unwrap();
         let service = ros
-            .advertise_service::<std_srvs::SetBool, _>("test_service", |_| {
+            .advertise_service::<std_srvs::SetBool, _>("/test_service", |_| {
                 Ok(std_srvs::SetBoolResponse {
                     success: true,
                     message: "You set my bool!".to_string(),
@@ -37,7 +37,7 @@ impl<T: Ros> Node<T> {
             .await
             .unwrap();
         let client = ros
-            .service_client::<std_srvs::SetBool>("test_service")
+            .service_client::<std_srvs::SetBool>("/test_service")
             .await
             .unwrap();
         Self {
