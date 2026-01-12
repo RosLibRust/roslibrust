@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-844379ed.js";
+            window.path_to_searchindex_js = "searchindex-236439f2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-42b5f6dc.js"></script>
@@ -257,7 +257,7 @@ use roslibrust::Publish;
 // and the generated types from the macro above.
 async fn pub_counter(ros: impl roslibrust::Ros) {
     let publisher = ros
-        .advertise::&lt;std_msgs::Int16&gt;("example_counter")
+        .advertise::&lt;std_msgs::Int16&gt;("/example_counter")
         .await
         .unwrap();
     let mut counter = 0;
@@ -304,7 +304,7 @@ mod test {
 
         // Subscribe to the topic we're publishing to
         let mut subscriber = ros
-            .subscribe::&lt;std_msgs::Int16&gt;("example_counter")
+            .subscribe::&lt;std_msgs::Int16&gt;("/example_counter")
             .await
             .unwrap();
 

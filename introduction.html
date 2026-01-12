@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-844379ed.js";
+            window.path_to_searchindex_js = "searchindex-236439f2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-42b5f6dc.js"></script>
@@ -244,19 +244,23 @@ pub trait TopicProvider {
 
     /// Advertises a topic to be published to and returns a type specific publisher to use.
     ///
+    /// Topic can be any type convertible to a [GlobalTopicName] this includes `&amp;str` and `String`.
+    /// If you pass in these types validation will occur each time advertise is called.
+    /// If you wish to avoid repeated validation you can create a [GlobalTopicName] yourself and pass it in.
+    ///
     /// The returned publisher is expected to be "self de-registering", where dropping the publisher results in the appropriate unadvertise operation.
-    fn advertise&lt;T: RosMessageType&gt;(
+    fn advertise&lt;MsgType: RosMessageType&gt;(
         &amp;self,
-        topic: &amp;str,
-    ) -&gt; impl Future&lt;Output = Result&lt;Self::Publisher&lt;T&gt;&gt;&gt; + Send;
+        topic: impl ToGlobalTopicName,
+    ) -&gt; impl Future&lt;Output = Result&lt;Self::Publisher&lt;MsgType&gt;&gt;&gt; + Send;
 
     /// Subscribes to a topic and returns a type specific subscriber to use.
     ///
     /// The returned subscriber is expected to be "self de-registering", where dropping the subscriber results in the appropriate unsubscribe operation.
-    fn subscribe&lt;T: RosMessageType&gt;(
+    fn subscribe&lt;MsgType: RosMessageType&gt;(
         &amp;self,
-        topic: &amp;str,
-    ) -&gt; impl Future&lt;Output = Result&lt;Self::Subscriber&lt;T&gt;&gt;&gt; + Send;
+        topic: impl ToGlobalTopicName,
+    ) -&gt; impl Future&lt;Output = Result&lt;Self::Subscriber&lt;MsgType&gt;&gt;&gt; + Send;
 }</code></pre>
 <p>We see a fairly advanced trait by Rust standards, with the following key features:</p>
 <ul>
