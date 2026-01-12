@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- ROS1 xmlrpc servers and TCPROS servers now much more closely follow roscpp behavior. They both explicitly listen on "0.0.0.0" instead of attempting to only listen on a specific interface.
+They also correctly fallback to using the IP address of the first interface in the same subnet as the ROS master if neither ROS_IP, ROS_HOSTNAME, or the system's hostname resolve to a valid IP address.
+
 ### Changed
 
 ## 0.18.0 - November 25th, 2025
