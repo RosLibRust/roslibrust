@@ -95,7 +95,8 @@ impl ToGlobalTopicName for &str {
 }
 
 static GLOBAL_NAME_REGEX: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
-    regex::Regex::new(r"^([/~a-zA-Z]){1}([a-zA-Z0-9_/])*([A-z0-9_])$").unwrap()
+    // Best attempt at a regex that matches both ROS1 and ROS2 naming conventions
+    regex::Regex::new(r"(?-u)^\/([A-Za-z][A-Za-z0-9_]*)(\/[A-Za-z][A-Za-z0-9_]*)*$").unwrap()
 });
 
 /// Check the name against our set of rules for validity
@@ -130,7 +131,7 @@ fn validate_global_name(name: &str) -> Result<(), Vec<String>> {
 
     // Use the ROS1 validation regex for a final check (in a lazy cell)
     if !GLOBAL_NAME_REGEX.is_match(name) {
-        failures.push("Name must match the ROS1 name regex".to_string());
+        failures.push("Name must match the ROS1 name validation regex".to_string());
     }
 
     if failures.is_empty() {
@@ -150,7 +151,6 @@ mod tests {
         assert!(GlobalTopicName::new("/foo/bar/baz").is_ok());
         assert!(GlobalTopicName::new("/foo_bar_baz").is_ok());
         assert!(GlobalTopicName::new("/abc123/def_456").is_ok());
-        assert!(GlobalTopicName::new("/123/_456/").is_err());
 
         assert!(GlobalTopicName::new("chatter").is_err());
         assert!(GlobalTopicName::new("chatter/").is_err());
@@ -161,6 +161,13 @@ mod tests {
         assert!(GlobalTopicName::new("~chatter").is_err());
         assert!(GlobalTopicName::new("/chatter/{ros2}").is_err());
         assert!(GlobalTopicName::new("/chatter-").is_err());
+        assert!(GlobalTopicName::new("/chatter/with space").is_err());
+        assert!(GlobalTopicName::new("/chatter/with#hash").is_err());
+        assert!(GlobalTopicName::new("/empty//bad").is_err());
+
+        // It is unclear for the ROS documentation if this should be valid or not
+        // assert!(GlobalTopicName::new("/123/_456/").is_err());
+        // assert!(GlobalTopicName::new("/123").is_err());
     }
 
     #[test]

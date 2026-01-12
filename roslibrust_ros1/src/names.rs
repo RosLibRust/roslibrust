@@ -1,7 +1,13 @@
 use std::fmt::Display;
 
+// TODO Carter `26
+// This module predated roslibrust_common::topic_name, but now is somewhat redundant
+// We should overhaul usage in ros1 to use the new type and then remove this module.
+// We may want to implement a LocalName type that supports ~ and relative names, but I'm not sure we really do?
+
 lazy_static::lazy_static! {
     // See: https://wiki.ros.org/Names
+    // TODO this Regex has diverged from the one in roslibrust_common:topic_name and should be unified
     static ref GRAPH_NAME_REGEX: regex::Regex = regex::Regex::new(r"^([/~a-zA-Z]){1}([a-zA-Z0-9_/])*([A-z0-9_])$").unwrap();
 }
 
