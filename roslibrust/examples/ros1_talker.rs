@@ -10,12 +10,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let nh = NodeHandle::new("http://localhost:11311", "talker_rs").await?;
     let publisher = nh
-        .advertise::<geometry_msgs::PointStamped>("/my_point", 1, false)
+        .advertise::<std_msgs::String>("/chatter", 1, false)
         .await?;
 
     for count in 0..50 {
-        let mut msg = geometry_msgs::PointStamped::default();
-        msg.point.x = count as f64;
+        let mut msg = std_msgs::String::default();
+        msg.data = count.to_string();
         publisher.publish(&msg).await?;
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     }
