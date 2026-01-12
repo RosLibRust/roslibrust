@@ -46,12 +46,10 @@ pub enum Error {
 /// Generic result type used throughout roslibrust.
 pub type Result<T> = std::result::Result<T, Error>;
 
-
 /// The error type used by [ServiceFn]
 ///
 /// When writing service callbacks this is the error type that should be returned.
 pub type ServiceError = anyhow::Error;
-
 
 /// A generic message type used by some implementations to provide a generic subscriber / publisher without serialization
 #[derive(:: serde :: Deserialize, :: serde :: Serialize, Debug, Default, Clone, PartialEq)]

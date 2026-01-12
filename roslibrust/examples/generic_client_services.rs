@@ -41,10 +41,7 @@ async fn main() {
         async fn run(self) {
             let _handle = self
                 .ros
-                .advertise_service::<std_srvs::SetBool, _>(
-                    "/my_set_bool",
-                    Self::handle_service,
-                )
+                .advertise_service::<std_srvs::SetBool, _>("/my_set_bool", Self::handle_service)
                 .await
                 .unwrap();
 
