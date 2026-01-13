@@ -10973,6 +10973,7 @@ pub mod std_msgs {
     #[serde(crate = "::roslibrust::codegen::serde")]
     pub struct ByteMultiArray {
         pub r#layout: self::MultiArrayLayout,
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
         pub r#data: ::std::vec::Vec<u8>,
     }
     impl ::roslibrust::RosMessageType for ByteMultiArray {
