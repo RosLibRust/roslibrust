@@ -88,6 +88,12 @@ impl ToGlobalTopicName for String {
     }
 }
 
+impl ToGlobalTopicName for &String {
+    fn to_global_name(self) -> Result<GlobalTopicName, RError> {
+        GlobalTopicName::new(self)
+    }
+}
+
 impl ToGlobalTopicName for &str {
     fn to_global_name(self) -> Result<GlobalTopicName, RError> {
         GlobalTopicName::new(self)
@@ -180,6 +186,9 @@ mod tests {
 
         // Works with String
         generic_with_to_global::<String>("/chatter".to_string());
+        // Works with &String
+        let chatter = "/chatter".to_string();
+        generic_with_to_global::<String>(&chatter);
         // Works with &str
         generic_with_to_global::<String>("/chatter");
         // Works with GlobalTopicName
