@@ -208,27 +208,36 @@ async fn establish_publisher_connection(
     let conn_header_bytes = conn_header.to_bytes(true)?;
     stream.write_all(&conn_header_bytes[..]).await?;
 
-    if let Ok(responded_header) = tcpros::receive_header(&mut stream).await {
-        if conn_header.md5sum == Some("*".to_string())
-            || responded_header.md5sum == Some("*".to_string())
-            || conn_header.md5sum == responded_header.md5sum
-        {
-            log::debug!(
-                "Established connection with publisher for {:?}",
-                conn_header.topic
-            );
-            Ok(stream)
-        } else {
-            log::error!(
-                "Tried to subscribe to {}, but md5sums do not match. Expected {:?}, received {:?}",
-                topic_name,
-                conn_header.md5sum,
-                responded_header.md5sum
-            );
-            Err(std::io::ErrorKind::InvalidData)
+    let Ok(responded_header_bytes) = tcpros::receive_header_bytes(&mut stream).await else {
+        // Some ROS tools appear to "probe" where they start a connection just to get the header
+        log::trace!("Could not read connection header bytes from publisher: {publisher_uri:?}");
+        return Err(std::io::Error::from(std::io::ErrorKind::UnexpectedEof));
+    };
+
+    let responded_header = match ConnectionHeader::from_bytes(&responded_header_bytes) {
+        Ok(header) => header,
+        Err(e) => {
+            log::error!("Could not parse connection header data sent by publisher: {e:?}");
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
+    };
+
+    if conn_header.md5sum == Some("*".to_string())
+        || responded_header.md5sum == Some("*".to_string())
+        || conn_header.md5sum == responded_header.md5sum
+    {
+        log::debug!(
+            "Established connection with publisher for {:?}",
+            conn_header.topic
+        );
+        Ok(stream)
     } else {
-        log::error!("Could not parse connection header data sent by publisher");
+        log::error!(
+            "Tried to subscribe to {}, but md5sums do not match. Expected {:?}, received {:?}",
+            topic_name,
+            conn_header.md5sum,
+            responded_header.md5sum
+        );
         Err(std::io::ErrorKind::InvalidData)
     }
     .map_err(std::io::Error::from)

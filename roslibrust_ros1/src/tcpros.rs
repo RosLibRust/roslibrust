@@ -238,17 +238,16 @@ pub async fn establish_connection(
         );
         Ok(stream)
     } else {
-        log::error!("Could not parse connection header data sent by server");
+        log::error!("Could not parse connection header data sent by server: {conn_header_bytes:?}");
         Err(std::io::ErrorKind::InvalidData)
     }
     .map_err(std::io::Error::from)
 }
 
-// Reads a complete ROS connection header from the given stream
-pub async fn receive_header(stream: &mut TcpStream) -> Result<ConnectionHeader, std::io::Error> {
+pub async fn receive_header_bytes(stream: &mut TcpStream) -> Result<Vec<u8>, std::io::Error> {
     // Bring trait def into scope
     use tokio::io::AsyncReadExt;
-    // Recieve the header length
+    // Receive the header length
     let mut header_len_bytes = [0u8; 4];
     let _num_bytes_read = stream.read_exact(&mut header_len_bytes).await?;
     // This is the length of the header itself
@@ -257,6 +256,12 @@ pub async fn receive_header(stream: &mut TcpStream) -> Result<ConnectionHeader, 
     // Initialize a buffer to hold the header
     let mut header_bytes = vec![0u8; header_len];
     let _num_bytes_read = stream.read_exact(&mut header_bytes).await?;
+    Ok(header_bytes)
+}
+
+// Reads a complete ROS connection header from the given stream
+pub async fn receive_header(stream: &mut TcpStream) -> Result<ConnectionHeader, std::io::Error> {
+    let header_bytes = receive_header_bytes(stream).await?;
     ConnectionHeader::from_bytes(&header_bytes)
 }
 
