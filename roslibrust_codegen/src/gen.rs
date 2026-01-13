@@ -280,7 +280,7 @@ fn generate_field_definition(
     // For larger arrays, we need special handling via BigArray.
     const MAX_FIXED_ARRAY_LEN: usize = 32;
 
-    let is_uint8_field = field.field_type.field_type == "uint8";
+    let is_uint8_field = matches!(field.field_type.field_type.as_str(), "uint8" | "byte");
 
     let serde_line = match &field.field_type.array_info {
         // Dynamic-length arrays (Vec<T>)
