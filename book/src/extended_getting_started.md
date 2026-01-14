@@ -232,7 +232,7 @@ Right now, **why** we did all these things might not be obvious, but it will be 
 So far we've avoided installing any version of ROS at all. This is great since we can write and run our node on a system without any ROS
 making our code extremely portable. However, to actually run our node we'll want a ROS system to connect to.
 
-One way to setup this up would be to go through a full ROS installation for either `ROS1` or `ROS2`, but the recommended approach for roslibrust is use a ROS installation inside a docker container.
+One way to set this up would be to go through a full ROS installation for either `ROS1` or `ROS2`, but the recommended approach for roslibrust is use a ROS installation inside a docker container.
 This unfortunately introduces the complexity of docker, but it is a very portable and repeatable way to setup a ROS environment.
 Furthermore, it makes it extremely easy to experiment with multiple versions of ROS!
 
