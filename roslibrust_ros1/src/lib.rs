@@ -60,7 +60,8 @@ mod tcpros;
 
 /// Provides a common type alias for type erased service server functions.
 /// Internally we use this type to store collections of server functions.
-pub(crate) type TypeErasedCallback = dyn Fn(Vec<u8>) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>
+/// Uses Bytes for efficient handling of incoming request data.
+pub(crate) type TypeErasedCallback = dyn Fn(bytes::Bytes) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>
     + Send
     + Sync
     + 'static;

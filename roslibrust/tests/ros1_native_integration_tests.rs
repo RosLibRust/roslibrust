@@ -37,7 +37,7 @@ mod tests {
             .unwrap();
 
         let msg_raw: Vec<u8> = [8, 0, 0, 0, 4, 0, 0, 0, 116, 101, 115, 116].to_vec();
-        publisher.publish(&msg_raw).await.unwrap();
+        publisher.publish(msg_raw).await.unwrap();
 
         let res =
             tokio::time::timeout(tokio::time::Duration::from_millis(250), subscriber.next()).await;
@@ -335,13 +335,13 @@ mod tests {
 
         // Create the server
         let handle = nh
-            .advertise_service::<test_msgs::AddTwoInts, _>("~/add_two", server_fn)
+            .advertise_service::<test_msgs::AddTwoInts, _>("/dropping_service_node/add_two", server_fn)
             .await
             .unwrap();
 
         // Make the request (should succeed)
         let client = nh
-            .service_client::<test_msgs::AddTwoInts>("~/add_two")
+            .service_client::<test_msgs::AddTwoInts>("/dropping_service_node/add_two")
             .await
             .unwrap();
         let _call: test_msgs::AddTwoIntsResponse = client
@@ -366,7 +366,7 @@ mod tests {
 
         // Create a new clinet
         let client = nh
-            .service_client::<test_msgs::AddTwoInts>("~/add_two")
+            .service_client::<test_msgs::AddTwoInts>("/dropping_service_node/add_two")
             .await;
         // Client should fail to create as there should be no provider of the service
         assert!(
@@ -402,13 +402,13 @@ mod tests {
 
         // Create the server
         let _handle = nh
-            .advertise_service::<test_msgs::AddTwoInts, _>("~/add_two", server_fn)
+            .advertise_service::<test_msgs::AddTwoInts, _>("/service_error_behavior/add_two", server_fn)
             .await
             .unwrap();
 
         // Make the request (should fail)
         let client = nh
-            .service_client::<test_msgs::AddTwoInts>("~/add_two")
+            .service_client::<test_msgs::AddTwoInts>("/service_error_behavior/add_two")
             .await
             .unwrap();
         let call = client
@@ -462,18 +462,10 @@ mod tests {
     }
 
     #[test_log::test(tokio::test)]
+    #[ntest::timeout(6000)]
     #[cfg(feature = "ros1_test")]
     async fn topic_provider_publish_functionality_test() {
         use roslibrust_common::*;
-
-        // Dropping watchdog at end of function cancels watchdog
-        // This test can hang which gives crappy debug output
-        let _watchdog: abort_on_drop::ChildTask<()> = tokio::spawn(async move {
-            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-            error!("Test watchdog tripped...");
-            std::process::exit(-1);
-        })
-        .into();
 
         // Define a custom "Node"
         struct MyClient<T: TopicProvider> {

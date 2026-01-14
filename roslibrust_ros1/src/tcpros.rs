@@ -1,4 +1,5 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use bytes::{Bytes, BytesMut};
 use log::*;
 use std::io::{Cursor, Read, Write};
 use tokio::net::TcpStream;
@@ -265,29 +266,27 @@ pub async fn receive_header(stream: &mut TcpStream) -> Result<ConnectionHeader, 
     ConnectionHeader::from_bytes(&header_bytes)
 }
 
-/// Reads the body of a message from the given stream
-/// It first reads the length of the body, then reads the body itself
-/// The returned Vec<> includes the length of the body at the front as serde_rosmsg expects
-pub async fn receive_body(stream: &mut TcpStream) -> Result<Vec<u8>, std::io::Error> {
-    // Bring trait def into scope
+/// Reads the body of a message from the given stream.
+/// It first reads the length of the body, then reads the body itself.
+/// The returned Bytes includes the length of the body at the front as serde_rosmsg expects.
+pub async fn receive_body(stream: &mut TcpStream) -> Result<Bytes, std::io::Error> {
     use tokio::io::AsyncReadExt;
 
-    // Read the four bytes of size directly
-    let mut body_len_bytes = [0u8; 4];
-    stream.read_exact(&mut body_len_bytes).await?;
-    let body_len = u32::from_le_bytes(body_len_bytes);
+    // Read the four byte length prefix
+    let body_len = stream.read_u32_le().await? as usize;
     trace!("Read length from stream: {}", body_len);
 
-    // Allocate buffer space for length and body
-    let mut body = vec![0u8; body_len as usize + 4];
-    // Copy the length into the first four bytes
-    body[..4].copy_from_slice(&body_len.to_le_bytes());
-    // Read the body into the buffer after the header
-    stream.read_exact(&mut body[4..]).await?;
-    trace!("Read body of size: {}", body.len());
+    // Allocate buffer for length prefix + body
+    let total_len = body_len + 4;
+    let mut buf = BytesMut::with_capacity(total_len);
+    buf.resize(total_len, 0);
 
-    // Return body
-    Ok(body)
+    // Write the length prefix and read the body
+    buf[..4].copy_from_slice(&(body_len as u32).to_le_bytes());
+    stream.read_exact(&mut buf[4..]).await?;
+    trace!("Read body of size: {}", buf.len());
+
+    Ok(buf.freeze())
 }
 
 #[cfg(test)]

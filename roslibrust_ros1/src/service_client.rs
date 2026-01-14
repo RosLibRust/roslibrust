@@ -3,6 +3,7 @@ use crate::{
     tcpros::{establish_connection, ConnectionHeader},
 };
 use abort_on_drop::ChildTask;
+use bytes::Bytes;
 use roslibrust_common::{Error, RosServiceType};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::{
@@ -17,7 +18,7 @@ use tokio::{
 use super::tcpros;
 
 pub type CallServiceRequest = (Vec<u8>, oneshot::Sender<CallServiceResponse>);
-pub type CallServiceResponse = roslibrust_common::Result<Vec<u8>>;
+pub type CallServiceResponse = roslibrust_common::Result<Bytes>;
 
 // Note: ServiceClient is clone, and this is expressly different behavior than calling .service_client() twice on NodeHandle
 // clonning a ServiceClient does not create a new connection to the service, but instead creates a second handle to the
@@ -145,7 +146,7 @@ impl ServiceClientLink {
         (request, response_sender): CallServiceRequest,
     ) {
         let response = Self::handle_service_call_fallible(stream, request).await;
-        let response = response.map_err(|err| {
+        let response: roslibrust_common::Result<Bytes> = response.map_err(|err| {
             log::error!(
                 "Failed to send and receive service call for service {service_name}: {err:?}"
             );
@@ -163,7 +164,7 @@ impl ServiceClientLink {
     async fn handle_service_call_fallible(
         stream: &mut TcpStream,
         request: Vec<u8>,
-    ) -> Result<Vec<u8>, std::io::Error> {
+    ) -> Result<Bytes, std::io::Error> {
         // Send the bytes of the request to the service
         stream.write_all(&request).await?;
 

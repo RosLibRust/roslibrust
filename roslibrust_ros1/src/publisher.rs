@@ -3,6 +3,7 @@ use crate::{
     tcpros::{self, ConnectionHeader},
 };
 use abort_on_drop::ChildTask;
+use bytes::Bytes;
 use log::*;
 use roslibrust_common::RosMessageType;
 use std::{
@@ -21,7 +22,8 @@ pub struct Publisher<T> {
     // Name of the topic this publisher is publishing on
     topic_name: String,
     // Actual channel on which messages are sent to be published
-    sender: broadcast::Sender<Vec<u8>>,
+    // Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers
+    sender: broadcast::Sender<Bytes>,
     // When the last publisher for a given topic is dropped, this channel is used to signal to cleanup
     // for the underlying publication
     _shutdown_channel: tokio::sync::mpsc::Sender<()>,
@@ -32,7 +34,7 @@ pub struct Publisher<T> {
 impl<T: RosMessageType> Publisher<T> {
     pub(crate) fn new(
         topic_name: &str,
-        sender: broadcast::Sender<Vec<u8>>,
+        sender: broadcast::Sender<Bytes>,
         shutdown_channel: tokio::sync::mpsc::Sender<()>,
     ) -> Self {
         Self {
@@ -53,7 +55,7 @@ impl<T: RosMessageType> Publisher<T> {
         // This function could probably be non-async
         // Or we should do some significant re-work to have it only yield when the data is sent.
         self.sender
-            .send(data)
+            .send(data.into())
             .map_err(|_| PublisherError::StreamClosed)?;
         debug!("Publishing data on topic {}", self.topic_name);
         Ok(())
@@ -65,18 +67,18 @@ impl<T: RosMessageType> Publisher<T> {
 /// Relies on user to provide serialized data. Typically used with playback from bag files.
 pub struct PublisherAny {
     topic_name: String,
-    sender: broadcast::Sender<Vec<u8>>,
+    sender: broadcast::Sender<Bytes>,
     // When the last publisher for a given topic is dropped, this channel is used to signal to cleanup
     // Don't need to send a message, simply dropping the last handle lets to node know to clean up
     // Note: this has to be used because tokio::sync::broadcast doesn't have a WeakSender
     _shutdown: tokio::sync::mpsc::Sender<()>,
-    phantom: PhantomData<Vec<u8>>,
+    phantom: PhantomData<Bytes>,
 }
 
 impl PublisherAny {
     pub(crate) fn new(
         topic_name: &str,
-        sender: broadcast::Sender<Vec<u8>>,
+        sender: broadcast::Sender<Bytes>,
         shutdown: tokio::sync::mpsc::Sender<()>,
     ) -> Self {
         Self {
@@ -92,15 +94,35 @@ impl PublisherAny {
     /// This expects the data to be the raw bytes of the message body as they would appear going over the wire.
     /// See ros1_publish_any.rs example for more details.
     /// Body length should be included as first four bytes.
+    ///
+    /// Accepts any type that can be viewed as a byte slice, including:
+    /// - `&Vec<u8>`
+    /// - `&[u8]`
+    /// - `Vec<u8>`
+    /// - Pre-serialized ROS message data
     // TODO this no longer needs to be (or should be) async
-    pub async fn publish(&self, data: &[u8]) -> Result<(), PublisherError> {
+    pub async fn publish(&self, data: impl AsRef<[u8]>) -> Result<(), PublisherError> {
         // TODO this is a pretty dumb...
         // because of the internal channel used for re-direction this future doesn't
         // actually complete when the data is sent, but merely when it is queued to be sent
         // This function could probably be non-async
         // Or we should do some significant re-work to have it only yield when the data is sent.
+        let bytes = Bytes::copy_from_slice(data.as_ref());
         self.sender
-            .send(data.to_vec())
+            .send(bytes)
+            .map_err(|_| PublisherError::StreamClosed)?;
+        debug!("Publishing data on topic {}", self.topic_name);
+        Ok(())
+    }
+
+    /// Queues a message to be sent on the related topic using pre-constructed Bytes.
+    ///
+    /// This is the most efficient method when you already have `Bytes` data,
+    /// as it avoids any copying.
+    // TODO this no longer needs to be (or should be) async
+    pub async fn publish_bytes(&self, data: Bytes) -> Result<(), PublisherError> {
+        self.sender
+            .send(data)
             .map_err(|_| PublisherError::StreamClosed)?;
         debug!("Publishing data on topic {}", self.topic_name);
         Ok(())
@@ -111,7 +133,7 @@ pub(crate) struct Publication {
     topic_type: String,
     listener_port: u16,
     _tcp_accept_task: ChildTask<()>,
-    publish_sender: broadcast::Sender<Vec<u8>>,
+    publish_sender: broadcast::Sender<Bytes>,
     // We store a weak handle to the shutdown channel
     // This allows us to create new Publisher with a shutdown sender, but doesn't keep the shutdown channel alive
     // Had to add this because broadcast doesn't have a weak sender equivalent
@@ -136,7 +158,7 @@ impl Publication {
     ) -> Result<
         (
             Self,
-            broadcast::Sender<Vec<u8>>,
+            broadcast::Sender<Bytes>,
             tokio::sync::mpsc::Sender<()>,
         ),
         std::io::Error,
@@ -147,7 +169,8 @@ impl Publication {
         let listener_port = tcp_listener.local_addr().unwrap().port();
 
         // Setup the channel will will receive messages to be published on
-        let (sender, receiver) = broadcast::channel::<Vec<u8>>(queue_size);
+        // Using Bytes for efficient cloning (reference counted) when there are multiple subscribers
+        let (sender, receiver) = broadcast::channel::<Bytes>(queue_size);
 
         // Setup the ROS connection header that we'll respond to all incoming connections with
         let responding_conn_header = ConnectionHeader {
@@ -197,10 +220,7 @@ impl Publication {
 
     pub(crate) fn get_senders(
         &self,
-    ) -> (
-        broadcast::Sender<Vec<u8>>,
-        tokio::sync::mpsc::WeakSender<()>,
-    ) {
+    ) -> (broadcast::Sender<Bytes>, tokio::sync::mpsc::WeakSender<()>) {
         (
             self.publish_sender.clone(),
             self.weak_shutdown_channel.clone(),
@@ -220,16 +240,16 @@ impl Publication {
     /// This task constantly pulls new messages from the main publish buffer and
     /// sends them to all of the TCP Streams that are connected to the topic.
     async fn publish_task(
-        mut rx: broadcast::Receiver<Vec<u8>>, // Receives messages to publish from the main buffer of messages
+        mut rx: broadcast::Receiver<Bytes>, // Receives messages to publish from the main buffer of messages
         mut stream: tokio::net::TcpStream,
         topic: String,
-        last_message: Option<Vec<u8>>, // If we're latching will contain a message to send right away
+        last_message: Option<Bytes>, // If we're latching will contain a message to send right away (stored as Bytes for cheap cloning)
     ) {
         let peer = stream.peer_addr();
         debug!("Publish task has started for publication: {topic} connection to {peer:?}");
 
-        if let Some(last_message) = last_message {
-            let res = stream.write_all(&last_message).await;
+        if let Some(ref last_message) = last_message {
+            let res = stream.write_all(last_message).await;
             match res {
                 Ok(_) => {}
                 Err(e) => {
@@ -274,12 +294,13 @@ impl Publication {
         tcp_listener: tokio::net::TcpListener, // The TCP listener to accept connections on
         topic_name: String,                    // Only used for logging
         responding_conn_header: ConnectionHeader, // Header we respond with
-        mut rx: broadcast::Receiver<Vec<u8>>, // Receives messages to publish from the main buffer of messages
+        mut rx: broadcast::Receiver<Bytes>, // Receives messages to publish from the main buffer of messages
         mut shutdown_rx: tokio::sync::mpsc::Receiver<()>, // Channel to signal to the publication to clean itself up
         nh: NodeServerHandle,
     ) {
         debug!("TCP accept task has started for publication: {topic_name}");
-        let mut last_message = None;
+        // Store latching message as Bytes for cheap cloning when new subscribers connect
+        let mut last_message: Option<Bytes> = None;
         loop {
             let result = tokio::select! {
                 shutdown = shutdown_rx.recv() => {
@@ -385,6 +406,7 @@ impl Publication {
             // always keep the channel open from the receive side.
             let rx_copy = rx.resubscribe();
             let topic_name_copy = topic_name.clone();
+            // Cloning Bytes is cheap (just increments ref count)
             let last_message_copy = last_message.clone();
             tokio::spawn(async move {
                 Self::publish_task(rx_copy, stream, topic_name_copy, last_message_copy).await;
