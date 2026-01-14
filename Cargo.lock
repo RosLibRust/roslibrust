@@ -2200,6 +2200,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "ntest"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54d1aa56874c2152c24681ed0df95ee155cc06c5c61b78e2d1e8c0cae8bc5326"
+dependencies = [
+ "ntest_test_cases",
+ "ntest_timeout",
+]
+
+[[package]]
+name = "ntest_test_cases"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6913433c6319ef9b2df316bb8e3db864a41724c2bb8f12555e07dc4ec69d3db1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "ntest_timeout"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9224be3459a0c1d6e9b0f42ab0e76e98b29aef5aba33c0487dfcf47ea08b5150"
+dependencies = [
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "nu-ansi-term"
 version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3148,6 +3181,7 @@ dependencies = [
  "abort-on-drop",
  "env_logger 0.11.8",
  "log",
+ "ntest",
  "roslibrust_codegen",
  "roslibrust_codegen_macro",
  "roslibrust_common",
@@ -3249,6 +3283,7 @@ dependencies = [
  "abort-on-drop",
  "anyhow",
  "byteorder",
+ "bytes",
  "gethostname",
  "getifs",
  "hyper",

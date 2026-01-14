@@ -23,6 +23,8 @@ This allows for more ergonomic usage of the API, and allows us to extend the API
 The API is now more strict about the format of topic names. See the documentation for GlobalTopicName for more details.
 Previously names like "chatter" could be handled differently be different backends that may or may not have added a leading slash automatically.
 Now all names **MUST** be a fully resolved name.
+- A major optimization pass was performed on the ROS1 backend resulting in a ~79% speedup on handling a 1080p image stream. Should be very close to equal in performance to roscpp now.
+- API for PublisherAny changed so that publish() takes a reference to a byte slice instead of ownership of a vector, and a publish_bytes() function was added to take ownership of a Bytes object.
 
 ## 0.18.0 - November 25th, 2025
 

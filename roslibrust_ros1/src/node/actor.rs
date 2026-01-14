@@ -8,6 +8,7 @@ use crate::{
     MasterClient, NodeError, ProtocolParams, ServiceClient, TypeErasedCallback,
 };
 use abort_on_drop::ChildTask;
+use bytes::Bytes;
 use log::*;
 use roslibrust_common::{Error, RosMessageType, RosServiceType, ServiceFn};
 use std::{collections::HashMap, io, net::Ipv4Addr, sync::Arc};
@@ -42,7 +43,8 @@ pub enum NodeMsg {
     // This results in the node's task ending and the node being dropped.
     Shutdown,
     RegisterPublisher {
-        reply: oneshot::Sender<Result<(broadcast::Sender<Vec<u8>>, mpsc::Sender<()>), String>>,
+        // Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers
+        reply: oneshot::Sender<Result<(broadcast::Sender<Bytes>, mpsc::Sender<()>), String>>,
         topic: String,
         topic_type: String,
         queue_size: usize,
@@ -51,7 +53,8 @@ pub enum NodeMsg {
         latching: bool,
     },
     RegisterSubscriber {
-        reply: oneshot::Sender<Result<broadcast::Receiver<Vec<u8>>, String>>,
+        // Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers
+        reply: oneshot::Sender<Result<broadcast::Receiver<Bytes>, String>>,
         topic: String,
         topic_type: String,
         queue_size: usize,
@@ -159,12 +162,13 @@ impl NodeServerHandle {
 
     /// Registers a publisher with the underlying node server
     /// Returns a channel that the raw bytes of a publish can be shoved into to queue the publish
+    /// Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers
     pub(crate) async fn register_publisher<T: RosMessageType>(
         &self,
         topic: &str,
         queue_size: usize,
         latching: bool,
-    ) -> Result<(broadcast::Sender<Vec<u8>>, mpsc::Sender<()>), NodeError> {
+    ) -> Result<(broadcast::Sender<Bytes>, mpsc::Sender<()>), NodeError> {
         let (sender, receiver) = oneshot::channel();
         self.node_server_sender.send(NodeMsg::RegisterPublisher {
             reply: sender,
@@ -182,6 +186,7 @@ impl NodeServerHandle {
 
     /// Registers a publisher with the underlying node server
     /// Returns a channel that the raw bytes of a publish can be shoved into to queue the publish
+    /// Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers
     pub(crate) async fn register_publisher_any(
         &self,
         topic: &str,
@@ -189,7 +194,7 @@ impl NodeServerHandle {
         msg_definition: &str,
         queue_size: usize,
         latching: bool,
-    ) -> Result<(broadcast::Sender<Vec<u8>>, mpsc::Sender<()>), NodeError> {
+    ) -> Result<(broadcast::Sender<Bytes>, mpsc::Sender<()>), NodeError> {
         let (sender, receiver) = oneshot::channel();
 
         let md5sum_res =
@@ -278,8 +283,9 @@ impl NodeServerHandle {
         // Type erase the server function here
         // Here we encode the type information of the service type passed in as T into the closure
         // This gives a generic closure that operates on byte arrays that we can then store and use freely
+        // Uses Bytes for efficient handling of incoming request data
         let server_typeless =
-            move |message: Vec<u8>| -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+            move |message: Bytes| -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
                 let request = roslibrust_serde_rosmsg::from_slice::<T::Request>(&message)
                     .map_err(|err| Error::SerializationError(err.to_string()))?;
                 let response = server(request)?;
@@ -326,11 +332,12 @@ impl NodeServerHandle {
     /// If this is the first time the given topic has been subscribed to (by this node)
     /// rosmaster will be informed.
     /// Otherwise, a new rx handle will simply be returned to the existing channel.
+    /// Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers
     pub(crate) async fn register_subscriber<T: RosMessageType>(
         &self,
         topic: &str,
         queue_size: usize,
-    ) -> Result<broadcast::Receiver<Vec<u8>>, NodeError> {
+    ) -> Result<broadcast::Receiver<Bytes>, NodeError> {
         // Type here is complicated, this is a channel that we're sending a channel receiver over
         // This channel is used to fire back the receiver of the underlying subscription
         let (sender, receiver) = oneshot::channel();
@@ -650,7 +657,7 @@ impl Node {
         queue_size: usize,
         msg_definition: &str,
         md5sum: &str,
-    ) -> Result<broadcast::Receiver<Vec<u8>>, NodeError> {
+    ) -> Result<broadcast::Receiver<Bytes>, NodeError> {
         match self.subscriptions.iter().find(|(key, _)| *key == topic) {
             Some((_topic, subscription)) => Ok(subscription.get_receiver()),
             None => {
@@ -683,7 +690,7 @@ impl Node {
         msg_definition: String,
         md5sum: String,
         latching: bool,
-    ) -> Result<(broadcast::Sender<Vec<u8>>, mpsc::Sender<()>), NodeError> {
+    ) -> Result<(broadcast::Sender<Bytes>, mpsc::Sender<()>), NodeError> {
         // Return handle to existing Publication if it exists
         let existing_entry = {
             self.publishers.iter().find_map(|(key, value)| {

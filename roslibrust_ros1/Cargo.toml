@@ -30,6 +30,7 @@ hyper = { version = "0.14", features = ["server"] }
 gethostname = { version = "0.4" }
 regex = { version = "1.9" }
 byteorder = "1.4"
+bytes = "1.5"
 thiserror = "2.0"
 anyhow = "1.0"
 getifs = "0.4"

@@ -218,9 +218,9 @@ impl ServiceServerLink {
                     // Another funky thing here
                     // services have to respond with one extra byte at the front
                     // to indicate success
-                    let full_response = [vec![1u8], response].concat();
-
-                    stream.write_all(&full_response).await.unwrap();
+                    // Use separate writes instead of concat() to avoid allocation
+                    stream.write_all(&[1u8]).await.unwrap();
+                    stream.write_all(&response).await.unwrap();
                     debug!("Wrote full service response for {service_name}");
                 }
                 // Error from user's function
@@ -229,9 +229,9 @@ impl ServiceServerLink {
 
                     let error_string = format!("{:?}", e);
                     let error_bytes = roslibrust_serde_rosmsg::to_vec(&error_string).unwrap();
-                    let full_response = [vec![0u8], error_bytes].concat();
-
-                    stream.write_all(&full_response).await.unwrap();
+                    // Use separate writes instead of concat() to avoid allocation
+                    stream.write_all(&[0u8]).await.unwrap();
+                    stream.write_all(&error_bytes).await.unwrap();
                 }
                 // Error from tokio
                 Err(e) => {

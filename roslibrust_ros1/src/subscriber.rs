@@ -1,5 +1,6 @@
 use crate::{names::Name, tcpros::ConnectionHeader};
 use abort_on_drop::ChildTask;
+use bytes::Bytes;
 use log::*;
 use roslibrust_common::{RosMessageType, ShapeShifter};
 use std::{marker::PhantomData, sync::Arc};
@@ -15,12 +16,13 @@ use tokio::{
 use super::tcpros;
 
 pub struct Subscriber<T> {
-    receiver: broadcast::Receiver<Vec<u8>>,
+    // Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers
+    receiver: broadcast::Receiver<Bytes>,
     _phantom: PhantomData<T>,
 }
 
 impl<T: RosMessageType> Subscriber<T> {
-    pub(crate) fn new(receiver: broadcast::Receiver<Vec<u8>>) -> Self {
+    pub(crate) fn new(receiver: broadcast::Receiver<Bytes>) -> Self {
         Self {
             receiver,
             _phantom: PhantomData,
@@ -57,12 +59,13 @@ impl<T: RosMessageType> Subscriber<T> {
 }
 
 pub struct SubscriberAny {
-    receiver: broadcast::Receiver<Vec<u8>>,
+    // Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers
+    receiver: broadcast::Receiver<Bytes>,
     _phantom: PhantomData<ShapeShifter>,
 }
 
 impl SubscriberAny {
-    pub(crate) fn new(receiver: broadcast::Receiver<Vec<u8>>) -> Self {
+    pub(crate) fn new(receiver: broadcast::Receiver<Bytes>) -> Self {
         Self {
             receiver,
             _phantom: PhantomData,
@@ -70,10 +73,11 @@ impl SubscriberAny {
     }
 
     /// Gets the next message from the subscriber.
-    /// Uniquely for SubscriberAny, this returns the raw bytes of the message.
+    /// Uniquely for SubscriberAny, this returns the raw bytes of the message as Bytes.
     /// Note: over the wire ros messages include a 4 byte length header before the message body.
     /// This function does not return that header, merely the message body.
-    pub async fn next(&mut self) -> Option<Result<Vec<u8>, SubscriberError>> {
+    /// The returned Bytes is reference counted and cheap to clone.
+    pub async fn next(&mut self) -> Option<Result<Bytes, SubscriberError>> {
         let data = match self.receiver.recv().await {
             Ok(v) => v,
             Err(RecvError::Closed) => return None,
@@ -85,8 +89,9 @@ impl SubscriberAny {
 
 pub struct Subscription {
     subscription_tasks: Vec<ChildTask<()>>,
-    _msg_receiver: broadcast::Receiver<Vec<u8>>,
-    msg_sender: broadcast::Sender<Vec<u8>>,
+    // Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers
+    _msg_receiver: broadcast::Receiver<Bytes>,
+    msg_sender: broadcast::Sender<Bytes>,
     connection_header: ConnectionHeader,
     known_publishers: Arc<RwLock<Vec<String>>>,
 }
@@ -100,7 +105,8 @@ impl Subscription {
         msg_definition: String,
         md5sum: String,
     ) -> Self {
-        let (sender, receiver) = broadcast::channel(queue_size);
+        // Using Bytes for efficient cloning (reference counted) when there are multiple subscribers
+        let (sender, receiver) = broadcast::channel::<Bytes>(queue_size);
         let connection_header = ConnectionHeader {
             caller_id: node_name.to_string(),
             latching: false,
@@ -126,7 +132,7 @@ impl Subscription {
         self.connection_header.topic_type.as_str()
     }
 
-    pub fn get_receiver(&self) -> broadcast::Receiver<Vec<u8>> {
+    pub fn get_receiver(&self) -> broadcast::Receiver<Bytes> {
         self.msg_sender.subscribe()
     }
 

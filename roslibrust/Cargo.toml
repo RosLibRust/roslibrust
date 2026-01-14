@@ -35,6 +35,8 @@ roslibrust_codegen_macro = { path = "../roslibrust_codegen_macro" }
 roslibrust_test = { path = "../roslibrust_test" }
 # Slightly weird, but used in documentation examples
 zenoh = "1.0"
+# Provides test timeout
+ntest = "0.9"
 
 [features]
 # default feature is pure traits only with no implementations

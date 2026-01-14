@@ -31,11 +31,11 @@ async fn setup_bench_context() -> BenchContext {
 
     let image = roslibrust_test::ros1::sensor_msgs::Image {
         header: Default::default(),
-        height: 100,
-        width: 100,
+        height: 1080,
+        width: 1920,
         encoding: "rgb8".to_owned(),
         is_bigendian: 0,
-        step: 300,
+        step: 1920 * 3,
         data: vec![0; 1920 * 1080 * 3],
     };
 
