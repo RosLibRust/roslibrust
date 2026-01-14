@@ -335,7 +335,10 @@ mod tests {
 
         // Create the server
         let handle = nh
-            .advertise_service::<test_msgs::AddTwoInts, _>("/dropping_service_node/add_two", server_fn)
+            .advertise_service::<test_msgs::AddTwoInts, _>(
+                "/dropping_service_node/add_two",
+                server_fn,
+            )
             .await
             .unwrap();
 
@@ -402,7 +405,10 @@ mod tests {
 
         // Create the server
         let _handle = nh
-            .advertise_service::<test_msgs::AddTwoInts, _>("/service_error_behavior/add_two", server_fn)
+            .advertise_service::<test_msgs::AddTwoInts, _>(
+                "/service_error_behavior/add_two",
+                server_fn,
+            )
             .await
             .unwrap();
 

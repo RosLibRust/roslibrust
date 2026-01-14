@@ -1,5 +1,5 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 use log::*;
 use std::io::{Cursor, Read, Write};
 use tokio::net::TcpStream;
@@ -270,8 +270,8 @@ pub async fn receive_header(stream: &mut TcpStream) -> Result<ConnectionHeader, 
 /// It first reads the length of the body, then reads the body itself.
 /// The returned Bytes includes the length of the body at the front as serde_rosmsg expects.
 pub async fn receive_body(stream: &mut TcpStream) -> Result<Bytes, std::io::Error> {
+    use bytes::{BufMut, BytesMut};
     use tokio::io::AsyncReadExt;
-    use bytes::{BytesMut, BufMut};
 
     let body_len = stream.read_u32_le().await? as usize;
     let total_len = 4 + body_len;
