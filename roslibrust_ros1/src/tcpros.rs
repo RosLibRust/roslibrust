@@ -271,20 +271,21 @@ pub async fn receive_header(stream: &mut TcpStream) -> Result<ConnectionHeader, 
 /// The returned Bytes includes the length of the body at the front as serde_rosmsg expects.
 pub async fn receive_body(stream: &mut TcpStream) -> Result<Bytes, std::io::Error> {
     use tokio::io::AsyncReadExt;
+    use bytes::{BytesMut, BufMut};
 
-    // Read the four byte length prefix
     let body_len = stream.read_u32_le().await? as usize;
-    trace!("Read length from stream: {}", body_len);
+    let total_len = 4 + body_len;
 
-    // Allocate buffer for length prefix + body
-    let total_len = body_len + 4;
     let mut buf = BytesMut::with_capacity(total_len);
-    buf.resize(total_len, 0);
+    buf.put_u32_le(body_len as u32); // len == 4, capacity == 4 + body_len
 
-    // Write the length prefix and read the body
-    buf[..4].copy_from_slice(&(body_len as u32).to_le_bytes());
-    stream.read_exact(&mut buf[4..]).await?;
-    trace!("Read body of size: {}", buf.len());
+    // Read until we have read the full body
+    while buf.len() < total_len {
+        let n = stream.read_buf(&mut buf).await?;
+        if n == 0 {
+            return Err(std::io::Error::from(std::io::ErrorKind::UnexpectedEof));
+        }
+    }
 
     Ok(buf.freeze())
 }
