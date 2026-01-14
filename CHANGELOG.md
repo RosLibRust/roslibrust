@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+### Changed
+
+## 0.19.0 - January 14th, 2026
+
+### Added
+
+### Fixed
+
 - ROS1 xmlrpc servers and TCPROS servers now much more closely follow roscpp behavior. They both explicitly listen on "0.0.0.0" instead of attempting to only listen on a specific interface.
 They also correctly fallback to using the IP address of the first interface in the same subnet as the ROS master if neither ROS_IP, ROS_HOSTNAME, or the system's hostname resolve to a valid IP address.
 - ROS1 subscribers no longer log errors when a TCP connection fails to reply with a connection header. Some ROS tools appear to "probe" where they start a connection just to get the header.
