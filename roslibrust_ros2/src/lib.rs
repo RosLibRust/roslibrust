@@ -43,9 +43,10 @@ impl<T: RosMessageType> ros_z::msg::ZSerializer for WrapperSerdes<T> {
 impl<T: RosMessageType> ros_z::msg::ZDeserializer for WrapperSerdes<T> {
     type Input<'a> = &'a [u8];
     type Output = RosMessageWrapper<T>;
-    fn deserialize(data: Self::Input<'_>) -> Self::Output {
-        let inner = ros_z::msg::CdrSerdes::<T>::deserialize(data);
-        RosMessageWrapper(inner)
+    type Error = ros_z::msg::CdrError;
+    fn deserialize(data: Self::Input<'_>) -> std::result::Result<Self::Output, Self::Error> {
+        let inner = ros_z::msg::CdrSerdes::<T>::deserialize(data)?;
+        Ok(RosMessageWrapper(inner))
     }
 }
 
@@ -186,6 +187,7 @@ impl<T: RosServiceType> roslibrust_common::Service<T> for ZenohServiceClient<T> 
         // Send the request
         self.client
             .send_request(request)
+            .await
             .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))?;
 
         // Wait for and take the response
