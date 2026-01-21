@@ -827,7 +827,8 @@ impl Node {
         } else {
             self.service_servers.insert(service.to_string(), link);
             // This is the address that ros will find this specific service server link
-            let service_uri = format!("rosrpc://{}:{}", self.host_addr, port);
+            // Use hostname (not host_addr) so other nodes can connect to us
+            let service_uri = format!("rosrpc://{}:{}", self.hostname, port);
 
             // Inform ROS master we provide this service
             self.client
@@ -845,7 +846,8 @@ impl Node {
         if let Some(service_link) = self.service_servers.remove(service_name) {
             log::debug!("Removing service_link for: {service_name:?}");
             // Inform rosmaster that we no longer provide this service
-            let uri = format!("rosrpc://{}:{}", self.host_addr, service_link.port());
+            // Use hostname (not host_addr) to match what was registered
+            let uri = format!("rosrpc://{}:{}", self.hostname, service_link.port());
             self.client.unregister_service(service_name, uri).await?;
             Ok(())
         } else {
@@ -865,7 +867,8 @@ impl Node {
         let subscriptions = std::mem::take(&mut self.subscriptions);
         let publishers = std::mem::take(&mut self.publishers);
         let service_servers = std::mem::take(&mut self.service_servers);
-        let host_addr = self.host_addr;
+        // Use hostname for unregistering services (must match what was registered)
+        let hostname = self.hostname.clone();
 
         // Move copies into a future that will do the clean-ups
         let future = async move {
@@ -889,7 +892,7 @@ impl Node {
 
             for (topic, service_link) in &service_servers {
                 debug!("Node shutdown is cleaning up service: {topic}");
-                let uri = format!("rosrpc://{}:{}", host_addr, service_link.port());
+                let uri = format!("rosrpc://{}:{}", hostname, service_link.port());
                 let _ = client.unregister_service(topic, uri).await.inspect_err(|_e| {
                     error!("Failed to unregister server server for topic: {topic} while shutting down node.");
                 });
