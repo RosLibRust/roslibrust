@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Regression in networking for ROS1 xmlrpc where an incorrect URI was being used for service registration.
+
 ### Changed
 
 ## 0.19.0 - January 14th, 2026

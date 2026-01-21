@@ -3,7 +3,7 @@ services:
     image: carter12s/roslibrust-ci-kilted:rust_1_90
     # ports:
     #   - "9090:9090"
-    network_mode: host # For developing ros2 backend
+    #network_mode: host # For developing ros2 backend
     # command: bash -c "source /opt/ros/kilted/setup.bash; ros2 run rmw_zenoh_cpp rmw_zenohd & disown; ros2 launch rosbridge_server rosbridge_websocket_launch.xml & disown; ros2 run rosapi rosapi_node --ros-args --log-level debug"
     # Version without rosbridge for zenoh testing
     command: bash -c "source /opt/ros/kilted/setup.bash; ros2 run rmw_zenoh_cpp rmw_zenohd"

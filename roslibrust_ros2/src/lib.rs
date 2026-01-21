@@ -454,6 +454,8 @@ mod tests {
             srv_call_cmd.kill().unwrap()
         }
 
+        // Test disabled on Jan 21 '25, waiting for ros-z development to stabilize
+        #[ignore]
         #[tokio::test(flavor = "multi_thread")]
         async fn test_service_zenoh_to_zenoh() {
             let ctx = make_test_context();
@@ -472,9 +474,10 @@ mod tests {
                 })
             };
 
+            // NOTE: Cannot use multi-part names for services in ros2 currently
             let _service = node
                 .advertise_service::<roslibrust_test::ros2::std_srvs::SetBool, _>(
-                    "/test_service_zenoh_to_zenoh/set_bool",
+                    "/test_service_zenoh_to_zenoh_set_bool",
                     server_fn,
                 )
                 .await
@@ -486,7 +489,7 @@ mod tests {
             // Create service client and call the service
             let response = node
                 .call_service::<roslibrust_test::ros2::std_srvs::SetBool>(
-                    "/test_service_zenoh_to_zenoh/set_bool",
+                    "/test_service_zenoh_to_zenoh_set_bool",
                     roslibrust_test::ros2::std_srvs::SetBoolRequest { data: true },
                 )
                 .await
