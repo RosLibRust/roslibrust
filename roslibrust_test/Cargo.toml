@@ -7,7 +7,7 @@ publish = false
 [dependencies]
 env_logger = "0.10"
 roslibrust = { path = "../roslibrust", features = ["ros1", "codegen", "macro", "mock"] }
-lazy_static = "1.4"
+lazy_static = "1.5"
 tokio = { workspace = true }
 log = { workspace = true }
 

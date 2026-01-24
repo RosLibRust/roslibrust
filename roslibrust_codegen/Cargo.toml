@@ -16,14 +16,14 @@ categories = ["science::robotics"]
 log = { workspace = true }
 serde = { workspace = true }
 roslibrust_common = { path = "../roslibrust_common", version = "0.19.0" }
-lazy_static = "1.4"
+lazy_static = "1.5"
 md5 = "0.7"
 proc-macro2 = "1.0"
 quote = "1.0"
 serde_json = "1.0"
 simple-error = "0.3"
 syn = "1.0"
-walkdir = "2.3"
+walkdir = "2.5"
 xml-rs = "0.8"
 # Not a direct dependencies of the crate, but something generated code uses
 # We include them as dependencies here and expose them with a `pub use`

@@ -13,14 +13,14 @@ roslibrust_common = { path = "../roslibrust_common", version = "0.19" }
 tokio = { workspace = true }
 log = { workspace = true }
 tokio-tungstenite = { version = "0.17" }
-uuid = { version = "1.1", features = ["v4"] }
+uuid = { version = "1.19", features = ["v4"] }
 serde_json = "1.0"
 serde = "1.0"
 anyhow = "1.0"
 futures = "0.3"
 futures-util = "0.3"
-dashmap = "5.3"
-deadqueue = "0.2.4" # .4+ is required to fix bug with missing tokio dep
+dashmap = "5.5"
+deadqueue = "0.2.5" # .4+ is required to fix bug with missing tokio dep
 
 [dev-dependencies]
 test-log = { workspace = true }
