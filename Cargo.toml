@@ -1,4 +1,7 @@
 [workspace]
+resolver = "2"
+package.rust-version = "1.88"
+
 members = [
     "example_package",
     "example_package_macro",
@@ -15,7 +18,6 @@ members = [
     "roslibrust_rosapi",
     "roslibrust_ros2",
 ]
-resolver = "2"
 
 [workspace.dependencies]
 log = "0.4"

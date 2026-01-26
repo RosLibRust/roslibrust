@@ -99,4 +99,4 @@ We uphold the rust lang [Code of Conduct](https://www.rust-lang.org/policies/cod
 
 ### Minimum Supported Rust Version / MSRV
 
-MSRV is currently 1.85 to support edition 2024.
+MSRV is currently 1.88 due to dependencies (ros-z requires `let_chains` stabilized in 1.88).
