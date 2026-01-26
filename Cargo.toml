@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-package.rust-version = "1.88"
+package.rust-version = "1.90"
 
 members = [
     "example_package",
