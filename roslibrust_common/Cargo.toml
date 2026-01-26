@@ -21,4 +21,4 @@ futures-core = "0.3"
 # Used for implementation of into_stream for subscribers
 async-stream = "0.3"
 # Used for validation of topic names
-regex = "1.9"
+regex = "1.12"

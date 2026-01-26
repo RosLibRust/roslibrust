@@ -18,7 +18,7 @@ log = { workspace = true }
 serde = { workspace = true }
 
 # Should probably become workspace members:
-lazy_static = "1.4"
+lazy_static = "1.5"
 abort-on-drop = "0.2"
 test-log = { workspace = true }
 
@@ -28,9 +28,9 @@ serde_xmlrpc = { version = "0.2" }
 roslibrust_serde_rosmsg = { workspace = true }
 hyper = { version = "0.14", features = ["server"] }
 gethostname = { version = "0.4" }
-regex = { version = "1.9" }
-byteorder = "1.4"
-bytes = "1.5"
+regex = { version = "1.12" }
+byteorder = "1.5"
+bytes = "1.11"
 thiserror = "2.0"
 anyhow = "1.0"
 getifs = "0.4"

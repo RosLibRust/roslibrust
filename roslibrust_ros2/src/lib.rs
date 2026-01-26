@@ -38,6 +38,14 @@ impl<T: RosMessageType> ros_z::msg::ZSerializer for WrapperSerdes<T> {
     fn serialize(input: Self::Input<'_>) -> Vec<u8> {
         ros_z::msg::CdrSerdes::<T>::serialize(&input.0)
     }
+
+    fn serialize_to_zbuf(input: Self::Input<'_>) -> zenoh_buffers::ZBuf {
+        ros_z::msg::CdrSerdes::<T>::serialize_to_zbuf(&input.0)
+    }
+
+    fn serialize_to_buf(input: Self::Input<'_>, buffer: &mut Vec<u8>) {
+        ros_z::msg::CdrSerdes::<T>::serialize_to_buf(&input.0, buffer)
+    }
 }
 
 impl<T: RosMessageType> ros_z::msg::ZDeserializer for WrapperSerdes<T> {

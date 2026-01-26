@@ -5,7 +5,8 @@ edition = "2021"
 publish = false
 
 [dependencies]
-zenoh = "1.5"
+zenoh = "1.7"
+zenoh-buffers = "1.7"
 tokio = { workspace = true }
 env_logger = "0.11"
 cdr = "0.2"

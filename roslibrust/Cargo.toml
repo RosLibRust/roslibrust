@@ -34,7 +34,7 @@ roslibrust_codegen_macro = { path = "../roslibrust_codegen_macro" }
 # Slightly weird, but used in documentation examples
 roslibrust_test = { path = "../roslibrust_test" }
 # Slightly weird, but used in documentation examples
-zenoh = "1.0"
+zenoh = "1.7"
 # Provides test timeout
 ntest = "0.9"
 
