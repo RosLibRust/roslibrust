@@ -566,7 +566,11 @@ fn tokenize_messages_and_services(
     let msg_iter = messages.iter().map(|m| m.parsed.path.clone());
     let srv_iter = services.iter().map(|s| s.parsed.path.clone());
     let action_iter = actions.iter().map(|a| a.path.clone());
-    let dependent_paths = msg_iter.chain(srv_iter).chain(action_iter).collect();
+    let dependent_paths = msg_iter
+        .chain(srv_iter)
+        .chain(action_iter)
+        .filter(|p| !p.starts_with("/tmp/roslibrust_builtin/"))
+        .collect();
     let source =
         generate_rust_ros_message_definitions(messages, services, &CodegenOptions::default())?;
     Ok((source, dependent_paths))

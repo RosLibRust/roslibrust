@@ -78,10 +78,10 @@ pub fn get_builtin_interfaces() -> BTreeMap<String, MessageFile> {
         "Time",
         &crate::utils::Package {
             name: "builtin_interfaces".to_string(),
-            path: "/tmp".into(),
+            path: "/tmp/roslibrust_builtin".into(),
             version: Some(crate::utils::RosVersion::ROS2),
         },
-        std::path::Path::new("/tmp/msg/Time.msg"),
+        std::path::Path::new("/tmp/roslibrust_builtin/msg/Time.msg"),
     )
     .expect("Internal representation of Time is invalid");
     let time_msg =
@@ -94,10 +94,10 @@ pub fn get_builtin_interfaces() -> BTreeMap<String, MessageFile> {
         "Duration",
         &crate::utils::Package {
             name: "builtin_interfaces".to_string(),
-            path: "/tmp".into(),
+            path: "/tmp/roslibrust_builtin".into(),
             version: Some(crate::utils::RosVersion::ROS2),
         },
-        std::path::Path::new("/tmp/msg/Duration.msg"),
+        std::path::Path::new("/tmp/roslibrust_builtin/msg/Duration.msg"),
     )
     .expect("Internal representation of Duration is invalid");
     let duration_msg =
@@ -110,10 +110,10 @@ pub fn get_builtin_interfaces() -> BTreeMap<String, MessageFile> {
         "ServiceEventInfo",
         &crate::utils::Package {
             name: "service_msgs".to_string(),
-            path: "/tmp".into(),
+            path: "/tmp/roslibrust_builtin".into(),
             version: Some(crate::utils::RosVersion::ROS2),
         },
-        std::path::Path::new("/tmp/msg/ServiceEventInfo.msg"),
+        std::path::Path::new("/tmp/roslibrust_builtin/msg/ServiceEventInfo.msg"),
     )
     .expect("Internal representation of ServiceEventInfo is invalid");
     let service_event_info = MessageFile::resolve(parsed, &map)
