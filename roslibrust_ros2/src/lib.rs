@@ -46,6 +46,21 @@ impl<T: RosMessageType> ros_z::msg::ZSerializer for WrapperSerdes<T> {
     fn serialize_to_buf(input: Self::Input<'_>, buffer: &mut Vec<u8>) {
         ros_z::msg::CdrSerdes::<T>::serialize_to_buf(&input.0, buffer)
     }
+
+    fn serialize_to_zbuf_with_hint(
+        input: Self::Input<'_>,
+        capacity_hint: usize,
+    ) -> zenoh_buffers::ZBuf {
+        ros_z::msg::CdrSerdes::<T>::serialize_to_zbuf_with_hint(&input.0, capacity_hint)
+    }
+
+    fn serialize_to_shm(
+        input: Self::Input<'_>,
+        estimated_size: usize,
+        provider: &zenoh::shm::ShmProvider<zenoh::shm::PosixShmProviderBackend>,
+    ) -> zenoh::Result<(zenoh_buffers::ZBuf, usize)> {
+        ros_z::msg::CdrSerdes::<T>::serialize_to_shm(&input.0, estimated_size, provider)
+    }
 }
 
 impl<T: RosMessageType> ros_z::msg::ZDeserializer for WrapperSerdes<T> {
