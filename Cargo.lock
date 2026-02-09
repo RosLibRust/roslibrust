@@ -147,6 +147,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
+name = "approx"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cab112f0a86d568ea0e627cc1d6be74a1e9cd55214684db5561995f6dad897c6"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "arc-swap"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3463,6 +3472,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "roslibrust_transforms"
+version = "0.1.0"
+dependencies = [
+ "diffy",
+ "env_logger 0.11.8",
+ "log",
+ "roslibrust",
+ "roslibrust_common",
+ "roslibrust_mock",
+ "roslibrust_rosbridge",
+ "roslibrust_test",
+ "serde",
+ "test-log",
+ "thiserror 2.0.18",
+ "tokio",
+ "transforms",
+]
+
+[[package]]
 name = "roslibrust_zenoh"
 version = "0.19.0"
 dependencies = [
@@ -4766,6 +4794,17 @@ dependencies = [
  "tracing-core",
  "tracing-log",
  "tracing-serde",
+]
+
+[[package]]
+name = "transforms"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e54745b240e84fb7064614afd5185a6243c84dc6823329ddb5dc81faf1c017c9"
+dependencies = [
+ "approx",
+ "hashbrown 0.16.1",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

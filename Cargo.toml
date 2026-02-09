@@ -13,6 +13,7 @@ members = [
     "roslibrust_ros1",
     "roslibrust_rosbridge",
     "roslibrust_test",
+    "roslibrust_transforms",
     "roslibrust_zenoh",
     "roslibrust",
     "roslibrust_rosapi",
