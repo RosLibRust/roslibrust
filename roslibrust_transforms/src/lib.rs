@@ -52,7 +52,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use roslibrust_common::{Publish, RosMessageType, Subscribe, TopicProvider};
-use tokio::sync::RwLock;
+use tokio::sync::{broadcast, RwLock};
+use tokio_util::sync::CancellationToken;
 
 /// Error types for TransformManager operations.
 #[derive(thiserror::Error, Debug)]
@@ -62,6 +63,9 @@ pub enum TransformManagerError {
 
     #[error("ROS communication error: {0}")]
     RosError(#[from] roslibrust_common::Error),
+
+    #[error("Timeout waiting for transform from '{0}' to '{1}'")]
+    Timeout(String, String),
 }
 
 /// Trait for converting a TransformStamped message to a `transforms::Transform`.
@@ -107,11 +111,13 @@ pub trait TFMessageType: RosMessageType + Send + Clone + 'static {
 /// The manager works with any roslibrust backend (ros1, rosbridge, zenoh, mock).
 pub struct TransformManager<M: TFMessageType, P: Publish<M> + Send + Sync> {
     registry: Arc<RwLock<Registry>>,
+    buffer_duration: Duration,
+    /// Broadcast channel to notify waiters when transforms are added
+    transform_notify: broadcast::Sender<()>,
+    /// Cancellation token to shut down background tasks when dropped
+    cancel_token: CancellationToken,
     tf_publisher: P,
     tf_static_publisher: P,
-    // We hold onto the task handles to keep them alive
-    _tf_task: tokio::task::JoinHandle<()>,
-    _tf_static_task: tokio::task::JoinHandle<()>,
     _phantom: PhantomData<M>,
 }
 
@@ -140,6 +146,13 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
     {
         let registry = Arc::new(RwLock::new(Registry::new(buffer_duration)));
 
+        // Create broadcast channel for notifying waiters when transforms are added
+        // Capacity of 16 should be plenty - receivers only care about the most recent notification
+        let (transform_notify, _) = broadcast::channel(16);
+
+        // Create cancellation token for shutting down background tasks
+        let cancel_token = CancellationToken::new();
+
         // Subscribe to /tf topic
         let tf_subscriber = ros.subscribe::<M>("/tf").await?;
 
@@ -154,22 +167,41 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
 
         // Spawn task to handle /tf messages
         let registry_clone = registry.clone();
-        let tf_task = tokio::spawn(async move {
-            Self::process_tf_messages(tf_subscriber, registry_clone, false).await;
+        let notify_clone = transform_notify.clone();
+        let cancel_clone = cancel_token.clone();
+        tokio::spawn(async move {
+            Self::process_tf_messages(
+                tf_subscriber,
+                registry_clone,
+                notify_clone,
+                cancel_clone,
+                false,
+            )
+            .await;
         });
 
         // Spawn task to handle /tf_static messages
         let registry_clone = registry.clone();
-        let tf_static_task = tokio::spawn(async move {
-            Self::process_tf_messages(tf_static_subscriber, registry_clone, true).await;
+        let notify_clone = transform_notify.clone();
+        let cancel_clone = cancel_token.clone();
+        tokio::spawn(async move {
+            Self::process_tf_messages(
+                tf_static_subscriber,
+                registry_clone,
+                notify_clone,
+                cancel_clone,
+                true,
+            )
+            .await;
         });
 
         Ok(TransformManager {
             registry,
+            buffer_duration,
+            transform_notify,
+            cancel_token,
             tf_publisher,
             tf_static_publisher,
-            _tf_task: tf_task,
-            _tf_static_task: tf_static_task,
             _phantom: PhantomData,
         })
     }
@@ -178,24 +210,40 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
     async fn process_tf_messages<S: Subscribe<M>>(
         mut subscriber: S,
         registry: Arc<RwLock<Registry>>,
+        notify: broadcast::Sender<()>,
+        cancel_token: CancellationToken,
         is_static: bool,
     ) {
         loop {
-            match subscriber.next().await {
-                Ok(msg) => {
-                    let mut reg = registry.write().await;
-                    for tf in msg.transforms() {
-                        let transform = tf.into_transform(is_static);
-                        reg.add_transform(transform);
-                    }
-                }
-                Err(e) => {
-                    log::warn!(
-                        "Error receiving {} message: {}",
-                        if is_static { "/tf_static" } else { "/tf" },
-                        e
+            tokio::select! {
+                _ = cancel_token.cancelled() => {
+                    log::debug!(
+                        "Shutting down {} listener task",
+                        if is_static { "/tf_static" } else { "/tf" }
                     );
-                    // Continue trying to receive messages
+                    break;
+                }
+                result = subscriber.next() => {
+                    match result {
+                        Ok(msg) => {
+                            let mut reg = registry.write().await;
+                            for tf in msg.transforms() {
+                                let transform = tf.into_transform(is_static);
+                                reg.add_transform(transform);
+                            }
+                            // Notify waiters that transforms have been added
+                            // Ignore errors - they just mean no one is currently listening
+                            let _ = notify.send(());
+                        }
+                        Err(e) => {
+                            log::warn!(
+                                "Error receiving {} message: {}",
+                                if is_static { "/tf_static" } else { "/tf" },
+                                e
+                            );
+                            // Continue trying to receive messages
+                        }
+                    }
                 }
             }
         }
@@ -258,6 +306,112 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
             .map_err(|e| TransformManagerError::LookupError(e.to_string()))
     }
 
+    /// Wait for a transform to become available between two frames at a specific time.
+    ///
+    /// This method will poll the registry until the transform is available or until the timeout
+    /// is reached. If `timeout` is `None`, the method will use the buffer duration configured
+    /// in the constructor as the timeout.
+    ///
+    /// # Arguments
+    ///
+    /// * `target_frame` - The frame to transform into
+    /// * `source_frame` - The frame to transform from
+    /// * `time` - The timestamp for which the transform is requested
+    /// * `timeout` - Optional timeout duration. If `None`, uses the buffer duration from the constructor.
+    ///
+    /// # Returns
+    ///
+    /// Returns the transform that converts points from `source_frame` to `target_frame`,
+    /// or a `Timeout` error if the transform is not available within the timeout period.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use roslibrust_transforms::{TransformManager, Ros1TFMessage, Timestamp};
+    /// use std::time::Duration;
+    ///
+    /// async fn example(manager: &TransformManager<Ros1TFMessage, impl roslibrust_common::Publish<Ros1TFMessage> + Send + Sync>) {
+    ///     // Wait up to 5 seconds for the transform
+    ///     let transform = manager.wait_for_transform(
+    ///         "base_link",
+    ///         "camera_link",
+    ///         Timestamp::now(),
+    ///         Some(Duration::from_secs(5))
+    ///     ).await.unwrap();
+    ///
+    ///     // Or use the default timeout (buffer duration)
+    ///     let transform = manager.wait_for_transform(
+    ///         "base_link",
+    ///         "camera_link",
+    ///         Timestamp::now(),
+    ///         None
+    ///     ).await.unwrap();
+    /// }
+    /// ```
+    pub async fn wait_for_transform(
+        &self,
+        target_frame: &str,
+        source_frame: &str,
+        time: Timestamp,
+        timeout: Option<Duration>,
+    ) -> Result<transforms::Transform, TransformManagerError> {
+        let timeout_duration = timeout.unwrap_or(self.buffer_duration);
+        let deadline = tokio::time::Instant::now() + timeout_duration;
+
+        // Subscribe to transform notifications
+        let mut receiver = self.transform_notify.subscribe();
+
+        loop {
+            // Try to get the transform
+            {
+                let mut registry = self.registry.write().await;
+                if let Ok(transform) = registry.get_transform(target_frame, source_frame, time) {
+                    return Ok(transform);
+                }
+            }
+
+            // Wait for either a notification or timeout
+            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+            if remaining.is_zero() {
+                return Err(TransformManagerError::Timeout(
+                    target_frame.to_string(),
+                    source_frame.to_string(),
+                ));
+            }
+
+            // Wait for either the final deadline to occur, or for a notification that a transform has been added
+            tokio::select! {
+                _ = tokio::time::sleep(remaining) => {
+                    // Timeout expired - do one final check then return error
+                    let mut registry = self.registry.write().await;
+                    if let Ok(transform) = registry.get_transform(target_frame, source_frame, time) {
+                        return Ok(transform);
+                    }
+                    return Err(TransformManagerError::Timeout(
+                        target_frame.to_string(),
+                        source_frame.to_string(),
+                    ));
+                }
+                result = receiver.recv() => {
+                    // Got a notification - check for the transform on next loop iteration
+                    // Handle lagged receivers by just continuing - we'll check the registry anyway
+                    match result {
+                        Ok(()) | Err(broadcast::error::RecvError::Lagged(_)) => {
+                            // Continue to next iteration to check for transform
+                        }
+                        Err(broadcast::error::RecvError::Closed) => {
+                            // Channel closed, shouldn't happen but treat as timeout
+                            return Err(TransformManagerError::Timeout(
+                                target_frame.to_string(),
+                                source_frame.to_string(),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /// Update (publish and add to registry) a dynamic transform.
     ///
     /// This publishes the transform to the /tf topic and adds it to the local registry.
@@ -272,8 +426,13 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
         self.tf_publisher.publish(&msg).await?;
 
         // Update registry
-        let mut registry = self.registry.write().await;
-        registry.add_transform(transform);
+        {
+            let mut registry = self.registry.write().await;
+            registry.add_transform(transform);
+        }
+
+        // Notify waiters that a transform has been added
+        let _ = self.transform_notify.send(());
 
         Ok(())
     }
@@ -302,8 +461,19 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
         // Update registry
         let mut registry = self.registry.write().await;
         registry.add_transform(transform);
+        drop(registry);
+
+        // Notify waiters that a transform has been added
+        let _ = self.transform_notify.send(());
 
         Ok(())
+    }
+}
+
+impl<M: TFMessageType, P: Publish<M> + Send + Sync> Drop for TransformManager<M, P> {
+    fn drop(&mut self) {
+        // Cancel the background tasks when the manager is dropped
+        self.cancel_token.cancel();
     }
 }
 

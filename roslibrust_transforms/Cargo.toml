@@ -18,6 +18,7 @@ tokio = { workspace = true }
 log = { workspace = true }
 thiserror = "2.0"
 serde = { workspace = true }
+tokio-util = "0.7"
 
 [dev-dependencies]
 env_logger = "0.11"
