@@ -51,6 +51,7 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::Duration;
 
+use chrono::{DateTime, Utc};
 use roslibrust_common::{Publish, RosMessageType, Subscribe, TopicProvider};
 use tokio::sync::{broadcast, RwLock};
 use tokio_util::sync::CancellationToken;
@@ -64,8 +65,8 @@ pub enum TransformManagerError {
     #[error("ROS communication error: {0}")]
     RosError(#[from] roslibrust_common::Error),
 
-    #[error("Timeout waiting for transform from '{0}' to '{1}'")]
-    Timeout(String, String),
+    #[error("Timeout waiting for transform from '{0}' to '{1}' at time '{2}'")]
+    Timeout(String, String, String),
 }
 
 /// Trait for converting a TransformStamped message to a `transforms::Transform`.
@@ -306,6 +307,18 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
             .map_err(|e| TransformManagerError::LookupError(e.to_string()))
     }
 
+    fn pretty_print_timestamp(time: Timestamp) -> String {
+        if time == Timestamp::zero() {
+            return "static (t=0)".to_string();
+        }
+        let secs = (time.t / 1_000_000_000) as i64;
+        let nanos = (time.t % 1_000_000_000) as u32;
+        match DateTime::<Utc>::from_timestamp(secs, nanos) {
+            Some(dt) => dt.format("%Y-%m-%d %H:%M:%S%.3f UTC").to_string(),
+            None => format!("{}.{:09}s", secs, nanos),
+        }
+    }
+
     /// Wait for a transform to become available between two frames at a specific time.
     ///
     /// This method will poll the registry until the transform is available or until the timeout
@@ -376,6 +389,7 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
                 return Err(TransformManagerError::Timeout(
                     target_frame.to_string(),
                     source_frame.to_string(),
+                    Self::pretty_print_timestamp(time),
                 ));
             }
 
@@ -390,6 +404,7 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
                     return Err(TransformManagerError::Timeout(
                         target_frame.to_string(),
                         source_frame.to_string(),
+                        Self::pretty_print_timestamp(time),
                     ));
                 }
                 result = receiver.recv() => {
@@ -404,6 +419,7 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
                             return Err(TransformManagerError::Timeout(
                                 target_frame.to_string(),
                                 source_frame.to_string(),
+                                Self::pretty_print_timestamp(time),
                             ));
                         }
                     }

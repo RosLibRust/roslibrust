@@ -314,7 +314,7 @@ async fn test_wait_for_transform_timeout() {
 
     // Verify it's a Timeout error
     match result {
-        Err(TransformManagerError::Timeout(parent, child)) => {
+        Err(TransformManagerError::Timeout(parent, child, _time)) => {
             assert_eq!(parent, "nonexistent_parent");
             assert_eq!(child, "nonexistent_child");
         }
