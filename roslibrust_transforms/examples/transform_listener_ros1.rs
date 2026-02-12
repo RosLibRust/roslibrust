@@ -22,7 +22,6 @@
 
 use std::time::Duration;
 
-use roslibrust_rosbridge::ClientHandle;
 use roslibrust_transforms::{Ros1TFMessage, Timestamp, TransformManager};
 
 use log::*;
@@ -32,7 +31,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     info!("Connecting to rosbridge at ws://localhost:9090...");
 
-    let client = ClientHandle::new("ws://localhost:9090").await?;
+    let client =
+        roslibrust::ros1::NodeHandle::new("http://localhost:11311", "example_transform_listener")
+            .await
+            .expect("Failed to create a ROS1 node");
     info!("Connected!");
 
     // Create a TransformManager with ROS1 message types

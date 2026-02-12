@@ -30,6 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     log::info!("Connecting to rosbridge at ws://localhost:9090...");
 
+    // Create a rosbridge client to talk over the rosbridge websocket
     let client = ClientHandle::new("ws://localhost:9090").await?;
     log::info!("Connected!");
 

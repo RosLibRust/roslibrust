@@ -41,22 +41,9 @@
 
 pub mod messages;
 pub mod transform_manager;
-
-// Re-export message modules for convenience
-pub use messages::ros2;
-pub use messages::{geometry_msgs, ros1, std_msgs};
-pub use transform_manager::{
-    FromTransform, IntoTransform, Ros1TFMessage, Ros1TransformStamped, Ros2TFMessage,
-    Ros2TransformStamped, TFMessageType, TransformManager, TransformManagerError,
-};
+pub use transform_manager::*;
 
 // Re-export useful types from the transforms crate
 pub use transforms::geometry::{Quaternion, Transform, Vector3};
 pub use transforms::time::Timestamp;
 pub use transforms::Registry;
-
-#[cfg(test)]
-mod tests;
-
-#[cfg(feature = "running_bridge")]
-mod integration_tests;
