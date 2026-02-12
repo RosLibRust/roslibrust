@@ -7,6 +7,7 @@ license = "MIT"
 description = "A tf2-like transform library for roslibrust providing TransformListener functionality."
 repository = "https://github.com/roslibrust/roslibrust"
 categories = ["science::robotics"]
+keywords = ["ROS", "robotics", "tf2", "transforms", "coordinates"]
 
 [dependencies]
 roslibrust_common = { path = "../roslibrust_common", version = "0.19" }
@@ -33,3 +34,6 @@ running_bridge = []
 ros1_test = ["running_bridge"]
 # Indicates we're testing with running ROS2 bridge
 ros2_test = ["running_bridge"]
+
+[package.metadata.docs.rs]
+all-features = true

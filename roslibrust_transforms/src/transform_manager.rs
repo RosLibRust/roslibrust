@@ -328,9 +328,15 @@ impl FromTransform for Ros1TransformStamped {
     fn from_transform(transform: &transforms::Transform) -> Self {
         use crate::messages::ros1::{geometry_msgs, std_msgs};
 
-        // TODO guards around underflow/overflow? here
-        let secs = (transform.timestamp.t / 1_000_000_000) as i32;
-        let nsecs = (transform.timestamp.t % 1_000_000_000) as i32;
+        // Year 2038 problem anyone?
+        let secs = transform.timestamp.t / 1_000_000_000;
+        let nsecs = transform.timestamp.t % 1_000_000_000;
+        if secs > i32::MAX as u128 || nsecs > i32::MAX as u128 {
+            panic!("Timestamp overflow when converting to Ros1TransformStamped");
+        }
+
+        let secs = secs as i32;
+        let nsecs = nsecs as i32;
 
         Ros1TransformStamped {
             header: std_msgs::Header {
