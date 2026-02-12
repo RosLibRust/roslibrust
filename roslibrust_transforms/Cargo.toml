@@ -1,0 +1,41 @@
+[package]
+name = "roslibrust_transforms"
+version = "0.1.0"
+edition = "2021"
+authors = ["carter <carterjschultz@gmail.com>"]
+license = "MIT"
+description = "A tf2-like transform library for roslibrust providing TransformListener functionality."
+repository = "https://github.com/roslibrust/roslibrust"
+categories = ["science::robotics"]
+keywords = ["ROS", "robotics", "tf2", "transforms", "coordinates"]
+
+[dependencies]
+roslibrust_common = { path = "../roslibrust_common", version = "0.19" }
+# roslibrust is needed because the macro-generated code references ::roslibrust::
+roslibrust = { path = "../roslibrust", version = "0.19", features = ["macro", "codegen"] }
+transforms = "1.1"
+tokio = { workspace = true }
+log = { workspace = true }
+thiserror = "2.0"
+serde = { workspace = true }
+tokio-util = "0.7"
+chrono = "0.4"
+
+[dev-dependencies]
+env_logger = "0.11"
+roslibrust_mock = { path = "../roslibrust_mock" }
+roslibrust_rosbridge = { path = "../roslibrust_rosbridge" }
+roslibrust_test = { path = "../roslibrust_test" }
+test-log = { workspace = true }
+diffy = "0.3.0"
+
+[features]
+# Used to enable tests that rely on a locally running rosbridge
+running_bridge = []
+# Indicates we're testing with running ROS1 bridge
+ros1_test = ["running_bridge"]
+# Indicates we're testing with running ROS2 bridge
+ros2_test = ["running_bridge"]
+
+[package.metadata.docs.rs]
+all-features = true
