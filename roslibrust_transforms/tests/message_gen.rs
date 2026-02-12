@@ -158,10 +158,6 @@ pub mod ros2 {{
         const ROS2_TYPE_NAME: &'static str = "tf2_msgs::msg::dds_::TFMessage_";
     }}
 }}
-
-// Re-export ROS1 messages as the default (for backward compatibility)
-pub use ros1::geometry_msgs;
-pub use ros1::std_msgs;
 "#
     )
 }

@@ -1,46 +1,46 @@
-//! Example showing how to use TransformManager with ROS1 messages via rosbridge.
+//! Example showing how to use TransformManager with ROS2 messages via rosbridge.
 //!
 //! This example connects to a rosbridge server and listens for transforms on /tf and /tf_static.
 //! It then periodically looks up the transform between two frames.
 //!
 //! # Running this example
 //!
-//! 1. Start a rosbridge server:
+//! 1. Start a ROS2 rosbridge server:
 //!    ```bash
-//!    roslaunch rosbridge_server rosbridge_websocket.launch
+//!    ros2 launch rosbridge_server rosbridge_websocket_launch.xml
 //!    ```
 //!
 //! 2. Run this example:
 //!    ```bash
-//!    cargo run -p roslibrust_transforms --example transform_listener_ros1
+//!    cargo run -p roslibrust_transforms --example transform_listener_ros2
 //!    ```
 //!
 //! 3. Publish some transforms (in another terminal):
 //!    ```bash
-//!    rosrun tf2_ros static_transform_publisher 1 2 3 0 0 0 world base_link
+//!    ros2 run tf2_ros static_transform_publisher --x 1 --y 2 --z 3 --frame-id world --child-frame-id base_link
 //!    ```
 
 use std::time::Duration;
 
-use roslibrust_transforms::{Ros1TFMessage, Timestamp, TransformManager};
-
-use log::*;
+use roslibrust_rosbridge::ClientHandle;
+use roslibrust_transforms::{Ros2TFMessage, Timestamp, TransformManager};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
-    info!("Connecting to rosbridge at ws://localhost:9090...");
+    log::info!("Connecting to rosbridge at ws://localhost:9090...");
 
-    let client =
-        roslibrust::ros1::NodeHandle::new("http://localhost:11311", "example_transform_listener")
-            .await
-            .expect("Failed to create a ROS1 node");
-    info!("Connected!");
+    // Create a rosbridge client to talk over the rosbridge websocket
+    let client = ClientHandle::new("ws://localhost:9090").await?;
+    log::info!("Connected!");
 
-    // Create a TransformManager with ROS1 message types
-    info!("Creating TransformManager...");
-    let manager = TransformManager::<Ros1TFMessage, _>::new(&client).await?;
-    info!("TransformManager created, listening on /tf and /tf_static");
+    // Create a TransformManager with ROS2 message types
+    // Note: The only difference from ROS1 is using Ros2TFMessage instead of Ros1TFMessage
+    log::info!("Creating TransformManager with ROS2 messages...");
+    let manager =
+        TransformManager::<Ros2TFMessage, _>::new(&client, std::time::Duration::from_secs(10))
+            .await?;
+    log::info!("TransformManager created, listening on /tf and /tf_static");
 
     // Periodically try to look up transforms
     let mut interval = tokio::time::interval(Duration::from_secs(1));
@@ -48,14 +48,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         tokio::select! {
             _ = tokio::signal::ctrl_c() => {
-                info!("Received Ctrl+C, shutting down...");
+                log::info!("Received Ctrl+C, shutting down...");
                 break;
             }
             _ = interval.tick() => {
                 // Try to look up a transform from "world" to "base_link"
-                match manager.lookup_latest_transform("world", "base_link").await {
+                match manager.get_transform("world", "base_link", Timestamp::now()).await {
                     Ok(transform) => {
-                        info!(
+                        log::info!(
                             "Transform world -> base_link: translation=({:.3}, {:.3}, {:.3})",
                             transform.translation.x,
                             transform.translation.y,
@@ -63,14 +63,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         );
                     }
                     Err(e) => {
-                        warn!("Could not look up transform: {}", e);
+                        log::warn!("Could not look up transform: {}", e);
                     }
                 }
 
                 // Also try looking up with a specific timestamp (for static transforms, use zero)
-                match manager.lookup_transform("world", "base_link", Timestamp::zero()).await {
+                match manager.get_transform("world", "base_link", Timestamp::zero()).await {
                     Ok(transform) => {
-                        info!(
+                        log::info!(
                             "Static transform world -> base_link: translation=({:.3}, {:.3}, {:.3})",
                             transform.translation.x,
                             transform.translation.y,

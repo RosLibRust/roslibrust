@@ -43,7 +43,9 @@ fn create_tf_message(
 async fn test_transform_listener_creation() {
     let mock_ros = MockRos::new();
 
-    let manager = TransformManager::<Ros1TFMessage, _>::new(&mock_ros).await;
+    let manager =
+        TransformManager::<Ros1TFMessage, _>::new(&mock_ros, std::time::Duration::from_secs(10))
+            .await;
     assert!(manager.is_ok(), "Failed to create TransformManager");
 }
 
@@ -60,9 +62,10 @@ async fn test_transform_listener_receives_tf_messages() {
         .expect("Failed to create /tf publisher");
 
     // Create the manager
-    let manager = TransformManager::<Ros1TFMessage, _>::new(&mock_ros)
-        .await
-        .expect("Failed to create TransformManager");
+    let manager =
+        TransformManager::<Ros1TFMessage, _>::new(&mock_ros, std::time::Duration::from_secs(10))
+            .await
+            .expect("Failed to create TransformManager");
 
     // Give the listener time to subscribe
     tokio::time::sleep(Duration::from_millis(50)).await;
@@ -90,7 +93,7 @@ async fn test_transform_listener_receives_tf_messages() {
 
     // Check that the transform is available at the exact timestamp we published
     let result = manager
-        .lookup_transform("world", "base_link", lookup_timestamp)
+        .get_transform("world", "base_link", lookup_timestamp)
         .await;
     assert!(
         result.is_ok(),
@@ -109,9 +112,10 @@ async fn test_transform_listener_static_transforms() {
         .expect("Failed to create /tf_static publisher");
 
     // Create the manager
-    let manager = TransformManager::<Ros1TFMessage, _>::new(&mock_ros)
-        .await
-        .expect("Failed to create TransformManager");
+    let manager =
+        TransformManager::<Ros1TFMessage, _>::new(&mock_ros, std::time::Duration::from_secs(10))
+            .await
+            .expect("Failed to create TransformManager");
 
     // Give the listener time to subscribe
     tokio::time::sleep(Duration::from_millis(50)).await;
@@ -128,9 +132,9 @@ async fn test_transform_listener_static_transforms() {
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // Check that the transform is available
-    let can_transform = manager.can_transform("base_link", "camera_link").await;
+    let can_transform = manager.get_transform("base_link", "camera_link", Timestamp::zero()).await;
     assert!(
-        can_transform,
+        can_transform.is_ok(),
         "Static transform should be available after publishing"
     );
 }
@@ -146,9 +150,10 @@ async fn test_lookup_transform_values() {
         .expect("Failed to create /tf_static publisher");
 
     // Create the manager
-    let manager = TransformManager::<Ros1TFMessage, _>::new(&mock_ros)
-        .await
-        .expect("Failed to create TransformManager");
+    let manager =
+        TransformManager::<Ros1TFMessage, _>::new(&mock_ros, std::time::Duration::from_secs(10))
+            .await
+            .expect("Failed to create TransformManager");
 
     // Give the listener time to subscribe
     tokio::time::sleep(Duration::from_millis(50)).await;
@@ -167,7 +172,7 @@ async fn test_lookup_transform_values() {
     // Look up the transform and verify its values
     // Static transforms use Timestamp::zero()
     let transform = manager
-        .lookup_transform("world", "sensor", Timestamp::zero())
+        .get_transform("world", "sensor", Timestamp::zero())
         .await
         .expect("Failed to look up transform");
 

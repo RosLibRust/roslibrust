@@ -7259,7 +7259,3 @@ uint32 stride  # stride of given dimension"####;
         const ROS2_TYPE_NAME: &'static str = "tf2_msgs::msg::dds_::TFMessage_";
     }
 }
-
-// Re-export ROS1 messages as the default (for backward compatibility)
-pub use ros1::geometry_msgs;
-pub use ros1::std_msgs;
