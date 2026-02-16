@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added the roslibrust_transforms crate which provides equivalent functionality to tf2 using the transforms crate.
+
 ### Fixed
 
 - Regression in networking for ROS1 xmlrpc where an incorrect URI was being used for service registration.
