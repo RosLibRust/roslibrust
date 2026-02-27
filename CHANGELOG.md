@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Regression in networking for ROS1 xmlrpc where an incorrect URI was being used for service registration.
+- ROS1 subscribers now retry TCP connections to publishers using exponential backoff when the connection fails.
 
 ### Changed
 
