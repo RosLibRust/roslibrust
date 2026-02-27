@@ -507,6 +507,11 @@ impl Node {
             }
             NodeMsg::SetPeerPublishers { topic, publishers } => {
                 if let Some(subscription) = self.subscriptions.get_mut(&topic) {
+                    // First, remove any publishers that are no longer in the list
+                    // This cancels retry loops for publishers that rosmaster says are gone
+                    subscription.remove_stale_publishers(&publishers).await;
+
+                    // Then add any new publishers
                     for publisher_uri in publishers {
                         if let Err(err) = subscription.add_publisher_source(&publisher_uri).await {
                             log::error!(

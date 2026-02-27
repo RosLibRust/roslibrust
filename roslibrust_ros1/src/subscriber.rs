@@ -3,13 +3,13 @@ use abort_on_drop::ChildTask;
 use bytes::Bytes;
 use log::*;
 use roslibrust_common::{RosMessageType, ShapeShifter};
-use std::{marker::PhantomData, sync::Arc};
+use std::{collections::HashMap, marker::PhantomData, sync::Arc, time::Duration};
 use tokio::{
     io::AsyncWriteExt,
     net::TcpStream,
     sync::{
         broadcast::{self, error::RecvError},
-        RwLock,
+        watch, RwLock,
     },
 };
 
@@ -87,13 +87,32 @@ impl SubscriberAny {
     }
 }
 
+/// Retry configuration constants (matching roscpp behavior)
+const INITIAL_RETRY_PERIOD: Duration = Duration::from_millis(100);
+const MAX_RETRY_PERIOD: Duration = Duration::from_secs(20);
+
+/// Tracks the state of a connection to a single publisher
+struct PublisherConnection {
+    /// The cached TCP endpoint (e.g., "192.168.1.1:12345") for direct reconnection
+    tcp_endpoint: Option<String>,
+    /// Sender to signal the reader task to cancel
+    cancel_tx: watch::Sender<bool>,
+}
+
+/// Shared state for publisher connections, accessible from spawned tasks
+struct PublisherConnectionState {
+    /// Map from XMLRPC URI to connection info
+    connections: HashMap<String, PublisherConnection>,
+}
+
 pub struct Subscription {
     subscription_tasks: Vec<ChildTask<()>>,
     // Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers
     _msg_receiver: broadcast::Receiver<Bytes>,
     msg_sender: broadcast::Sender<Bytes>,
     connection_header: ConnectionHeader,
-    known_publishers: Arc<RwLock<Vec<String>>>,
+    /// Shared state tracking all publisher connections
+    publisher_state: Arc<RwLock<PublisherConnectionState>>,
 }
 
 impl Subscription {
@@ -124,7 +143,9 @@ impl Subscription {
             _msg_receiver: receiver,
             msg_sender: sender,
             connection_header,
-            known_publishers: Arc::new(RwLock::new(vec![])),
+            publisher_state: Arc::new(RwLock::new(PublisherConnectionState {
+                connections: HashMap::new(),
+            })),
         }
     }
 
@@ -140,83 +161,266 @@ impl Subscription {
         &mut self,
         publisher_uri: &str,
     ) -> Result<(), std::io::Error> {
+        // Check if we already have a connection (or retry in progress) for this publisher
         let is_new_connection = {
             !self
-                .known_publishers
+                .publisher_state
                 .read()
                 .await
-                .iter()
-                .any(|publisher| publisher.as_str() == publisher_uri)
+                .connections
+                .contains_key(publisher_uri)
         };
 
         if is_new_connection {
+            // Create cancellation channel for this publisher's task
+            let (cancel_tx, cancel_rx) = watch::channel(false);
+
+            // Register this publisher in our state before spawning
+            {
+                let mut state = self.publisher_state.write().await;
+                state.connections.insert(
+                    publisher_uri.to_owned(),
+                    PublisherConnection {
+                        tcp_endpoint: None,
+                        cancel_tx,
+                    },
+                );
+            }
+
             let node_name = self.connection_header.caller_id.clone();
             let topic_name = self.connection_header.topic.as_ref().unwrap().clone();
             let connection_header = self.connection_header.clone();
             let sender = self.msg_sender.clone();
-            let publisher_list = self.known_publishers.clone();
+            let publisher_state = self.publisher_state.clone();
             let publisher_uri = publisher_uri.to_owned();
+
             trace!("Creating new subscription connection for {publisher_uri} on {topic_name}");
+
             let handle = tokio::spawn(async move {
-                if let Ok(mut stream) = establish_publisher_connection(
-                    &node_name,
-                    &topic_name,
-                    &publisher_uri,
+                publisher_reader_task(
+                    cancel_rx,
+                    publisher_state,
+                    publisher_uri,
+                    node_name,
+                    topic_name,
                     connection_header,
+                    sender,
                 )
-                .await
-                {
-                    publisher_list.write().await.push(publisher_uri.to_owned());
-                    // Repeatedly read from the stream until its dry
-                    loop {
-                        trace!(
-                            "Subscription to {} receiving from {} is awaiting next body",
-                            topic_name,
-                            publisher_uri
-                        );
-                        match tcpros::receive_body(&mut stream).await {
-                            Ok(body) => {
-                                trace!(
-                                    "Subscription to {} receiving from {} received body",
-                                    topic_name,
-                                    publisher_uri
-                                );
-                                let send_result = sender.send(body);
-                                if let Err(err) = send_result {
-                                    log::error!("Unable to send message data due to dropped channel, closing connection: {err}");
-                                    break;
-                                }
-                            }
-                            Err(e) => {
-                                log::debug!("Failed to read body from publisher connection: {e}, closing connection");
-                                break;
-                            }
-                        }
-                    }
-                }
+                .await;
             });
             self.subscription_tasks.push(handle.into());
         }
 
         Ok(())
     }
+
+    /// Removes publishers that are no longer in the provided list.
+    /// This is called when rosmaster sends a publisherUpdate with the current list of publishers.
+    /// Any publisher we're tracking that isn't in the new list will be cancelled.
+    pub async fn remove_stale_publishers(&mut self, current_publishers: &[String]) {
+        let mut state = self.publisher_state.write().await;
+
+        // Find publishers that are no longer in the list
+        let stale_uris: Vec<String> = state
+            .connections
+            .keys()
+            .filter(|uri| !current_publishers.iter().any(|p| p == *uri))
+            .cloned()
+            .collect();
+
+        // Cancel and remove stale publishers
+        for uri in stale_uris {
+            if let Some(conn) = state.connections.remove(&uri) {
+                log::debug!("Publisher {uri} no longer in rosmaster list, cancelling connection");
+                // Signal the task to cancel - ignore error if receiver is already dropped
+                let _ = conn.cancel_tx.send(true);
+            }
+        }
+    }
 }
 
+/// The main reader task for a publisher connection.
+/// Handles connection establishment, reading messages, and retry with exponential backoff.
+async fn publisher_reader_task(
+    mut cancel_rx: watch::Receiver<bool>,
+    publisher_state: Arc<RwLock<PublisherConnectionState>>,
+    publisher_uri: String,
+    node_name: String,
+    topic_name: String,
+    conn_header: ConnectionHeader,
+    sender: broadcast::Sender<Bytes>,
+) {
+    let mut retry_period = INITIAL_RETRY_PERIOD;
+    let mut tcp_endpoint: Option<String> = None;
+
+    'connection_loop: loop {
+        // Check for cancellation before attempting connection
+        if *cancel_rx.borrow() {
+            log::debug!(
+                "Publisher reader task for {publisher_uri} cancelled before connection attempt"
+            );
+            break 'connection_loop;
+        }
+
+        // Attempt to establish or re-establish connection
+        let stream_result = if let Some(ref endpoint) = tcp_endpoint {
+            // Retry: connect directly to cached endpoint (skip XMLRPC)
+            log::debug!("Retrying direct connection to {endpoint} for topic {topic_name}");
+            connect_and_handshake(endpoint, &conn_header, &topic_name).await
+        } else {
+            // First connection: go through XMLRPC to get the TCP endpoint
+            log::debug!(
+                "Establishing initial connection to {publisher_uri} for topic {topic_name}"
+            );
+            match establish_publisher_connection(
+                &node_name,
+                &topic_name,
+                &publisher_uri,
+                conn_header.clone(),
+            )
+            .await
+            {
+                Ok((stream, endpoint)) => {
+                    // Cache the endpoint for future reconnections
+                    tcp_endpoint = Some(endpoint.clone());
+
+                    // Update shared state with the TCP endpoint
+                    if let Some(conn) = publisher_state
+                        .write()
+                        .await
+                        .connections
+                        .get_mut(&publisher_uri)
+                    {
+                        conn.tcp_endpoint = Some(endpoint);
+                    }
+
+                    Ok(stream)
+                }
+                Err(e) => Err(e),
+            }
+        };
+
+        let mut stream = match stream_result {
+            Ok(s) => {
+                log::info!("Connected to publisher {publisher_uri} for topic {topic_name}");
+                retry_period = INITIAL_RETRY_PERIOD; // Reset backoff on successful connection
+                s
+            }
+            Err(e) => {
+                log::debug!(
+                    "Connection to {publisher_uri} failed: {e}, retrying in {retry_period:?}"
+                );
+
+                // Wait with cancellation support
+                tokio::select! {
+                    biased;
+                    _ = cancel_rx.changed() => {
+                        if *cancel_rx.borrow() {
+                            log::debug!("Publisher reader task for {publisher_uri} cancelled during retry wait");
+                            break 'connection_loop;
+                        }
+                    }
+                    _ = tokio::time::sleep(retry_period) => {}
+                }
+
+                // Exponential backoff
+                retry_period = std::cmp::min(retry_period * 2, MAX_RETRY_PERIOD);
+                continue 'connection_loop;
+            }
+        };
+
+        // Read messages until error or cancellation
+        loop {
+            tokio::select! {
+                biased;
+                _ = cancel_rx.changed() => {
+                    if *cancel_rx.borrow() {
+                        log::debug!("Publisher reader task for {publisher_uri} cancelled during read");
+                        break 'connection_loop;
+                    }
+                }
+                result = tcpros::receive_body(&mut stream) => {
+                    match result {
+                        Ok(body) => {
+                            trace!(
+                                "Subscription to {topic_name} received message from {publisher_uri}"
+                            );
+                            if sender.send(body).is_err() {
+                                log::error!(
+                                    "Unable to send message data due to dropped channel, closing connection to {publisher_uri}"
+                                );
+                                break 'connection_loop;
+                            }
+                            // Reset retry period on successful message (connection is healthy)
+                            retry_period = INITIAL_RETRY_PERIOD;
+                        }
+                        Err(e) => {
+                            log::debug!(
+                                "Read error from {publisher_uri}: {e}, will retry connection"
+                            );
+                            // Break inner loop to retry connection
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // After read loop breaks due to error, wait before retry
+        log::debug!("Connection to {publisher_uri} lost, retrying in {retry_period:?}");
+
+        tokio::select! {
+            biased;
+            _ = cancel_rx.changed() => {
+                if *cancel_rx.borrow() {
+                    log::debug!("Publisher reader task for {publisher_uri} cancelled during post-disconnect retry wait");
+                    break 'connection_loop;
+                }
+            }
+            _ = tokio::time::sleep(retry_period) => {}
+        }
+
+        // Exponential backoff
+        retry_period = std::cmp::min(retry_period * 2, MAX_RETRY_PERIOD);
+    }
+
+    // Cleanup: remove from publisher_state when task exits
+    log::debug!("Publisher reader task for {publisher_uri} exiting, cleaning up state");
+    publisher_state
+        .write()
+        .await
+        .connections
+        .remove(&publisher_uri);
+}
+
+/// Establishes a connection to a publisher via XMLRPC negotiation.
+/// Returns both the TcpStream and the TCP endpoint string for potential reconnection.
 async fn establish_publisher_connection(
     node_name: &str,
     topic_name: &str,
     publisher_uri: &str,
     conn_header: ConnectionHeader,
+) -> Result<(TcpStream, String), std::io::Error> {
+    let tcp_endpoint = send_topic_request(node_name, topic_name, publisher_uri).await?;
+    let stream = connect_and_handshake(&tcp_endpoint, &conn_header, topic_name).await?;
+    Ok((stream, tcp_endpoint))
+}
+
+/// Connects directly to a TCP endpoint and performs the TCPROS handshake.
+/// Used for both initial connections and reconnections.
+async fn connect_and_handshake(
+    tcp_endpoint: &str,
+    conn_header: &ConnectionHeader,
+    topic_name: &str,
 ) -> Result<TcpStream, std::io::Error> {
-    let publisher_channel_uri = send_topic_request(node_name, topic_name, publisher_uri).await?;
-    let mut stream = TcpStream::connect(publisher_channel_uri).await?;
+    let mut stream = TcpStream::connect(tcp_endpoint).await?;
 
     let conn_header_bytes = conn_header.to_bytes(true)?;
     stream.write_all(&conn_header_bytes[..]).await?;
 
     let Ok(responded_header_bytes) = tcpros::receive_header_bytes(&mut stream).await else {
         // Some ROS tools appear to "probe" where they start a connection just to get the header
-        log::trace!("Could not read connection header bytes from publisher: {publisher_uri:?}");
+        log::trace!("Could not read connection header bytes from endpoint: {tcp_endpoint:?}");
         return Err(std::io::Error::from(std::io::ErrorKind::UnexpectedEof));
     };
 
