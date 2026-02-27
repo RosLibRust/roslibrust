@@ -304,5 +304,4 @@ mod tests {
 
         mock_pub.cleanup().await;
     }
-
 }
