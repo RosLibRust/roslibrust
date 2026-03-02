@@ -3270,7 +3270,7 @@ dependencies = [
 
 [[package]]
 name = "roslibrust"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "abort-on-drop",
  "env_logger 0.11.8",
@@ -3293,7 +3293,7 @@ dependencies = [
 
 [[package]]
 name = "roslibrust_codegen"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -3322,7 +3322,7 @@ dependencies = [
 
 [[package]]
 name = "roslibrust_codegen_macro"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3332,7 +3332,7 @@ dependencies = [
 
 [[package]]
 name = "roslibrust_common"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -3345,7 +3345,7 @@ dependencies = [
 
 [[package]]
 name = "roslibrust_genmsg"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "clap 4.5.56",
  "const_format",
@@ -3361,7 +3361,7 @@ dependencies = [
 
 [[package]]
 name = "roslibrust_mock"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "bincode",
  "log",
@@ -3372,7 +3372,7 @@ dependencies = [
 
 [[package]]
 name = "roslibrust_ros1"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "abort-on-drop",
  "anyhow",
@@ -3425,7 +3425,7 @@ dependencies = [
 
 [[package]]
 name = "roslibrust_rosbridge"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "anyhow",
  "dashmap",
@@ -3495,7 +3495,7 @@ dependencies = [
 
 [[package]]
 name = "roslibrust_zenoh"
-version = "0.19.0"
+version = "0.20.0"
 dependencies = [
  "anyhow",
  "env_logger 0.11.8",

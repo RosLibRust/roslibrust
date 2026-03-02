@@ -10,9 +10,9 @@ categories = ["science::robotics"]
 keywords = ["ROS", "robotics", "tf2", "transforms", "coordinates"]
 
 [dependencies]
-roslibrust_common = { path = "../roslibrust_common", version = "0.19" }
+roslibrust_common = { path = "../roslibrust_common", version = "0.20" }
 # roslibrust is needed because the macro-generated code references ::roslibrust::
-roslibrust = { path = "../roslibrust", version = "0.19", features = ["macro", "codegen"] }
+roslibrust = { path = "../roslibrust", version = "0.20", features = ["macro", "codegen"] }
 transforms = "1.1"
 tokio = { workspace = true }
 log = { workspace = true }
