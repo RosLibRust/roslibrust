@@ -32,6 +32,7 @@ regex = { version = "1.12" }
 byteorder = "1.5"
 bytes = "1.11"
 thiserror = "2.0"
+tokio-util = "0.7"
 anyhow = "1.0"
 getifs = "0.4"
 

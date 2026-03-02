@@ -9,9 +9,10 @@ use tokio::{
     net::TcpStream,
     sync::{
         broadcast::{self, error::RecvError},
-        watch, RwLock,
+        RwLock,
     },
 };
+use tokio_util::sync::CancellationToken;
 
 use super::tcpros;
 
@@ -95,8 +96,8 @@ const MAX_RETRY_PERIOD: Duration = Duration::from_secs(20);
 struct PublisherConnection {
     /// The cached TCP endpoint (e.g., "192.168.1.1:12345") for direct reconnection
     tcp_endpoint: Option<String>,
-    /// Sender to signal the reader task to cancel
-    cancel_tx: watch::Sender<bool>,
+    /// Token to signal the reader task to cancel
+    cancel_token: CancellationToken,
 }
 
 /// Shared state for publisher connections, accessible from spawned tasks
@@ -172,8 +173,8 @@ impl Subscription {
         };
 
         if is_new_connection {
-            // Create cancellation channel for this publisher's task
-            let (cancel_tx, cancel_rx) = watch::channel(false);
+            // Create cancellation token for this publisher's task
+            let cancel_token = CancellationToken::new();
 
             // Register this publisher in our state before spawning
             {
@@ -182,7 +183,7 @@ impl Subscription {
                     publisher_uri.to_owned(),
                     PublisherConnection {
                         tcp_endpoint: None,
-                        cancel_tx,
+                        cancel_token: cancel_token.clone(),
                     },
                 );
             }
@@ -198,7 +199,7 @@ impl Subscription {
 
             let handle = tokio::spawn(async move {
                 publisher_reader_task(
-                    cancel_rx,
+                    cancel_token,
                     publisher_state,
                     publisher_uri,
                     node_name,
@@ -232,8 +233,7 @@ impl Subscription {
         for uri in stale_uris {
             if let Some(conn) = state.connections.remove(&uri) {
                 log::debug!("Publisher {uri} no longer in rosmaster list, cancelling connection");
-                // Signal the task to cancel - ignore error if receiver is already dropped
-                let _ = conn.cancel_tx.send(true);
+                conn.cancel_token.cancel();
             }
         }
     }
@@ -242,7 +242,7 @@ impl Subscription {
 /// The main reader task for a publisher connection.
 /// Handles connection establishment, reading messages, and retry with exponential backoff.
 async fn publisher_reader_task(
-    mut cancel_rx: watch::Receiver<bool>,
+    cancel_token: CancellationToken,
     publisher_state: Arc<RwLock<PublisherConnectionState>>,
     publisher_uri: String,
     node_name: String,
@@ -255,7 +255,7 @@ async fn publisher_reader_task(
 
     'connection_loop: loop {
         // Check for cancellation before attempting connection
-        if *cancel_rx.borrow() {
+        if cancel_token.is_cancelled() {
             log::debug!(
                 "Publisher reader task for {publisher_uri} cancelled before connection attempt"
             );
@@ -314,11 +314,9 @@ async fn publisher_reader_task(
                 // Wait with cancellation support
                 tokio::select! {
                     biased;
-                    _ = cancel_rx.changed() => {
-                        if *cancel_rx.borrow() {
-                            log::debug!("Publisher reader task for {publisher_uri} cancelled during retry wait");
-                            break 'connection_loop;
-                        }
+                    _ = cancel_token.cancelled() => {
+                        log::debug!("Publisher reader task for {publisher_uri} cancelled during retry wait");
+                        break 'connection_loop;
                     }
                     _ = tokio::time::sleep(retry_period) => {}
                 }
@@ -333,11 +331,9 @@ async fn publisher_reader_task(
         loop {
             tokio::select! {
                 biased;
-                _ = cancel_rx.changed() => {
-                    if *cancel_rx.borrow() {
-                        log::debug!("Publisher reader task for {publisher_uri} cancelled during read");
-                        break 'connection_loop;
-                    }
+                _ = cancel_token.cancelled() => {
+                    log::debug!("Publisher reader task for {publisher_uri} cancelled during read");
+                    break 'connection_loop;
                 }
                 result = tcpros::receive_body(&mut stream) => {
                     match result {
@@ -371,11 +367,9 @@ async fn publisher_reader_task(
 
         tokio::select! {
             biased;
-            _ = cancel_rx.changed() => {
-                if *cancel_rx.borrow() {
-                    log::debug!("Publisher reader task for {publisher_uri} cancelled during post-disconnect retry wait");
-                    break 'connection_loop;
-                }
+            _ = cancel_token.cancelled() => {
+                log::debug!("Publisher reader task for {publisher_uri} cancelled during post-disconnect retry wait");
+                break 'connection_loop;
             }
             _ = tokio::time::sleep(retry_period) => {}
         }
