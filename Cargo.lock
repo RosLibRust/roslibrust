@@ -4801,9 +4801,9 @@ dependencies = [
 
 [[package]]
 name = "transforms"
-version = "1.1.1"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e54745b240e84fb7064614afd5185a6243c84dc6823329ddb5dc81faf1c017c9"
+checksum = "f6319e43042a9870592131406e2018fb88bb8114b282b98f99bb7f5922f03386"
 dependencies = [
  "approx",
  "hashbrown 0.16.1",
