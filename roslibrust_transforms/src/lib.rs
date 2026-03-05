@@ -51,10 +51,10 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::Duration;
 
-use chrono::{DateTime, Utc};
 use roslibrust_common::{Publish, RosMessageType, Subscribe, TopicProvider};
 use tokio::sync::{broadcast, RwLock};
 use tokio_util::sync::CancellationToken;
+use transforms::time::TimePoint;
 
 /// Error types for TransformManager operations.
 #[derive(thiserror::Error, Debug)]
@@ -69,30 +69,83 @@ pub enum TransformManagerError {
     Timeout(String, String, String),
 }
 
+/// Conversion between ROS header timestamps and transform timestamps.
+pub trait RosTimestamp: TimePoint {
+    /// Convert ROS sec/nsec fields into this timestamp type.
+    fn from_ros_time(sec: i32, nsec: u32) -> Self;
+
+    /// Convert this timestamp type into ROS sec/nsec fields.
+    fn as_ros_time(self) -> (i32, u32);
+}
+
+impl RosTimestamp for Timestamp {
+    fn from_ros_time(sec: i32, nsec: u32) -> Self {
+        Timestamp {
+            t: (sec as u128) * 1_000_000_000 + (nsec as u128),
+        }
+    }
+
+    fn as_ros_time(self) -> (i32, u32) {
+        let secs = self.t / 1_000_000_000;
+        let nsecs = self.t % 1_000_000_000;
+        (secs as i32, nsecs as u32)
+    }
+}
+
+impl RosTimestamp for std::time::SystemTime {
+    fn from_ros_time(sec: i32, nsec: u32) -> Self {
+        use std::time::UNIX_EPOCH;
+
+        if sec >= 0 {
+            UNIX_EPOCH + Duration::new(sec as u64, nsec)
+        } else {
+            UNIX_EPOCH
+                .checked_sub(Duration::new((-sec) as u64, nsec))
+                .unwrap_or(UNIX_EPOCH)
+        }
+    }
+
+    fn as_ros_time(self) -> (i32, u32) {
+        use std::time::UNIX_EPOCH;
+
+        let duration = self.duration_since(UNIX_EPOCH).unwrap_or_default();
+        (duration.as_secs() as i32, duration.subsec_nanos())
+    }
+}
+
 /// Trait for converting a TransformStamped message to a `transforms::Transform`.
 ///
 /// This trait abstracts over the differences between ROS1 and ROS2 TransformStamped messages.
-pub trait IntoTransform {
+pub trait IntoTransform<T = Timestamp>
+where
+    T: TimePoint,
+{
     /// Convert this message into a `transforms::Transform`.
     ///
-    /// If `is_static` is true, the timestamp should be set to `Timestamp::zero()`.
-    fn into_transform(self, is_static: bool) -> transforms::Transform;
+    /// If `is_static` is true, the timestamp should be set to the static timestamp value.
+    fn into_transform(self, is_static: bool) -> transforms::Transform<T>;
 }
 
 /// Trait for converting a `transforms::Transform` to a TransformStamped message.
 ///
 /// This trait abstracts over the differences between ROS1 and ROS2 TransformStamped messages.
-pub trait FromTransform: Sized {
+pub trait FromTransform<T = Timestamp>: Sized
+where
+    T: TimePoint,
+{
     /// Create a TransformStamped message from a `transforms::Transform`.
-    fn from_transform(transform: &transforms::Transform) -> Self;
+    fn from_transform(transform: &transforms::Transform<T>) -> Self;
 }
 
 /// Trait for TFMessage types that contain a list of TransformStamped messages.
 ///
 /// This trait abstracts over the differences between ROS1 and ROS2 TFMessage types.
-pub trait TFMessageType: RosMessageType + Send + Clone + 'static {
+pub trait TFMessageType<T = Timestamp>: RosMessageType + Send + Clone + 'static
+where
+    T: TimePoint,
+{
     /// The TransformStamped type contained in this TFMessage.
-    type TransformStamped: IntoTransform + FromTransform + Clone;
+    type TransformStamped: IntoTransform<T> + FromTransform<T> + Clone;
 
     /// Get the transforms from this message.
     fn transforms(self) -> Vec<Self::TransformStamped>;
@@ -110,8 +163,13 @@ pub trait TFMessageType: RosMessageType + Send + Clone + 'static {
 /// - `P`: The publisher type (inferred from the TopicProvider used to create the manager)
 ///
 /// The manager works with any roslibrust backend (ros1, rosbridge, zenoh, mock).
-pub struct TransformManager<M: TFMessageType, P: Publish<M> + Send + Sync> {
-    registry: Arc<RwLock<Registry>>,
+pub struct TransformManager<M, P, T = Timestamp>
+where
+    M: TFMessageType<T>,
+    P: Publish<M> + Send + Sync,
+    T: TimePoint,
+{
+    registry: Arc<RwLock<Registry<T>>>,
     buffer_duration: Duration,
     /// Broadcast channel to notify waiters when transforms are added
     transform_notify: broadcast::Sender<()>,
@@ -122,7 +180,12 @@ pub struct TransformManager<M: TFMessageType, P: Publish<M> + Send + Sync> {
     _phantom: PhantomData<M>,
 }
 
-impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
+impl<M, P, T> TransformManager<M, P, T>
+where
+    M: TFMessageType<T>,
+    P: Publish<M> + Send + Sync,
+    T: TimePoint + Send + Sync + 'static,
+{
     /// Create a new TransformManager with a custom buffer duration.
     ///
     /// Typical usage:
@@ -136,16 +199,16 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn new<T>(
-        ros: &T,
+    pub async fn new<R>(
+        ros: &R,
         buffer_duration: Duration,
-    ) -> Result<TransformManager<M, T::Publisher<M>>, TransformManagerError>
+    ) -> Result<TransformManager<M, R::Publisher<M>, T>, TransformManagerError>
     where
-        T: TopicProvider<Publisher<M> = P> + Clone + Send + Sync + 'static,
-        T::Subscriber<M>: Send + 'static,
-        T::Publisher<M>: Send + Sync,
+        R: TopicProvider<Publisher<M> = P> + Clone + Send + Sync + 'static,
+        R::Subscriber<M>: Send + 'static,
+        R::Publisher<M>: Send + Sync,
     {
-        let registry = Arc::new(RwLock::new(Registry::new(buffer_duration)));
+        let registry = Arc::new(RwLock::new(Registry::<T>::new(buffer_duration)));
 
         // Create broadcast channel for notifying waiters when transforms are added
         // Capacity of 16 should be plenty - receivers only care about the most recent notification
@@ -210,7 +273,7 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
     /// Background tokio task to process incoming TF messages.
     async fn process_tf_messages<S: Subscribe<M>>(
         mut subscriber: S,
-        registry: Arc<RwLock<Registry>>,
+        registry: Arc<RwLock<Registry<T>>>,
         notify: broadcast::Sender<()>,
         cancel_token: CancellationToken,
         is_static: bool,
@@ -228,8 +291,12 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
                     match result {
                         Ok(msg) => {
                             let mut reg = registry.write().await;
-                            for tf in msg.transforms() {
-                                let transform = tf.into_transform(is_static);
+                            for tf in <M as TFMessageType<T>>::transforms(msg) {
+                                let transform =
+                                    <M::TransformStamped as IntoTransform<T>>::into_transform(
+                                        tf,
+                                        is_static,
+                                    );
                                 reg.add_transform(transform);
                             }
                             // Notify waiters that transforms have been added
@@ -299,23 +366,22 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
         &self,
         target_frame: &str,
         source_frame: &str,
-        time: Timestamp,
-    ) -> Result<transforms::Transform, TransformManagerError> {
+        time: T,
+    ) -> Result<transforms::Transform<T>, TransformManagerError> {
         let mut registry = self.registry.write().await;
         registry
             .get_transform(target_frame, source_frame, time)
             .map_err(|e| TransformManagerError::LookupError(e.to_string()))
     }
 
-    fn pretty_print_timestamp(time: Timestamp) -> String {
-        if time == Timestamp::zero() {
-            return "static (t=0)".to_string();
+    fn pretty_print_timestamp(time: T) -> String {
+        if time.is_static() {
+            return "static".to_string();
         }
-        let secs = (time.t / 1_000_000_000) as i64;
-        let nanos = (time.t % 1_000_000_000) as u32;
-        match DateTime::<Utc>::from_timestamp(secs, nanos) {
-            Some(dt) => dt.format("%Y-%m-%d %H:%M:%S%.3f UTC").to_string(),
-            None => format!("{}.{:09}s", secs, nanos),
+
+        match time.as_seconds() {
+            Ok(secs) => format!("{secs:.3}s"),
+            Err(_) => "<unprintable time>".to_string(),
         }
     }
 
@@ -365,9 +431,9 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
         &self,
         target_frame: &str,
         source_frame: &str,
-        time: Timestamp,
+        time: T,
         timeout: Option<Duration>,
-    ) -> Result<transforms::Transform, TransformManagerError> {
+    ) -> Result<transforms::Transform<T>, TransformManagerError> {
         let timeout_duration = timeout.unwrap_or(self.buffer_duration);
         let deadline = tokio::time::Instant::now() + timeout_duration;
 
@@ -433,10 +499,11 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
     /// This publishes the transform to the /tf topic and adds it to the local registry.
     pub async fn add_transform(
         &self,
-        transform: transforms::Transform,
+        transform: transforms::Transform<T>,
     ) -> Result<(), TransformManagerError> {
-        let transform_stamped = M::TransformStamped::from_transform(&transform);
-        let msg = M::from_transforms(vec![transform_stamped]);
+        let transform_stamped =
+            <M::TransformStamped as FromTransform<T>>::from_transform(&transform);
+        let msg = <M as TFMessageType<T>>::from_transforms(vec![transform_stamped]);
 
         // Publish to /tf
         self.tf_publisher.publish(&msg).await?;
@@ -456,20 +523,21 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
     /// Update (publish and add to registry) a static transform.
     ///
     /// This publishes the transform to the /tf_static topic and adds it to the local registry
-    /// with a timestamp of zero (which the transforms crate treats as a static transform).
-    /// If the timestamp is not zero, it will be overwritten with zero.
+    /// with the static timestamp value.
+    /// If the timestamp is not static, it will be overwritten with the static value.
     ///
     /// This function is equivalent to calling [Self::update_transform] with a timestamp of zero, but
     /// provided as an additional function for clarity.
     pub async fn update_static_transform(
         &self,
-        mut transform: transforms::Transform,
+        mut transform: transforms::Transform<T>,
     ) -> Result<(), TransformManagerError> {
         // Static transforms use timestamp zero
-        transform.timestamp = Timestamp::zero();
+        transform.timestamp = T::static_timestamp();
 
-        let transform_stamped = M::TransformStamped::from_transform(&transform);
-        let msg = M::from_transforms(vec![transform_stamped]);
+        let transform_stamped =
+            <M::TransformStamped as FromTransform<T>>::from_transform(&transform);
+        let msg = <M as TFMessageType<T>>::from_transforms(vec![transform_stamped]);
 
         // Publish to /tf_static
         self.tf_static_publisher.publish(&msg).await?;
@@ -484,9 +552,40 @@ impl<M: TFMessageType, P: Publish<M> + Send + Sync> TransformManager<M, P> {
 
         Ok(())
     }
+
+    /// Look up a transform between two frames at different times, using a fixed frame.
+    ///
+    /// This matches tf2's "time travel" lookup. The returned transform converts points
+    /// from `source_frame` at `source_time` into `target_frame` at `target_time`.
+    ///
+    /// Note: this function is async to wait for access to registry, but does not wait for the transform to be available.
+    pub async fn get_transform_at(
+        &self,
+        target_frame: &str,
+        target_time: T,
+        source_frame: &str,
+        source_time: T,
+        fixed_frame: &str,
+    ) -> Result<transforms::Transform<T>, TransformManagerError> {
+        let mut registry = self.registry.write().await;
+        registry
+            .get_transform_at(
+                target_frame,
+                target_time,
+                source_frame,
+                source_time,
+                fixed_frame,
+            )
+            .map_err(|e| TransformManagerError::LookupError(e.to_string()))
+    }
 }
 
-impl<M: TFMessageType, P: Publish<M> + Send + Sync> Drop for TransformManager<M, P> {
+impl<M, P, T> Drop for TransformManager<M, P, T>
+where
+    M: TFMessageType<T>,
+    P: Publish<M> + Send + Sync,
+    T: TimePoint,
+{
     fn drop(&mut self) {
         // Cancel the background tasks when the manager is dropped
         self.cancel_token.cancel();
@@ -503,7 +602,10 @@ pub type Ros1TFMessage = crate::messages::ros1::TFMessage;
 /// ROS1 TransformStamped type alias for convenience.
 pub type Ros1TransformStamped = crate::messages::ros1::geometry_msgs::TransformStamped;
 
-impl TFMessageType for Ros1TFMessage {
+impl<T> TFMessageType<T> for Ros1TFMessage
+where
+    T: RosTimestamp,
+{
     type TransformStamped = Ros1TransformStamped;
 
     fn transforms(self) -> Vec<Self::TransformStamped> {
@@ -515,14 +617,15 @@ impl TFMessageType for Ros1TFMessage {
     }
 }
 
-impl IntoTransform for Ros1TransformStamped {
-    fn into_transform(self, is_static: bool) -> transforms::Transform {
+impl<T> IntoTransform<T> for Ros1TransformStamped
+where
+    T: RosTimestamp,
+{
+    fn into_transform(self, is_static: bool) -> transforms::Transform<T> {
         let timestamp = if is_static {
-            Timestamp::zero()
+            T::static_timestamp()
         } else {
-            let nanoseconds = (self.header.stamp.secs as u128) * 1_000_000_000
-                + (self.header.stamp.nsecs as u128);
-            Timestamp { t: nanoseconds }
+            T::from_ros_time(self.header.stamp.secs, self.header.stamp.nsecs as u32)
         };
 
         transforms::Transform {
@@ -544,18 +647,18 @@ impl IntoTransform for Ros1TransformStamped {
     }
 }
 
-impl FromTransform for Ros1TransformStamped {
-    fn from_transform(transform: &transforms::Transform) -> Self {
+impl<T> FromTransform<T> for Ros1TransformStamped
+where
+    T: RosTimestamp,
+{
+    fn from_transform(transform: &transforms::Transform<T>) -> Self {
         use crate::messages::ros1::{geometry_msgs, std_msgs};
 
-        // Year 2038 problem anyone?
-        let secs = transform.timestamp.t / 1_000_000_000;
-        let nsecs = transform.timestamp.t % 1_000_000_000;
-        if secs > i32::MAX as u128 || nsecs > i32::MAX as u128 {
+        let (secs, nsecs) = transform.timestamp.as_ros_time();
+        if nsecs > i32::MAX as u32 {
             panic!("Timestamp overflow when converting to Ros1TransformStamped");
         }
 
-        let secs = secs as i32;
         let nsecs = nsecs as i32;
 
         Ros1TransformStamped {
@@ -592,7 +695,10 @@ pub type Ros2TFMessage = crate::messages::ros2::TFMessage;
 /// ROS2 TransformStamped type alias for convenience.
 pub type Ros2TransformStamped = crate::messages::ros2::geometry_msgs::TransformStamped;
 
-impl TFMessageType for Ros2TFMessage {
+impl<T> TFMessageType<T> for Ros2TFMessage
+where
+    T: RosTimestamp,
+{
     type TransformStamped = Ros2TransformStamped;
 
     fn transforms(self) -> Vec<Self::TransformStamped> {
@@ -604,14 +710,15 @@ impl TFMessageType for Ros2TFMessage {
     }
 }
 
-impl IntoTransform for Ros2TransformStamped {
-    fn into_transform(self, is_static: bool) -> transforms::Transform {
+impl<T> IntoTransform<T> for Ros2TransformStamped
+where
+    T: RosTimestamp,
+{
+    fn into_transform(self, is_static: bool) -> transforms::Transform<T> {
         let timestamp = if is_static {
-            Timestamp::zero()
+            T::static_timestamp()
         } else {
-            let nanoseconds = (self.header.stamp.sec as u128) * 1_000_000_000
-                + (self.header.stamp.nanosec as u128);
-            Timestamp { t: nanoseconds }
+            T::from_ros_time(self.header.stamp.sec, self.header.stamp.nanosec)
         };
 
         transforms::Transform {
@@ -633,18 +740,14 @@ impl IntoTransform for Ros2TransformStamped {
     }
 }
 
-impl FromTransform for Ros2TransformStamped {
-    fn from_transform(transform: &transforms::Transform) -> Self {
+impl<T> FromTransform<T> for Ros2TransformStamped
+where
+    T: RosTimestamp,
+{
+    fn from_transform(transform: &transforms::Transform<T>) -> Self {
         use crate::messages::ros2::{builtin_interfaces, geometry_msgs, std_msgs};
 
-        // Year 2038 problem anyone?
-        let sec = transform.timestamp.t / 1_000_000_000;
-        let nanosec = transform.timestamp.t % 1_000_000_000;
-        if sec > i32::MAX as u128 || nanosec > u32::MAX as u128 {
-            panic!("Timestamp overflow when converting to Ros2TransformStamped");
-        }
-        let sec = sec as i32;
-        let nanosec = nanosec as u32;
+        let (sec, nanosec) = transform.timestamp.as_ros_time();
 
         Ros2TransformStamped {
             header: std_msgs::Header {
