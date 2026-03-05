@@ -106,18 +106,9 @@ fn create_tf_message(
     }
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn test_transform_listener_creation() {
-    let mock_ros = MockRos::new();
-
-    let manager =
-        TransformManager::<Ros1TFMessage, _>::new(&mock_ros, std::time::Duration::from_secs(10))
-            .await;
-    assert!(manager.is_ok(), "Failed to create TransformManager");
-}
-
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_transform_listener_with_custom_timestamp() {
+    tokio::time::pause();
     let mock_ros = MockRos::new();
 
     // Create a publisher for /tf topic
@@ -180,8 +171,9 @@ async fn test_transform_listener_with_custom_timestamp() {
     assert!((retrieved.translation.z - 6.0).abs() < 1e-6);
 }
 
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_transform_listener_receives_tf_messages() {
+    tokio::time::pause();
     use crate::Timestamp;
 
     let mock_ros = MockRos::new();
@@ -232,8 +224,9 @@ async fn test_transform_listener_receives_tf_messages() {
     );
 }
 
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_transform_listener_static_transforms() {
+    tokio::time::pause();
     let mock_ros = MockRos::new();
 
     // Create a publisher for /tf_static topic
@@ -272,8 +265,9 @@ async fn test_transform_listener_static_transforms() {
     );
 }
 
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_lookup_transform_values() {
+    tokio::time::pause();
     let mock_ros = MockRos::new();
 
     // Create a publisher for /tf_static topic
@@ -349,8 +343,9 @@ async fn test_lookup_transform_values() {
     );
 }
 
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_wait_for_transform_success() {
+    tokio::time::pause();
     let mock_ros = MockRos::new();
 
     // Create the manager
@@ -379,7 +374,7 @@ async fn test_wait_for_transform_success() {
     });
 
     // Wait for the transform - it should succeed after the delayed publish
-    let start = std::time::Instant::now();
+    let start = tokio::time::Instant::now();
     let result = manager
         .wait_for_transform(
             "world",
@@ -408,8 +403,9 @@ async fn test_wait_for_transform_success() {
     assert!((transform.translation.z - 3.0).abs() < 1e-6);
 }
 
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_wait_for_transform_timeout() {
+    tokio::time::pause();
     use roslibrust_transforms::TransformManagerError;
 
     let mock_ros = MockRos::new();
@@ -421,7 +417,7 @@ async fn test_wait_for_transform_timeout() {
             .expect("Failed to create TransformManager");
 
     // Wait for a transform that will never be published
-    let start = std::time::Instant::now();
+    let start = tokio::time::Instant::now();
     let result = manager
         .wait_for_transform(
             "nonexistent_parent",
@@ -453,8 +449,9 @@ async fn test_wait_for_transform_timeout() {
     }
 }
 
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_wait_for_transform_immediate_success() {
+    tokio::time::pause();
     let mock_ros = MockRos::new();
 
     // Create a publisher for /tf_static topic
@@ -502,8 +499,9 @@ async fn test_wait_for_transform_immediate_success() {
     );
 }
 
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_wait_for_transform_default_timeout() {
+    tokio::time::pause();
     let mock_ros = MockRos::new();
 
     // Create the manager with a short buffer duration (used as default timeout)
@@ -513,7 +511,7 @@ async fn test_wait_for_transform_default_timeout() {
             .expect("Failed to create TransformManager");
 
     // Wait for a transform that will never be published, using default timeout (None)
-    let start = std::time::Instant::now();
+    let start = tokio::time::Instant::now();
     let result = manager
         .wait_for_transform("missing_parent", "missing_child", Timestamp::zero(), None)
         .await;
@@ -533,8 +531,9 @@ async fn test_wait_for_transform_default_timeout() {
     );
 }
 
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_get_transform_at_different_times() {
+    tokio::time::pause();
     let mock_ros = MockRos::new();
 
     // Create a publisher for /tf topic
