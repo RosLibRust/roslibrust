@@ -22,7 +22,7 @@ jobs:
         # Default commands to running the book directory of our workspace
         working-directory: book
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       # Install mdbook
       - name: Setup mdBook

@@ -1,0 +1,79 @@
+# Consolidated ROS2 CI workflow using matrix strategy
+# Each distro appears as a separate job in the GitHub UI for individual status/badges
+# Badge URL format: https://github.com/OWNER/REPO/actions/workflows/ros2.yml/badge.svg?branch=master
+name: ROS2
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  HOME: /root
+  # Coupled with our use of the test_log crate this should give us good CI output on failure
+  RUST_LOG: debug
+
+jobs:
+  ros2:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: galactic
+            container: carter12s/roslibrust-ci-galactic:rust_1_90
+            features: ros2_test
+            zenoh: false
+          - distro: humble
+            container: carter12s/roslibrust-ci-humble:rust_1_90
+            features: ros2_test
+            zenoh: false
+          - distro: iron
+            container: carter12s/roslibrust-ci-iron:rust_1_90
+            features: ros2_test
+            zenoh: false
+          - distro: kilted
+            container: carter12s/roslibrust-ci-kilted:rust_1_90
+            features: ros2_zenoh_test,ros2_test
+            zenoh: true
+          - distro: rolling
+            container: carter12s/roslibrust-ci-rolling:rust_1_91
+            features: ros2_zenoh_test,ros2_test
+            zenoh: true
+
+    name: ${{ matrix.distro }}
+    container: ${{ matrix.container }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - name: Lint
+        run: source /root/.cargo/env && cargo fmt --all -- --check
+
+      - name: Start rosbridge services
+        run: |
+          source /opt/ros/${{ matrix.distro }}/setup.bash
+          ros2 launch rosbridge_server rosbridge_websocket_launch.xml &
+          ros2 run rosapi rosapi_node &
+          sleep 1
+
+      - name: Start zenoh daemon
+        if: matrix.zenoh
+        run: |
+          source /opt/ros/${{ matrix.distro }}/setup.bash
+          ros2 run rmw_zenoh_cpp rmw_zenohd -l tcp/0.0.0.0:7447 > zenoh.log 2>&1 &
+          sleep 1
+
+      - name: Integration Tests
+        run: |
+          source /root/.cargo/env
+          cargo test --features ${{ matrix.features }} -- --test-threads 1
+
