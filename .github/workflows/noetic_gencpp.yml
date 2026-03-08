@@ -2,9 +2,9 @@ name: Noetic gencpp
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 env:
   HOME: /root
@@ -21,8 +21,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          submodules: 'true'  
+          submodules: "true"
       - name: Compile test package
         run: cd roslibrust_genmsg/test_package; mkdir -p cmake_build; cd cmake_build; cmake .. -DCMAKE_BUILD_TYPE=Release; make -j6;

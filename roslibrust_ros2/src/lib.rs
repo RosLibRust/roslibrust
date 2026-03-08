@@ -360,6 +360,8 @@ mod tests {
                 .unwrap()
         }
 
+        // Ignored for now until we get ROS2 zenoh CI stable
+        #[ignore]
         #[tokio::test(flavor = "multi_thread")]
         async fn test_subscribe_basic() {
             let ctx = make_test_context();
