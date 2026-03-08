@@ -1,11 +1,7 @@
 # RosLibRust
 
 [![Noetic](https://github.com/roslibrust/roslibrust/actions/workflows/noetic.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/noetic.yml)
-[![Galactic](https://github.com/roslibrust/roslibrust/actions/workflows/galactic.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/galactic.yml)
-[![Humble](https://github.com/roslibrust/roslibrust/actions/workflows/humble.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/humble.yml)
-[![Iron](https://github.com/roslibrust/roslibrust/actions/workflows/iron.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/iron.yml)
-[![Kilted](https://github.com/roslibrust/roslibrust/actions/workflows/kilted.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/kilted.yml)
-[![Rolling](https://github.com/roslibrust/roslibrust/actions/workflows/rolling.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/rolling.yml)
+[![ROS2](https://github.com/roslibrust/roslibrust/actions/workflows/ros2.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/ros2.yml)
 [![License:MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Documentation about the crate is on [docs.rs](https://docs.rs/roslibrust/latest/roslibrust/),
@@ -77,7 +73,7 @@ All of this is backed by common traits for ROS messages, topics, and services. `
 `roslibrust_codegen_macro` provides a convenient macro for generating these types:
 
 ```rust,ignore
-// Will generate types from all packages in ROS_PACKAGE_PATH 
+// Will generate types from all packages in ROS_PACKAGE_PATH
 roslibrust_codegen_macro::find_and_generate_ros_messages!();
 ```
 
