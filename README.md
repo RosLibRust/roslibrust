@@ -1,6 +1,6 @@
 # RosLibRust
 
-[![Noetic](https://github.com/roslibrust/roslibrust/actions/workflows/noetic.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/noetic.yml)
+[![ROS1](https://github.com/roslibrust/roslibrust/actions/workflows/noetic.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/noetic.yml)
 [![ROS2](https://github.com/roslibrust/roslibrust/actions/workflows/ros2.yml/badge.svg)](https://github.com/roslibrust/roslibrust/actions/workflows/ros2.yml)
 [![License:MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
