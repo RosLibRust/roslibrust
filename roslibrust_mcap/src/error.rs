@@ -36,4 +36,3 @@ pub enum McapError {
 
 /// Result type for MCAP operations
 pub type Result<T> = std::result::Result<T, McapError>;
-

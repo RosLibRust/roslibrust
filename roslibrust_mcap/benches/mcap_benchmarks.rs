@@ -20,9 +20,7 @@ fn benchmark_write_messages(c: &mut Criterion) {
                     let mut buffer = Vec::new();
                     let mut writer =
                         roslibrust_mcap::McapWriter::new(Cursor::new(&mut buffer)).unwrap();
-                    let channel = writer
-                        .add_ros_channel::<std_msgs::String>("/test")
-                        .unwrap();
+                    let channel = writer.add_ros_channel::<std_msgs::String>("/test").unwrap();
 
                     for i in 0..count {
                         channel
@@ -53,9 +51,7 @@ fn benchmark_read_messages(c: &mut Criterion) {
         let mut buffer = Vec::new();
         {
             let mut writer = roslibrust_mcap::McapWriter::new(Cursor::new(&mut buffer)).unwrap();
-            let channel = writer
-                .add_ros_channel::<std_msgs::String>("/test")
-                .unwrap();
+            let channel = writer.add_ros_channel::<std_msgs::String>("/test").unwrap();
 
             for i in 0..*message_count {
                 channel
@@ -78,8 +74,7 @@ fn benchmark_read_messages(c: &mut Criterion) {
             message_count,
             |b, _count| {
                 b.iter(|| {
-                    let reader =
-                        roslibrust_mcap::McapReader::new(Cursor::new(&buffer)).unwrap();
+                    let reader = roslibrust_mcap::McapReader::new(Cursor::new(&buffer)).unwrap();
                     let messages: Vec<_> = reader
                         .iter_messages()
                         .unwrap()
@@ -101,9 +96,7 @@ fn benchmark_deserialize_messages(c: &mut Criterion) {
         let mut buffer = Vec::new();
         {
             let mut writer = roslibrust_mcap::McapWriter::new(Cursor::new(&mut buffer)).unwrap();
-            let channel = writer
-                .add_ros_channel::<std_msgs::String>("/test")
-                .unwrap();
+            let channel = writer.add_ros_channel::<std_msgs::String>("/test").unwrap();
 
             for i in 0..*message_count {
                 channel
@@ -126,8 +119,7 @@ fn benchmark_deserialize_messages(c: &mut Criterion) {
             message_count,
             |b, _count| {
                 b.iter(|| {
-                    let reader =
-                        roslibrust_mcap::McapReader::new(Cursor::new(&buffer)).unwrap();
+                    let reader = roslibrust_mcap::McapReader::new(Cursor::new(&buffer)).unwrap();
                     let messages: Vec<_> = reader
                         .iter_messages()
                         .unwrap()
@@ -154,4 +146,3 @@ criterion_group!(
     benchmark_deserialize_messages
 );
 criterion_main!(benches);
-

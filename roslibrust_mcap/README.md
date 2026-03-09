@@ -85,3 +85,10 @@ MIT
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+# TODO's
+
+- Get ros2bag installed in docker images for integration test
+- Confirm integration tests pass in CI
+- Get some static MCAP files generated to test aginst
+- Benchmark against ros2 tools and see what our overhead is
+- Give a "raw" API and raw examples
