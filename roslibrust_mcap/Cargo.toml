@@ -1,0 +1,38 @@
+[package]
+name = "roslibrust_mcap"
+version = "0.1.0"
+edition = "2021"
+authors = ["carter <carterjschultz@gmail.com>"]
+license = "MIT"
+description = "Utilities for reading and writing MCAP files with ROS message support for roslibrust."
+repository = "https://github.com/roslibrust/roslibrust"
+categories = ["science::robotics"]
+keywords = ["ROS", "robotics", "mcap", "logging", "playback"]
+
+[dependencies]
+roslibrust_common = { path = "../roslibrust_common", version = "0.20" }
+mcap = "0.24"
+log = { workspace = true }
+serde = { workspace = true }
+serde_json = "1.0"
+thiserror = "2.0"
+anyhow = "1.0"
+cdr = "0.2"
+
+[dev-dependencies]
+roslibrust_test = { path = "../roslibrust_test" }
+tokio = { workspace = true }
+tempfile = "3.3"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[features]
+# Used to enable tests that require ROS2 installation
+ros2_test = []
+
+[[bench]]
+name = "mcap_benchmarks"
+harness = false
+
+[package.metadata.docs.rs]
+all-features = true
+

@@ -9,6 +9,7 @@ members = [
     "roslibrust_codegen",
     "roslibrust_common",
     "roslibrust_genmsg",
+    "roslibrust_mcap",
     "roslibrust_mock",
     "roslibrust_ros1",
     "roslibrust_rosbridge",
