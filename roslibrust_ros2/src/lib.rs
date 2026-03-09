@@ -5,7 +5,7 @@ use std::result::Result as StdResult;
 use ros_z::{
     context::ZContext,
     entity::{TypeHash, TypeInfo},
-    msg::{SerdeCdrSerdes, ZService},
+    msg::{CdrCompatSerdes, ZService},
     pubsub::{ZPub, ZSub},
     ros_msg::ServiceTypeInfo,
     Builder,
@@ -21,7 +21,7 @@ pub struct ZenohClient {
 
 /// The publisher type returned by [TopicProvider::advertise] on [ZenohClient].
 pub struct ZenohPublisher<T: RosMessageType> {
-    publisher: ZPub<T, SerdeCdrSerdes>,
+    publisher: ZPub<T, CdrCompatSerdes>,
 }
 
 impl<T: RosMessageType + serde::Serialize + serde::de::DeserializeOwned + Send + Sync + 'static>
@@ -37,7 +37,7 @@ impl<T: RosMessageType + serde::Serialize + serde::de::DeserializeOwned + Send +
 
 /// The subscriber type returned by [TopicProvider::subscribe] on [ZenohClient].
 pub struct ZenohSubscriber<T: RosMessageType> {
-    subscriber: ZSub<T, zenoh::sample::Sample, SerdeCdrSerdes>,
+    subscriber: ZSub<T, zenoh::sample::Sample, CdrCompatSerdes>,
 }
 
 impl<T: RosMessageType + serde::Serialize + serde::de::DeserializeOwned + Send + Sync + 'static>
@@ -78,7 +78,7 @@ impl roslibrust_common::TopicProvider for ZenohClient {
         let publisher = self
             .node
             .create_pub_impl::<MsgType>(topic.as_ref(), Some(ros_type_info::<MsgType>()))
-            .with_serdes::<SerdeCdrSerdes>()
+            .with_serdes::<CdrCompatSerdes>()
             .build()
             .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))?;
 
@@ -93,7 +93,7 @@ impl roslibrust_common::TopicProvider for ZenohClient {
         let sub = self
             .node
             .create_sub_impl::<MsgType>(topic.as_ref(), Some(ros_type_info::<MsgType>()))
-            .with_serdes::<SerdeCdrSerdes>()
+            .with_serdes::<CdrCompatSerdes>()
             .build()
             .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))?;
 
