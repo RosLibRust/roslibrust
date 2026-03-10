@@ -1,6 +1,6 @@
 services:
   rosbridge_kilted:
-    image: carter12s/roslibrust-ci-kilted:rust_1_90
+    image: carter12s/roslibrust-ci-kilted:rust_1_94
     # ports:
     #   - "9090:9090"
     #network_mode: host # For developing ros2 backend
