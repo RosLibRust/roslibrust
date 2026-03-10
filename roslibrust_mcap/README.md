@@ -4,7 +4,7 @@ Utilities for reading and writing [MCAP](https://mcap.dev/) files with ROS messa
 
 ## Overview
 
-MCAP is a modular container format for heterogeneous timestamped data, commonly used for recording and playing back ROS messages. This crate provides integration between the Rust MCAP library and roslibrust's message types.
+MCAP is a modular container format for heterogeneous timestamped data, commonly used for recording and playing back ROS messages. This crate provides integration between the Rust MCAP library and roslibrust's message types. If you want to use MCAP files in rust, and want automatic serialization/deserialization of ROS messages this crate is for you.
 
 ## ROS 2 Compatibility
 
