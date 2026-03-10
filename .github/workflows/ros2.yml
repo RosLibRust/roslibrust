@@ -22,15 +22,15 @@ jobs:
       matrix:
         include:
           - distro: galactic
-            container: carter12s/roslibrust-ci-galactic:rust_1_94
+            container: carter12s/roslibrust-ci-galactic:rust_1_94_mcap
             features: ros2_test
             zenoh: false
           - distro: humble
-            container: carter12s/roslibrust-ci-humble:rust_1_94
+            container: carter12s/roslibrust-ci-humble:rust_1_94_mcap
             features: ros2_test
             zenoh: false
           - distro: iron
-            container: carter12s/roslibrust-ci-iron:rust_1_94
+            container: carter12s/roslibrust-ci-iron:rust_1_94_mcap
             features: ros2_test
             zenoh: false
           - distro: kilted
