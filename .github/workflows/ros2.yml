@@ -74,6 +74,7 @@ jobs:
 
       - name: Integration Tests
         run: |
+          source /opt/ros/${{ matrix.distro }}/setup.bash
           source /root/.cargo/env
           cargo test --features ${{ matrix.features }} -- --test-threads 1
 
