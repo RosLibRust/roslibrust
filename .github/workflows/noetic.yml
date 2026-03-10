@@ -3,9 +3,9 @@ name: Noetic
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 env:
   HOME: /root
@@ -23,9 +23,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          submodules: 'true'
+          submodules: "true"
       - name: Verify rust version
         run: source /root/.cargo/env; rustc --version
       - name: Lint
