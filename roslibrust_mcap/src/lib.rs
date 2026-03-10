@@ -13,6 +13,16 @@
 //! - Support for both ROS1 and ROS2 message formats
 //! - Integration with roslibrust's `RosMessageType` trait
 //!
+//! ## ROS 2 Compatibility
+//!
+//! MCAP files written by this crate are compatible with ROS 2's `ros2 bag` tools.
+//!
+//! - **Jazzy, Kilted, Rolling**: MCAP is the default format and auto-detected
+//! - **Humble, Iron, Galactic**: Requires installing `ros-<distro>-rosbag2-storage-mcap`
+//!   and using `-s mcap` flag with `ros2 bag` commands
+//!
+//! See the [README](https://github.com/Carter12s/roslibrust/tree/master/roslibrust_mcap) for details.
+//!
 //! ## Reading MCAP Files
 //!
 //! ```rust,no_run

@@ -3,6 +3,12 @@
 //! These tests write MCAP files using roslibrust_mcap and then verify they can be read
 //! by the official ROS2 bag tools, and vice versa.
 //!
+//! ## ROS 2 Version Requirements
+//!
+//! These tests use `-s mcap` flag for compatibility with all ROS 2 distributions:
+//! - **Jazzy, Kilted, Rolling**: MCAP is built-in and the flag is accepted (though not required)
+//! - **Humble, Iron, Galactic**: Requires `ros-<distro>-rosbag2-storage-mcap` package installed
+//!
 //! ## Running Tests
 //!
 //! ### Without ROS2 (self-consistency tests only):
@@ -14,6 +20,9 @@
 //! ```bash
 //! # Source ROS2 first
 //! source /opt/ros/humble/setup.bash  # or your ROS2 distribution
+//!
+//! # For Humble/Iron/Galactic, ensure MCAP plugin is installed:
+//! # sudo apt install ros-<distro>-rosbag2-storage-mcap
 //!
 //! # Run with ros2_test feature
 //! cargo test -p roslibrust_mcap --test ros2_bag_integration --features ros2_test
@@ -78,8 +87,9 @@ fn test_ros2_bag_can_read_our_mcap_string() -> Result<()> {
     assert!(metadata.len() > 0, "MCAP file should not be empty");
 
     // Use ros2 bag info to verify the bag
+    // Note: -s mcap is required for ROS 2 Humble/Iron/Galactic compatibility
     let output = Command::new("ros2")
-        .args(["bag", "info", mcap_path.to_str().unwrap()])
+        .args(["bag", "info", "-s", "mcap", mcap_path.to_str().unwrap()])
         .output()?;
 
     assert!(
@@ -132,8 +142,9 @@ fn test_ros2_bag_can_read_our_mcap_complex() -> Result<()> {
     }
 
     // Use ros2 bag info to verify
+    // Note: -s mcap is required for ROS 2 Humble/Iron/Galactic compatibility
     let output = Command::new("ros2")
-        .args(["bag", "info", mcap_path.to_str().unwrap()])
+        .args(["bag", "info", "-s", "mcap", mcap_path.to_str().unwrap()])
         .output()?;
 
     assert!(
@@ -203,8 +214,9 @@ fn test_ros2_bag_can_read_our_mcap_multiple_topics() -> Result<()> {
     }
 
     // Use ros2 bag info to verify
+    // Note: -s mcap is required for ROS 2 Humble/Iron/Galactic compatibility
     let output = Command::new("ros2")
-        .args(["bag", "info", mcap_path.to_str().unwrap()])
+        .args(["bag", "info", "-s", "mcap", mcap_path.to_str().unwrap()])
         .output()?;
 
     assert!(
