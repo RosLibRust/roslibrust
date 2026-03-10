@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added the roslibrust_mcap crate which provides utilities for reading and writing MCAP files compatible ROS2 bag tools with ROS message support.
+
 ### Fixed
 
 ### Changed
