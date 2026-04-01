@@ -30,7 +30,7 @@ const ROS_PACKAGE_PATH_ENV_VAR: &str = "ROS_PACKAGE_PATH";
 
 pub fn get_search_paths() -> Vec<PathBuf> {
     if let Ok(paths) = std::env::var(ROS_PACKAGE_PATH_ENV_VAR) {
-        #[cfg(unix)]
+        [cfg(not(windows))]
         let separator = ":";
         #[cfg(windows)]
         let separator = ";";
