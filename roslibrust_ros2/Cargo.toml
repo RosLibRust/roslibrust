@@ -13,7 +13,7 @@ cdr = "0.2"
 roslibrust_common = { path = "../roslibrust_common", version = "0.20" }
 anyhow = "1.0"
 # Experimental "raw ros" library, we're going to try to build on top of
-ros-z = { git = "https://github.com/ZettaScaleLabs/ros-z.git" }
+ros-z = { path = "/home/circle/Workings/ZettaScale/zenoh-ws/project/nix-ros/src/worktree-ros-z/serdes-param/crates/ros-z", features = ["jazzy"] }
 log = "0.4"
 # Used for cancellation token
 tokio-util = "0.7"
