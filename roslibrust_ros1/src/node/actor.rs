@@ -810,10 +810,13 @@ impl Node {
             return Ok(());
         }
         let _ = self.subscriptions.remove(topic);
-        self.client.unregister_subscriber(topic).await.map_err(|e| {
-            log::error!("Failed to unregister subscriber with master for {topic}: {e:?}");
-            NodeError::IoError(io::Error::from(io::ErrorKind::ConnectionAborted))
-        })?;
+        self.client
+            .unregister_subscriber(topic)
+            .await
+            .map_err(|e| {
+                log::error!("Failed to unregister subscriber with master for {topic}: {e:?}");
+                NodeError::IoError(io::Error::from(io::ErrorKind::ConnectionAborted))
+            })?;
         debug!("Removed subscription and unregistered with master: {topic}");
         Ok(())
     }
