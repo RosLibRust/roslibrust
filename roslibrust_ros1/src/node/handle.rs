@@ -126,7 +126,11 @@ impl NodeHandle {
             .inner
             .register_subscriber::<roslibrust_common::ShapeShifter>(topic_name, queue_size)
             .await?;
-        Ok(SubscriberAny::new(receiver))
+        Ok(SubscriberAny::new(
+            receiver,
+            topic_name.to_string(),
+            self.weak_clone(),
+        ))
     }
 
     /// Subscribe to a topic with automatic deserialization to the given type.
@@ -144,7 +148,11 @@ impl NodeHandle {
             .inner
             .register_subscriber::<T>(topic_name, queue_size)
             .await?;
-        Ok(Subscriber::new(receiver))
+        Ok(Subscriber::new(
+            receiver,
+            topic_name.to_string(),
+            self.weak_clone(),
+        ))
     }
 
     pub async fn service_client<T: roslibrust_common::RosServiceType>(
@@ -174,6 +182,20 @@ impl NodeHandle {
             .await?;
         // Super important. Don't clone self or we create a STRONG NodeHandle that keeps the node alive
         Ok(ServiceServer::new(service_name, self.weak_clone()))
+    }
+
+    /// Not intended to be called manually.
+    /// Automatically called when the last `Subscriber` / `SubscriberAny` for a topic is dropped.
+    /// Spawns a task to ask the node actor to tear down the subscription if no live
+    /// subscribers remain.
+    pub(crate) fn unsubscribe(&self, topic_name: &str) {
+        let copy = self.clone();
+        let name_copy = topic_name.to_string();
+        tokio::spawn(async move {
+            if let Err(e) = copy.inner.unregister_subscriber(&name_copy).await {
+                log::error!("Failed to unregister subscriber for {name_copy:?}: {e:?}");
+            }
+        });
     }
 
     // TODO Major: This should probably be moved to NodeServerHandle?

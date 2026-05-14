@@ -6,6 +6,7 @@
 #[cfg(feature = "ros1_test")]
 mod tests {
     use roslibrust_common::RosMessageType;
+    use roslibrust_ros1::NodeHandle;
     use roslibrust_test::ros1::*;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
@@ -303,5 +304,51 @@ mod tests {
         }
 
         mock_pub.cleanup().await;
+    }
+
+    /// Test that dropping a subscriber automatically unregisters the subscription
+    /// This verifies that the automatic unsubscribing mechanism works correctly
+    #[test_log::test(tokio::test)]
+    async fn verify_automatic_unsubscribe() -> Result<(), Box<dyn std::error::Error + Send + Sync>>
+    {
+        const TOPIC: &str = "/test_auto_unsub";
+        const NODE_NAME: &str = "/verify_automatic_unsubscribe";
+
+        let node = NodeHandle::new("http://localhost:11311", NODE_NAME).await?;
+        log::info!("Created node handle");
+
+        // Create a MasterClient to query rosmaster state
+        let master_client = roslibrust_ros1::MasterClient::new(
+            "http://localhost:11311",
+            "http://localhost:0", // We don't need a real URI for queries
+            "/test_master_client",
+        )
+        .await?;
+
+        // Initially, the node should not be subscribed to the topic
+        let state = master_client.get_system_state().await?;
+        assert!(!state.is_subscribed(TOPIC, NODE_NAME));
+        log::info!("Confirmed no initial subscription");
+
+        // Create a subscriber in a scope so we can drop it
+        {
+            let _subscriber = node.subscribe::<std_msgs::String>(TOPIC, 1).await?;
+            log::info!("Created subscriber");
+
+            // Verify the subscription is now registered with rosmaster
+            let state = master_client.get_system_state().await?;
+            assert!(state.is_subscribed(TOPIC, NODE_NAME));
+            log::info!("Confirmed subscription registered with rosmaster");
+        } // Subscriber is dropped here
+
+        // Give the async unsubscribe task time to complete
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        // Verify the subscription has been automatically removed from rosmaster
+        let state = master_client.get_system_state().await?;
+        assert!(!state.is_subscribed(TOPIC, NODE_NAME));
+        log::info!("Confirmed automatic unsubscribe completed");
+
+        Ok(())
     }
 }

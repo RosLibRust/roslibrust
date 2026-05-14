@@ -89,6 +89,10 @@ pub enum NodeMsg {
         reply: oneshot::Sender<Result<(), String>>,
         topic: String,
     },
+    UnregisterSubscriber {
+        reply: oneshot::Sender<Result<(), String>>,
+        topic: String,
+    },
 }
 
 /// Represents a communication handle to an underlying node server
@@ -309,6 +313,21 @@ impl NodeServerHandle {
         received.map_err(|err| {
             log::error!("Failed to register service server: {err}");
             NodeError::IoError(io::Error::from(io::ErrorKind::ConnectionAborted))
+        })
+    }
+
+    /// Asks the node actor to tear down a subscription if no live `Subscriber`s remain.
+    /// Called from `Subscriber::drop` via `NodeHandle::unsubscribe`.
+    pub(crate) async fn unregister_subscriber(&self, topic: &str) -> Result<(), NodeError> {
+        let (tx, rx) = oneshot::channel();
+        self.node_server_sender
+            .send(NodeMsg::UnregisterSubscriber {
+                reply: tx,
+                topic: topic.to_string(),
+            })?;
+        rx.await?.map_err(|e| {
+            log::error!("Failed to unregister subscriber {topic:?}: {e:?}");
+            NodeError::IoError(io::Error::from(io::ErrorKind::InvalidData))
         })
     }
 
@@ -557,6 +576,13 @@ impl Node {
                         .map_err(|err| err.to_string()),
                 );
             }
+            NodeMsg::UnregisterSubscriber { reply, topic } => {
+                let _ = reply.send(
+                    self.unregister_subscriber(&topic)
+                        .await
+                        .map_err(|err| err.to_string()),
+                );
+            }
             NodeMsg::RegisterSubscriber {
                 reply,
                 topic,
@@ -767,6 +793,31 @@ impl Node {
                 std::io::ErrorKind::AddrInUse,
             )));
         }
+        Ok(())
+    }
+
+    /// Tear down a subscription if no live `Subscriber<T>` / `SubscriberAny` for the topic
+    /// remain. Called when a `Subscriber` is dropped.
+    /// Dropping the `Subscription` aborts its per-publisher TCP reader tasks via the
+    /// `Vec<ChildTask<()>>` it owns.
+    async fn unregister_subscriber(&mut self, topic: &str) -> Result<(), NodeError> {
+        let Some(subscription) = self.subscriptions.get(topic) else {
+            // Already removed (e.g. by node shutdown). Not an error.
+            return Ok(());
+        };
+        if subscription.subscriber_count() != 0 {
+            // Other live Subscribers exist — keep the subscription.
+            return Ok(());
+        }
+        let _ = self.subscriptions.remove(topic);
+        self.client
+            .unregister_subscriber(topic)
+            .await
+            .map_err(|e| {
+                log::error!("Failed to unregister subscriber with master for {topic}: {e:?}");
+                NodeError::IoError(io::Error::from(io::ErrorKind::ConnectionAborted))
+            })?;
+        debug!("Removed subscription and unregistered with master: {topic}");
         Ok(())
     }
 
