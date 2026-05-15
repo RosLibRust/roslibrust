@@ -15,8 +15,6 @@ use tokio::{
     sync::broadcast::{self, error::RecvError},
 };
 
-use super::actor::NodeServerHandle;
-
 /// The regular Publisher representation returned by calling advertise on a [crate::NodeHandle].
 pub struct Publisher<T> {
     // Name of the topic this publisher is publishing on
@@ -154,7 +152,7 @@ impl Publication {
         msg_definition: &str,
         md5sum: &str,
         topic_type: &str,
-        node_handle: NodeServerHandle,
+        weak_node: std::sync::Weak<tokio::sync::Mutex<super::node::actor::Node>>,
     ) -> Result<
         (
             Self,
@@ -199,7 +197,7 @@ impl Publication {
                 responding_conn_header,
                 receiver,
                 shutdown_rx,
-                node_handle,
+                weak_node,
             )
             .await
         });
@@ -296,7 +294,7 @@ impl Publication {
         responding_conn_header: ConnectionHeader, // Header we respond with
         mut rx: broadcast::Receiver<Bytes>, // Receives messages to publish from the main buffer of messages
         mut shutdown_rx: tokio::sync::mpsc::Receiver<()>, // Channel to signal to the publication to clean itself up
-        nh: NodeServerHandle,
+        nh: std::sync::Weak<tokio::sync::Mutex<super::node::actor::Node>>,
     ) {
         debug!("TCP accept task has started for publication: {topic_name}");
         // Store latching message as Bytes for cheap cloning when new subscribers connect
@@ -309,7 +307,10 @@ impl Publication {
                         None => debug!("TCP accept task has received shutdown signal for publication: {topic_name}"),
                     }
                     // Notify our Node that we're shutting down
-                    nh.unregister_publisher(&topic_name).await.unwrap();
+                    if let Some(node_arc) = nh.upgrade() {
+                        let mut node = node_arc.lock().await;
+                        let _ = node.unregister_publisher(&topic_name).await;
+                    }
                     // Exit our loop and shutdown this task
                     break;
                 }

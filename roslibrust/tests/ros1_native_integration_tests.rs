@@ -577,14 +577,14 @@ mod tests {
         assert!(data.is_subscribed("/test_cleanup_sub", "/test_node_cleanup"));
         assert!(data.is_service_provider("/test_cleanup_srv", "/test_node_cleanup"));
 
+        // Check the Arc strong count before drop
+        debug!("Arc strong_count before drop: {}", nh.arc_strong_count());
+
         // Drop our node handle
         std::mem::drop(nh);
+        debug!("Drop has happened");
 
         // Confirm here that Node actually got shut down
-        debug!("Drop has happened");
-        // Delay to allow destructor to complete
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        debug!("sleep is over");
         let data = master_client.get_system_state().await.unwrap();
         info!("Got data after drop: {data:?}");
 

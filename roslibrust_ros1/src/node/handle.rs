@@ -4,6 +4,7 @@ use crate::{
     subscriber::Subscriber, subscriber::SubscriberAny, NodeError, ServiceServer,
 };
 use roslibrust_common::ServiceFn;
+use std::sync::Arc;
 
 /// Represents a handle to an underlying Node. NodeHandle's can be freely cloned, moved, copied, etc.
 /// This class provides the user facing API for interacting with ROS.
@@ -40,16 +41,11 @@ impl NodeHandle {
         Ok(nh)
     }
 
-    /// This creates a clone() of NodeHandle that doesn't keep the underlying node alive
-    /// This should be used for things like ServiceServer which wants to be able to talk to the node
-    /// but doesn't need to keep the node alive.
-    pub(crate) fn weak_clone(&self) -> NodeHandle {
-        NodeHandle {
-            inner: NodeServerHandle {
-                node_server_sender: self.inner.node_server_sender.clone(),
-                _node_task: None,
-            },
-        }
+    // TODO REMOVE BEFORE MERGE
+    /// Debug helper to check the Arc strong count
+    /// This is useful for debugging lifecycle issues
+    pub fn arc_strong_count(&self) -> usize {
+        Arc::strong_count(&self.inner.node)
     }
 
     /// This function may be removed...
@@ -57,7 +53,9 @@ impl NodeHandle {
     /// If this function returns false, the backend node server has shut down and this handle is invalid.
     /// This state should be unreachable by normal usage of the library.
     pub fn is_ok(&self) -> bool {
-        !self.inner.node_server_sender.is_closed()
+        // Check if the Arc still has any strong references
+        // If it only has weak references, the node has been shut down
+        Arc::strong_count(&self.inner.node) > 0
     }
 
     /// Returns the network uri of XMLRPC server for the underlying node.
@@ -172,8 +170,9 @@ impl NodeHandle {
         self.inner
             .register_service_server::<T, F>(&service_name, server)
             .await?;
-        // Super important. Don't clone self or we create a STRONG NodeHandle that keeps the node alive
-        Ok(ServiceServer::new(service_name, self.weak_clone()))
+        // Super important: Pass a Weak reference so ServiceServer doesn't keep the node alive
+        let weak_node = Arc::downgrade(&self.inner.node);
+        Ok(ServiceServer::new(service_name, weak_node))
     }
 
     // TODO Major: This should probably be moved to NodeServerHandle?

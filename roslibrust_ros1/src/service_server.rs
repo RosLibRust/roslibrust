@@ -1,15 +1,15 @@
 use std::{
     net::{Ipv4Addr, SocketAddr},
-    sync::Arc,
+    sync::{Arc, Weak},
 };
 
 use abort_on_drop::ChildTask;
 use log::*;
-use tokio::io::AsyncWriteExt;
+use tokio::{io::AsyncWriteExt, sync::Mutex};
 
 use crate::tcpros::{self, ConnectionHeader};
 
-use super::{names::Name, NodeHandle, TypeErasedCallback};
+use super::{names::Name, node::actor::Node, TypeErasedCallback};
 
 /// ServiceServer is simply a lifetime control
 /// The underlying ServiceServer is kept alive while object is kept alive.
@@ -18,14 +18,14 @@ use super::{names::Name, NodeHandle, TypeErasedCallback};
 // Maybe we should just let people manually call an unadvertise_service method?
 pub struct ServiceServer {
     service_name: Name,
-    node_handle: NodeHandle,
+    weak_node: Weak<Mutex<Node>>,
 }
 
 impl ServiceServer {
-    pub fn new(service_name: Name, node_handle: NodeHandle) -> Self {
+    pub fn new(service_name: Name, weak_node: Weak<Mutex<Node>>) -> Self {
         Self {
             service_name,
-            node_handle,
+            weak_node,
         }
     }
 }
@@ -33,9 +33,22 @@ impl ServiceServer {
 impl Drop for ServiceServer {
     fn drop(&mut self) {
         debug!("Dropping service server: {:?}", self.service_name);
-        let _ = self
-            .node_handle
-            .unadvertise_service_server(&self.service_name.to_string());
+        // Try to upgrade weak reference - if it fails, the node is already gone
+        if let Some(node_arc) = self.weak_node.upgrade() {
+            let service_name = self.service_name.to_string();
+            // Spawn a task to do the async cleanup
+            tokio::spawn(async move {
+                let mut node = node_arc.lock().await;
+                if let Err(e) = node.unregister_service_server(&service_name).await {
+                    error!("Failed to unregister service server {service_name}: {e:?}");
+                }
+            });
+        } else {
+            debug!(
+                "Node already dropped, skipping service unadvertisement for {:?}",
+                self.service_name
+            );
+        }
     }
 }
 
