@@ -1,11 +1,10 @@
-use super::NodeServerHandle;
-use abort_on_drop::ChildTask;
 use hyper::{Body, Response, StatusCode};
 use log::*;
 use std::{
     convert::Infallible,
     net::{Ipv4Addr, SocketAddr},
 };
+use tokio_util::sync::CancellationToken;
 
 #[allow(unused)]
 enum RosXmlStatusCode {
@@ -32,54 +31,77 @@ impl RosXmlStatusCode {
 /// but are intentionally using "XmlRpcServer" in place of where ROS says "Slave API"
 pub(crate) struct XmlRpcServer {}
 
-pub(crate) struct XmlRpcServerHandle {
+/// Intermediate structure holding a bound server that hasn't started serving yet
+pub(crate) struct BoundXmlRpcServer {
     port: u16,
-    _handle: ChildTask<()>,
+    server: hyper::server::Builder<hyper::server::conn::AddrIncoming>,
 }
 
-impl XmlRpcServerHandle {
+impl BoundXmlRpcServer {
+    /// Allows getting the port so the node can know its full URI
     pub fn port(&self) -> u16 {
         self.port
+    }
+
+    /// Start serving requests with a weak reference to the node and cancellation token
+    /// The server will shutdown when the cancellation token is cancelled or when the node is dropped
+    pub fn serve(
+        self,
+        weak_node: super::actor::WeakNodeServerHandle,
+        cancellation_token: CancellationToken,
+    ) {
+        let make_svc = hyper::service::make_service_fn(move |connection| {
+            debug!("New node xmlrpc connection {connection:?}");
+            let weak_node = weak_node.clone();
+            async move {
+                Ok::<_, Infallible>(hyper::service::service_fn(move |req| {
+                    XmlRpcServer::respond(weak_node.clone(), req)
+                }))
+            }
+        });
+
+        let server = self.server.serve(make_svc);
+
+        tokio::spawn(async move {
+            tokio::select! {
+                result = server => {
+                    if let Err(err) = result {
+                        log::error!("xmlrpc server encountered error: {err:?}");
+                    }
+                }
+                _ = cancellation_token.cancelled() => {
+                    debug!("XmlRpc server shutting down due to cancellation");
+                }
+            }
+        });
     }
 }
 
 impl XmlRpcServer {
-    #[allow(clippy::new_ret_no_self)]
-    pub fn new(
-        host_addr: Ipv4Addr,
-        node_server: NodeServerHandle,
-    ) -> Result<XmlRpcServerHandle, XmlRpcError> {
-        let make_svc = hyper::service::make_service_fn(move |connection| {
-            debug!("New node xmlrpc connection {connection:?}");
-            let node_server = node_server.clone();
-            async move {
-                Ok::<_, Infallible>(hyper::service::service_fn(move |req| {
-                    XmlRpcServer::respond(node_server.clone(), req)
-                }))
-            }
-        });
+    /// Bind to an address without starting to serve
+    /// Returns a BoundXmlRpcServer that can be used to get the port and then start serving
+    pub fn bind(host_addr: Ipv4Addr) -> Result<BoundXmlRpcServer, XmlRpcError> {
         let host_addr = SocketAddr::from((host_addr, 0));
         let server = hyper::server::Server::try_bind(&host_addr)?;
-        let server = server.serve(make_svc);
-        let addr = server.local_addr();
+        let port = server.local_addr().port();
 
-        let handle = tokio::spawn(async {
-            if let Err(err) = server.await {
-                log::error!("xmlrpc server encountered error: {err:?}");
-            }
-        });
-
-        Ok(XmlRpcServerHandle {
-            port: addr.port(),
-            _handle: handle.into(),
-        })
+        Ok(BoundXmlRpcServer { port, server })
     }
 
     // Our actual service handler with our error type
     async fn respond_inner(
-        node_server: NodeServerHandle,
+        weak_node: super::actor::WeakNodeServerHandle,
         body: hyper::Request<Body>,
     ) -> Result<Response<Body>, Box<Response<Body>>> {
+        // Try to upgrade the weak reference to a strong reference
+        // If this fails, the node has been dropped and we should error out
+        let node_handle = weak_node.upgrade().ok_or_else(|| {
+            Box::new(Self::make_error_response(
+                std::io::Error::new(std::io::ErrorKind::NotFound, "Node has been dropped"),
+                "Node no longer exists, shutting down XmlRpc server",
+                StatusCode::SERVICE_UNAVAILABLE,
+            ))
+        })?;
         // Await the bytes of the body
         let body = hyper::body::to_bytes(body).await.map_err(|e| {
             Box::new(Self::make_error_response(
@@ -111,14 +133,9 @@ impl XmlRpcServer {
         match method_name.as_str() {
             "getMasterUri" => {
                 debug!("getMasterUri called by {args:?}");
-                match node_server.get_master_uri().await {
-                    Ok(uri) => Self::to_response(uri),
-                    Err(e) => Err(Box::new(Self::make_error_response(
-                        e,
-                        "Unable to retrieve master URI",
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                    ))),
-                }
+                let node = node_handle.node.lock().await;
+                let uri = node.client.get_master_uri().to_owned();
+                Self::to_response(uri)
             }
             "getPid" => {
                 debug!("getPid called by {args:?}");
@@ -131,30 +148,36 @@ impl XmlRpcServer {
             }
             "getSubscriptions" => {
                 debug!("getSubscriptions called by {args:?}");
-                match node_server.get_subscriptions().await {
-                    Ok(subs) => {
-                        match serde_xmlrpc::to_value(subs) {
-                            Ok(subs) => Self::to_response(subs),
-                            Err(e) => Err(Box::new(Self::make_error_response(
-                                e,
-                                "Subscriptions contained names which could not be validly serialized to xmlrpc",
-                                StatusCode::INTERNAL_SERVER_ERROR)))
-                        }
-                    },
-                    Err(e) => Err(Box::new(Self::make_error_response(e, "Unable to get subscriptions", StatusCode::INTERNAL_SERVER_ERROR)))
+                let node = node_handle.node.lock().await;
+                let subs: Vec<(String, String)> = node
+                    .subscriptions
+                    .iter()
+                    .map(|(topic_name, subscription)| {
+                        (topic_name.clone(), subscription.topic_type().to_owned())
+                    })
+                    .collect();
+                match serde_xmlrpc::to_value(subs) {
+                    Ok(subs) => Self::to_response(subs),
+                    Err(e) => Err(Box::new(Self::make_error_response(
+                        e,
+                        "Subscriptions contained names which could not be validly serialized to xmlrpc",
+                        StatusCode::INTERNAL_SERVER_ERROR)))
                 }
             }
             "getPublications" => {
                 debug!("getPublications called by {args:?}");
-                match node_server.get_publications().await {
-                    Ok(pubs) => match serde_xmlrpc::to_value(pubs) {
-                        Ok(pubs) => Self::to_response(pubs),
-                        Err(e) => Err(Box::new(Self::make_error_response(
-                            e,
-                            "Publications contained names which could not be validly serialized to xmlrpc",
-                            StatusCode::INTERNAL_SERVER_ERROR)))
-                    },
-                    Err(e) => Err(Box::new(Self::make_error_response(e, "Unable to get publications", StatusCode::INTERNAL_SERVER_ERROR)))
+                let node = node_handle.node.lock().await;
+                let pubs: Vec<(String, String)> = node
+                    .publishers
+                    .iter()
+                    .map(|(key, entry)| (key.clone(), entry.topic_type().to_owned()))
+                    .collect();
+                match serde_xmlrpc::to_value(pubs) {
+                    Ok(pubs) => Self::to_response(pubs),
+                    Err(e) => Err(Box::new(Self::make_error_response(
+                        e,
+                        "Publications contained names which could not be validly serialized to xmlrpc",
+                        StatusCode::INTERNAL_SERVER_ERROR)))
                 }
             }
             "paramUpdate" => {
@@ -172,15 +195,24 @@ impl XmlRpcServer {
                             StatusCode::BAD_REQUEST,
                         )
                     })?;
-                node_server
-                    .set_peer_publishers(topic, publishers)
-                    .map_err(|e| {
-                        Self::make_error_response(
-                            e,
-                            "Unable to set peer publishers",
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                        )
-                    })?;
+
+                let mut node = node_handle.node.lock().await;
+                if let Some(subscription) = node.subscriptions.get_mut(&topic) {
+                    // First, remove any publishers that are no longer in the list
+                    subscription.remove_stale_publishers(&publishers).await;
+                    // Then add any new publishers
+                    for publisher_uri in publishers {
+                        if let Err(err) = subscription.add_publisher_source(&publisher_uri).await {
+                            log::error!(
+                                "Unable to create subscribe stream for topic {topic}: {err}"
+                            );
+                        }
+                    }
+                } else {
+                    log::warn!(
+                        "Got peer publisher update for topic we weren't subscribed to, ignoring"
+                    );
+                }
 
                 // ROS's API is for us to still return an int, but the value is literally named "ignore"...
                 Self::to_response(0)
@@ -197,16 +229,39 @@ impl XmlRpcServer {
                     })?;
                 let protocols = protocols.iter().flatten().cloned().collect::<Vec<_>>();
                 debug!("Request for topic {topic} from {caller_id} via protocols {protocols:?}");
-                let params = node_server
-                    .request_topic(&topic, &protocols)
-                    .await
-                    .map_err(|e| {
-                        Self::make_error_response(
-                            e,
-                            "Unable to get parameters for requested topic",
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                        )
-                    })?;
+
+                let node = node_handle.node.lock().await;
+                let params = if protocols.iter().any(|proto| proto.as_str() == "TCPROS") {
+                    if let Some((_key, publishing_channel)) =
+                        node.publishers.iter().find(|(key, _pub)| *key == &topic)
+                    {
+                        crate::ProtocolParams {
+                            hostname: node.hostname.clone(),
+                            protocol: String::from("TCPROS"),
+                            port: publishing_channel.port(),
+                        }
+                    } else {
+                        return Err(Box::new(Self::make_error_response(
+                            std::io::Error::new(
+                                std::io::ErrorKind::NotFound,
+                                format!(
+                                "Got request for topic {topic} which this node does not publish"
+                            ),
+                            ),
+                            "Topic not found",
+                            StatusCode::NOT_FOUND,
+                        )));
+                    }
+                } else {
+                    return Err(Box::new(Self::make_error_response(
+                        std::io::Error::new(
+                            std::io::ErrorKind::Unsupported,
+                            format!("No supported protocols in request: {protocols:?}"),
+                        ),
+                        "Unsupported protocol",
+                        StatusCode::BAD_REQUEST,
+                    )));
+                };
 
                 let response = Self::make_success_response(
                     RosXmlStatusCode::Success,
@@ -229,13 +284,14 @@ impl XmlRpcServer {
                         )
                     })?;
                 debug!("Received request for shutdown from {caller_id}: {msg}");
-                node_server.shutdown().map_err(|e| {
-                    Self::make_error_response(
-                        e,
-                        "Unable to shutdown",
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                    )
-                })?;
+
+                // TODO this is not tested, we need to add a test for this
+                // Trigger shutdown by spawning a task that will lock and shutdown the node
+                let node_for_shutdown = node_handle.node.clone();
+                tokio::spawn(async move {
+                    let mut node_guard = node_for_shutdown.lock().await;
+                    node_guard.shutdown();
+                });
 
                 Self::to_response(0)
             }
@@ -319,11 +375,11 @@ impl XmlRpcServer {
 
     // Is the actual function we hand to hyper
     async fn respond(
-        node_server: NodeServerHandle,
+        weak_node: super::actor::WeakNodeServerHandle,
         body: hyper::Request<Body>,
     ) -> Result<Response<Body>, Infallible> {
         // Call our inner function and unwrap error type into response
-        match Self::respond_inner(node_server, body).await {
+        match Self::respond_inner(weak_node, body).await {
             Ok(body) => Ok(body),
             Err(body) => Ok(*body),
         }

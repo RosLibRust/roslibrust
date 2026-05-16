@@ -1,4 +1,4 @@
-use crate::{names::Name, tcpros::ConnectionHeader, NodeHandle};
+use crate::{names::Name, node::actor::WeakNodeServerHandle, tcpros::ConnectionHeader};
 use abort_on_drop::ChildTask;
 use bytes::Bytes;
 use log::*;
@@ -20,7 +20,7 @@ pub struct Subscriber<T> {
     // Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers.
     receiver: broadcast::Receiver<Bytes>,
     topic_name: String,
-    node_handle: NodeHandle,
+    weak_node: WeakNodeServerHandle,
     _phantom: PhantomData<T>,
 }
 
@@ -28,12 +28,12 @@ impl<T: RosMessageType> Subscriber<T> {
     pub(crate) fn new(
         receiver: broadcast::Receiver<Bytes>,
         topic_name: String,
-        node_handle: NodeHandle,
+        weak_node: WeakNodeServerHandle,
     ) -> Self {
         Self {
             receiver,
             topic_name,
-            node_handle,
+            weak_node,
             _phantom: PhantomData,
         }
     }
@@ -71,7 +71,7 @@ pub struct SubscriberAny {
     // Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers.
     receiver: broadcast::Receiver<Bytes>,
     topic_name: String,
-    node_handle: NodeHandle,
+    weak_node: WeakNodeServerHandle,
     _phantom: PhantomData<ShapeShifter>,
 }
 
@@ -79,12 +79,12 @@ impl SubscriberAny {
     pub(crate) fn new(
         receiver: broadcast::Receiver<Bytes>,
         topic_name: String,
-        node_handle: NodeHandle,
+        weak_node: WeakNodeServerHandle,
     ) -> Self {
         Self {
             receiver,
             topic_name,
-            node_handle,
+            weak_node,
             _phantom: PhantomData,
         }
     }
@@ -116,14 +116,16 @@ fn drop_receiver(slot: &mut broadcast::Receiver<Bytes>) {
 impl<T> Drop for Subscriber<T> {
     fn drop(&mut self) {
         drop_receiver(&mut self.receiver);
-        self.node_handle.unsubscribe(&self.topic_name);
+        // Use the unified helper method to unregister the subscriber
+        self.weak_node.try_unregister_subscriber(&self.topic_name);
     }
 }
 
 impl Drop for SubscriberAny {
     fn drop(&mut self) {
         drop_receiver(&mut self.receiver);
-        self.node_handle.unsubscribe(&self.topic_name);
+        // Use the unified helper method to unregister the subscriber
+        self.weak_node.try_unregister_subscriber(&self.topic_name);
     }
 }
 

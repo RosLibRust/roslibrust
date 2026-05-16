@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- @DomWilliamsEE fix ros1 subscribers not automatically unsubscribing from the master when dropped.
+
 ### Changed
 
 ## 0.20.0 - March 2nd, 2026
