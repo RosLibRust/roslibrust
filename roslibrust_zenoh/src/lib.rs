@@ -85,16 +85,6 @@ impl<T: RosMessageType> Subscribe<T> for ZenohSubscriber<T> {
 }
 
 fn deserialize_payload<T: RosMessageType>(payload: &ZBytes, context: &str) -> Result<T> {
-    let mut slices = payload.slices();
-    if let Some(slice) = slices.next() {
-        if slices.next().is_none() {
-            return roslibrust_serde_rosmsg::from_slice_known_length(slice, slice.len() as u32)
-                .map_err(|e| {
-                    Error::SerializationError(format!("Failed to deserialize {context}: {e:?}"))
-                });
-        }
-    }
-
     // Note: Zenoh decided to not make the 4 byte length header part of the payload.
     let mut reader = payload.reader();
     roslibrust_serde_rosmsg::from_reader_known_length(&mut reader, payload.len() as u32)
