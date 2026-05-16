@@ -3,12 +3,14 @@ use crate::{
     tcpros::{self, ConnectionHeader},
 };
 use abort_on_drop::ChildTask;
-use bytes::Bytes;
+use bytes::{BufMut, Bytes};
 use log::*;
 use roslibrust_common::RosMessageType;
 use std::{
+    io::Write,
     marker::PhantomData,
     net::{Ipv4Addr, SocketAddr},
+    sync::atomic::{AtomicUsize, Ordering},
 };
 use tokio::{
     io::AsyncWriteExt,
@@ -27,6 +29,8 @@ pub struct Publisher<T> {
     _shutdown_channel: tokio::sync::mpsc::Sender<()>,
     // Phantom data to ensure that the type is known at compile time
     phantom: PhantomData<T>,
+    // Used to track buffer capacity size to minimize allocations
+    capacity_hint: AtomicUsize,
 }
 
 impl<T: RosMessageType> Publisher<T> {
@@ -40,20 +44,30 @@ impl<T: RosMessageType> Publisher<T> {
             sender,
             _shutdown_channel: shutdown_channel,
             phantom: PhantomData,
+            // Default capacity size, after this we use the size of the previous message +32
+            capacity_hint: 1024.into(),
         }
     }
 
     /// Queues a message to be sent on the related topic.
     // TODO Major this no longer needs to be (or should be) async
     pub async fn publish(&self, data: &T) -> Result<(), PublisherError> {
-        let data = roslibrust_serde_rosmsg::to_vec(&data)?;
-        // TODO this is a pretty dumb...
-        // because of the internal channel used for re-direction this future doesn't
-        // actually complete when the data is sent, but merely when it is queued to be sent
-        // This function could probably be non-async
-        // Or we should do some significant re-work to have it only yield when the data is sent.
+        let size_hint = self.capacity_hint.load(Ordering::Relaxed);
+        let buffer = bytes::BytesMut::with_capacity(size_hint + 4);
+        let mut writer = buffer.writer();
+        // Write empty u32 for size
+        writer.write(&[0, 0, 0, 0]).unwrap();
+        roslibrust_serde_rosmsg::to_writer_skip_length(&mut writer, data)?;
+        let mut buffer = writer.into_inner();
+        // Patch size back to front of buffer
+        let size = buffer.len() as u32 - 4;
+        if size > size_hint as u32 {
+            self.capacity_hint.store(size as usize, Ordering::Relaxed);
+        }
+        buffer[0..4].copy_from_slice(&size.to_le_bytes());
+        let bytes = buffer.freeze();
         self.sender
-            .send(data.into())
+            .send(bytes)
             .map_err(|_| PublisherError::StreamClosed)?;
         debug!("Publishing data on topic {}", self.topic_name);
         Ok(())

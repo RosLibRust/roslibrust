@@ -13,8 +13,8 @@ log = { workspace = true }
 
 [dev-dependencies]
 diffy = "0.3.0"
-criterion = { version = "0.4", features = ["html_reports", "async_tokio"] }
-pprof = { version = "0.11", features = ["flamegraph", "criterion"] }
+criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
+pprof = { version = "0.15", features = ["flamegraph", "criterion"] }
 test-log = { workspace = true }
 hex = "0.4"
 
