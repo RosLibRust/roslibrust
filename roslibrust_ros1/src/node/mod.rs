@@ -13,7 +13,7 @@ use std::{
 pub(crate) mod actor;
 mod handle;
 mod xmlrpc;
-use actor::*;
+pub use actor::WeakNodeServerHandle;
 use anyhow::anyhow;
 pub use handle::NodeHandle;
 use tokio::sync::{mpsc, oneshot};

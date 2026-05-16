@@ -476,6 +476,14 @@ mod test {
         .await
     }
 
+    fn test_sync_client() -> SyncMasterClient {
+        SyncMasterClient::new(
+            "http://localhost:11311",
+            "http://localhost:11312",
+            TEST_NODE_ID,
+        )
+    }
+
     #[test_log::test(tokio::test)]
     async fn get_system_state() -> Result<(), RosMasterError> {
         let _state = test_client().await?.get_system_state().await?;

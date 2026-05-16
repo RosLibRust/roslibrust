@@ -152,7 +152,7 @@ impl Publication {
         msg_definition: &str,
         md5sum: &str,
         topic_type: &str,
-        weak_node: std::sync::Weak<tokio::sync::Mutex<super::node::actor::Node>>,
+        weak_node: crate::node::actor::WeakNodeServerHandle,
     ) -> Result<
         (
             Self,
@@ -294,7 +294,7 @@ impl Publication {
         responding_conn_header: ConnectionHeader, // Header we respond with
         mut rx: broadcast::Receiver<Bytes>, // Receives messages to publish from the main buffer of messages
         mut shutdown_rx: tokio::sync::mpsc::Receiver<()>, // Channel to signal to the publication to clean itself up
-        nh: std::sync::Weak<tokio::sync::Mutex<super::node::actor::Node>>,
+        nh: crate::node::actor::WeakNodeServerHandle,
     ) {
         debug!("TCP accept task has started for publication: {topic_name}");
         // Store latching message as Bytes for cheap cloning when new subscribers connect
@@ -306,11 +306,8 @@ impl Publication {
                         Some(_) => error!("Message should never be sent on this channel"),
                         None => debug!("TCP accept task has received shutdown signal for publication: {topic_name}"),
                     }
-                    // Notify our Node that we're shutting down
-                    if let Some(node_arc) = nh.upgrade() {
-                        let mut node = node_arc.lock().await;
-                        let _ = node.unregister_publisher(&topic_name).await;
-                    }
+                    // Notify our Node that we're shutting down using the unified helper method
+                    nh.try_unregister_publisher(&topic_name);
                     // Exit our loop and shutdown this task
                     break;
                 }

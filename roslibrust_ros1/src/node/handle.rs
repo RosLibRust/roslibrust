@@ -53,9 +53,8 @@ impl NodeHandle {
     /// If this function returns false, the backend node server has shut down and this handle is invalid.
     /// This state should be unreachable by normal usage of the library.
     pub fn is_ok(&self) -> bool {
-        // Check if the Arc still has any strong references
-        // If it only has weak references, the node has been shut down
-        Arc::strong_count(&self.inner.node) > 0
+        // Check the atomic is_alive flag which is set to false during shutdown
+        self.inner.is_alive()
     }
 
     /// Returns the network uri of XMLRPC server for the underlying node.
@@ -171,7 +170,7 @@ impl NodeHandle {
             .register_service_server::<T, F>(&service_name, server)
             .await?;
         // Super important: Pass a Weak reference so ServiceServer doesn't keep the node alive
-        let weak_node = Arc::downgrade(&self.inner.node);
+        let weak_node = self.inner.downgrade();
         Ok(ServiceServer::new(service_name, weak_node))
     }
 

@@ -1,15 +1,15 @@
 use std::{
     net::{Ipv4Addr, SocketAddr},
-    sync::{Arc, Weak},
+    sync::Arc,
 };
 
 use abort_on_drop::ChildTask;
 use log::*;
-use tokio::{io::AsyncWriteExt, sync::Mutex};
+use tokio::io::AsyncWriteExt;
 
 use crate::tcpros::{self, ConnectionHeader};
 
-use super::{names::Name, node::actor::Node, TypeErasedCallback};
+use super::{names::Name, node::actor::WeakNodeServerHandle, TypeErasedCallback};
 
 /// ServiceServer is simply a lifetime control
 /// The underlying ServiceServer is kept alive while object is kept alive.
@@ -18,11 +18,11 @@ use super::{names::Name, node::actor::Node, TypeErasedCallback};
 // Maybe we should just let people manually call an unadvertise_service method?
 pub struct ServiceServer {
     service_name: Name,
-    weak_node: Weak<Mutex<Node>>,
+    weak_node: WeakNodeServerHandle,
 }
 
 impl ServiceServer {
-    pub fn new(service_name: Name, weak_node: Weak<Mutex<Node>>) -> Self {
+    pub fn new(service_name: Name, weak_node: WeakNodeServerHandle) -> Self {
         Self {
             service_name,
             weak_node,
@@ -33,22 +33,9 @@ impl ServiceServer {
 impl Drop for ServiceServer {
     fn drop(&mut self) {
         debug!("Dropping service server: {:?}", self.service_name);
-        // Try to upgrade weak reference - if it fails, the node is already gone
-        if let Some(node_arc) = self.weak_node.upgrade() {
-            let service_name = self.service_name.to_string();
-            // Spawn a task to do the async cleanup
-            tokio::spawn(async move {
-                let mut node = node_arc.lock().await;
-                if let Err(e) = node.unregister_service_server(&service_name).await {
-                    error!("Failed to unregister service server {service_name}: {e:?}");
-                }
-            });
-        } else {
-            debug!(
-                "Node already dropped, skipping service unadvertisement for {:?}",
-                self.service_name
-            );
-        }
+        // Use the unified helper method to unregister the service server
+        self.weak_node
+            .try_unregister_service_server(&self.service_name.to_string());
     }
 }
 

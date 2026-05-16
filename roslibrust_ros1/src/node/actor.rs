@@ -10,7 +10,10 @@ use std::{
     collections::HashMap,
     io,
     net::Ipv4Addr,
-    sync::{Arc, Weak},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Weak,
+    },
 };
 use tokio::sync::{broadcast, mpsc, Mutex};
 use tokio_util::sync::CancellationToken;
@@ -23,9 +26,78 @@ use tokio_util::sync::CancellationToken;
 pub(crate) struct NodeServerHandle {
     // Shared reference to the actual node
     pub(crate) node: Arc<Mutex<Node>>,
+    // Shared flag to track if the node is alive
+    // This is cheaper to check than locking the node
+    is_alive: Arc<AtomicBool>,
+}
+
+/// Weak reference to a NodeServerHandle
+/// This doesn't keep the Node alive and can be upgraded to a NodeServerHandle
+#[derive(Clone)]
+pub struct WeakNodeServerHandle {
+    pub(crate) node: Weak<Mutex<Node>>,
+    is_alive: Arc<AtomicBool>,
+}
+
+impl WeakNodeServerHandle {
+    /// Attempt to upgrade the weak reference to a strong reference
+    /// Returns None if the Node has already been dropped
+    pub(crate) fn upgrade(&self) -> Option<NodeServerHandle> {
+        self.node.upgrade().map(|node| NodeServerHandle {
+            node,
+            is_alive: self.is_alive.clone(),
+        })
+    }
+
+    /// Attempt to unregister a publisher with the node
+    /// This is a helper method for use in Drop implementations
+    /// If the node is already gone, this is a no-op
+    pub(crate) fn try_unregister_publisher(&self, topic_name: &str) {
+        if let Some(node_handle) = self.upgrade() {
+            let topic_name = topic_name.to_string();
+            tokio::spawn(async move {
+                let mut node = node_handle.node.lock().await;
+                if let Err(e) = node.unregister_publisher(&topic_name).await {
+                    error!("Failed to unregister publisher {topic_name}: {e:?}");
+                }
+            });
+        } else {
+            debug!("Node already dropped, skipping publisher unadvertisement for {topic_name}");
+        }
+    }
+
+    /// Attempt to unregister a service server with the node
+    /// This is a helper method for use in Drop implementations
+    /// If the node is already gone, this is a no-op
+    pub(crate) fn try_unregister_service_server(&self, service_name: &str) {
+        if let Some(node_handle) = self.upgrade() {
+            let service_name = service_name.to_string();
+            tokio::spawn(async move {
+                let mut node = node_handle.node.lock().await;
+                if let Err(e) = node.unregister_service_server(&service_name).await {
+                    error!("Failed to unregister service server {service_name}: {e:?}");
+                }
+            });
+        } else {
+            debug!("Node already dropped, skipping service unadvertisement for {service_name}");
+        }
+    }
 }
 
 impl NodeServerHandle {
+    /// Create a weak reference to this handle
+    pub(crate) fn downgrade(&self) -> WeakNodeServerHandle {
+        WeakNodeServerHandle {
+            node: Arc::downgrade(&self.node),
+            is_alive: self.is_alive.clone(),
+        }
+    }
+
+    /// Check if the node is still alive
+    /// This is a cheap operation that doesn't require locking the node
+    pub(crate) fn is_alive(&self) -> bool {
+        self.is_alive.load(Ordering::Relaxed)
+    }
     /// Get the URI of the client node.
     pub(crate) async fn get_client_uri(&self) -> Result<String, NodeError> {
         let node = self.node.lock().await;
@@ -42,7 +114,7 @@ impl NodeServerHandle {
         latching: bool,
     ) -> Result<(broadcast::Sender<Bytes>, mpsc::Sender<()>), NodeError> {
         // Create a weak reference to pass to the publication
-        let weak_node = Arc::downgrade(&self.node);
+        let weak_node = self.downgrade();
         let mut node = self.node.lock().await;
         node.register_publisher(
             topic.to_owned(),
@@ -81,7 +153,7 @@ impl NodeServerHandle {
         };
 
         // Create a weak reference to pass to the publication
-        let weak_node = Arc::downgrade(&self.node);
+        let weak_node = self.downgrade();
         let mut node = self.node.lock().await;
         node.register_publisher(
             topic.to_owned(),
@@ -237,6 +309,10 @@ pub(crate) struct Node {
     // Cancellation token to signal shutdown of background tasks (e.g., XML-RPC server)
     // When this Node is dropped, it will cancel this token
     pub(crate) shutdown_token: CancellationToken,
+    // Atomic flag to track if the node is alive
+    // Set to true in construction, false in shutdown
+    // This is shared across all handles to the node
+    is_alive: Arc<AtomicBool>,
 }
 
 impl Node {
@@ -263,6 +339,7 @@ impl Node {
             crate::SyncMasterClient::new(master_uri, &client_uri, node_name.to_string());
 
         // Create the node
+        let is_alive = Arc::new(AtomicBool::new(true));
         let node = Self {
             client: rosmaster_client,
             sync_client,
@@ -273,19 +350,24 @@ impl Node {
             hostname: hostname.to_owned(),
             node_name: node_name.to_owned(),
             shutdown_token: shutdown_token.clone(),
+            is_alive: is_alive.clone(),
         };
 
         let node_arc = Arc::new(Mutex::new(node));
+        let node_handle = NodeServerHandle {
+            node: node_arc,
+            is_alive,
+        };
 
         // Create a weak reference for the xmlrpc server
         // This allows the server to access the node without keeping it alive
-        let weak_node = Arc::downgrade(&node_arc);
+        let weak_node = node_handle.downgrade();
 
         // Now start serving with the properly initialized node
         // Pass the weak reference and cancellation token so the server can shut down when signaled
         bound_xmlrpc.serve(weak_node, shutdown_token);
 
-        Ok(NodeServerHandle { node: node_arc })
+        Ok(node_handle)
     }
 
     async fn register_subscriber(
@@ -328,7 +410,7 @@ impl Node {
         msg_definition: String,
         md5sum: String,
         latching: bool,
-        weak_node: Weak<Mutex<Node>>,
+        weak_node: WeakNodeServerHandle,
     ) -> Result<(broadcast::Sender<Bytes>, mpsc::Sender<()>), NodeError> {
         // Return handle to existing Publication if it exists
         let existing_entry = {
@@ -501,6 +583,9 @@ impl Node {
     // This is not expected to be called anywhere other than the drop impl
     pub(crate) fn shutdown(&mut self) {
         debug!("Node shutdown called for: {}", self.node_name);
+
+        // Mark the node as no longer alive
+        self.is_alive.store(false, Ordering::Relaxed);
 
         // Tell xmlrpc server to shut down first
         self.shutdown_token.cancel();

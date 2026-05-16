@@ -1,12 +1,9 @@
-use super::Node;
 use hyper::{Body, Response, StatusCode};
 use log::*;
 use std::{
     convert::Infallible,
     net::{Ipv4Addr, SocketAddr},
-    sync::Weak,
 };
-use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 
 #[allow(unused)]
@@ -48,7 +45,11 @@ impl BoundXmlRpcServer {
 
     /// Start serving requests with a weak reference to the node and cancellation token
     /// The server will shutdown when the cancellation token is cancelled or when the node is dropped
-    pub fn serve(self, weak_node: Weak<Mutex<Node>>, cancellation_token: CancellationToken) {
+    pub fn serve(
+        self,
+        weak_node: super::actor::WeakNodeServerHandle,
+        cancellation_token: CancellationToken,
+    ) {
         let make_svc = hyper::service::make_service_fn(move |connection| {
             debug!("New node xmlrpc connection {connection:?}");
             let weak_node = weak_node.clone();
@@ -89,12 +90,12 @@ impl XmlRpcServer {
 
     // Our actual service handler with our error type
     async fn respond_inner(
-        weak_node: Weak<Mutex<Node>>,
+        weak_node: super::actor::WeakNodeServerHandle,
         body: hyper::Request<Body>,
     ) -> Result<Response<Body>, Box<Response<Body>>> {
         // Try to upgrade the weak reference to a strong reference
         // If this fails, the node has been dropped and we should error out
-        let node_arc = weak_node.upgrade().ok_or_else(|| {
+        let node_handle = weak_node.upgrade().ok_or_else(|| {
             Box::new(Self::make_error_response(
                 std::io::Error::new(std::io::ErrorKind::NotFound, "Node has been dropped"),
                 "Node no longer exists, shutting down XmlRpc server",
@@ -132,7 +133,7 @@ impl XmlRpcServer {
         match method_name.as_str() {
             "getMasterUri" => {
                 debug!("getMasterUri called by {args:?}");
-                let node = node_arc.lock().await;
+                let node = node_handle.node.lock().await;
                 let uri = node.client.get_master_uri().to_owned();
                 Self::to_response(uri)
             }
@@ -147,7 +148,7 @@ impl XmlRpcServer {
             }
             "getSubscriptions" => {
                 debug!("getSubscriptions called by {args:?}");
-                let node = node_arc.lock().await;
+                let node = node_handle.node.lock().await;
                 let subs: Vec<(String, String)> = node
                     .subscriptions
                     .iter()
@@ -165,7 +166,7 @@ impl XmlRpcServer {
             }
             "getPublications" => {
                 debug!("getPublications called by {args:?}");
-                let node = node_arc.lock().await;
+                let node = node_handle.node.lock().await;
                 let pubs: Vec<(String, String)> = node
                     .publishers
                     .iter()
@@ -195,7 +196,7 @@ impl XmlRpcServer {
                         )
                     })?;
 
-                let mut node = node_arc.lock().await;
+                let mut node = node_handle.node.lock().await;
                 if let Some(subscription) = node.subscriptions.get_mut(&topic) {
                     // First, remove any publishers that are no longer in the list
                     subscription.remove_stale_publishers(&publishers).await;
@@ -229,7 +230,7 @@ impl XmlRpcServer {
                 let protocols = protocols.iter().flatten().cloned().collect::<Vec<_>>();
                 debug!("Request for topic {topic} from {caller_id} via protocols {protocols:?}");
 
-                let node = node_arc.lock().await;
+                let node = node_handle.node.lock().await;
                 let params = if protocols.iter().any(|proto| proto.as_str() == "TCPROS") {
                     if let Some((_key, publishing_channel)) =
                         node.publishers.iter().find(|(key, _pub)| *key == &topic)
@@ -286,7 +287,7 @@ impl XmlRpcServer {
 
                 // TODO this is not tested, we need to add a test for this
                 // Trigger shutdown by spawning a task that will lock and shutdown the node
-                let node_for_shutdown = node_arc.clone();
+                let node_for_shutdown = node_handle.node.clone();
                 tokio::spawn(async move {
                     let mut node_guard = node_for_shutdown.lock().await;
                     node_guard.shutdown();
@@ -374,7 +375,7 @@ impl XmlRpcServer {
 
     // Is the actual function we hand to hyper
     async fn respond(
-        weak_node: Weak<Mutex<Node>>,
+        weak_node: super::actor::WeakNodeServerHandle,
         body: hyper::Request<Body>,
     ) -> Result<Response<Body>, Infallible> {
         // Call our inner function and unwrap error type into response
