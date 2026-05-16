@@ -10,6 +10,7 @@ roslibrust = { path = "../roslibrust", features = ["ros1", "codegen", "macro", "
 lazy_static = "1.5"
 tokio = { workspace = true }
 log = { workspace = true }
+zenoh = "1.7"
 
 [dev-dependencies]
 diffy = "0.3.0"
@@ -17,6 +18,7 @@ criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
 pprof = { version = "0.15", features = ["flamegraph", "criterion"] }
 test-log = { workspace = true }
 hex = "0.4"
+roslibrust_zenoh = { path = "../roslibrust_zenoh" }
 
 [[bin]]
 path = "src/performance_ramp.rs"

@@ -5,6 +5,7 @@ use roslibrust_common::topic_name::{GlobalTopicName, ToGlobalTopicName};
 use roslibrust_common::*;
 
 use log::*;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use zenoh::bytes::ZBytes;
 
 /// A wrapper around a normal zenoh session that adds roslibrust specific functionality.
@@ -25,16 +26,24 @@ impl ZenohClient {
 /// This type is self de-registering, and dropping the publisher will automatically un-advertise the topic.
 pub struct ZenohPublisher<T> {
     publisher: zenoh::pubsub::Publisher<'static>,
+    // Used to track buffer capacity size to minimize allocations for fixed-size streams.
+    capacity_hint: AtomicUsize,
     _marker: std::marker::PhantomData<T>,
 }
 
 impl<T: RosMessageType> Publish<T> for ZenohPublisher<T> {
     async fn publish(&self, data: &T) -> Result<()> {
-        let bytes = roslibrust_serde_rosmsg::to_vec_skip_length(data).map_err(|e| {
+        let size_hint = self.capacity_hint.load(Ordering::Relaxed);
+        let mut bytes = Vec::with_capacity(size_hint);
+        roslibrust_serde_rosmsg::to_writer_skip_length(&mut bytes, data).map_err(|e| {
             Error::SerializationError(format!("Failed to serialize message: {e:?}"))
         })?;
 
-        match self.publisher.put(&bytes).await {
+        if bytes.len() > size_hint {
+            self.capacity_hint.store(bytes.len(), Ordering::Relaxed);
+        }
+
+        match self.publisher.put(bytes).await {
             Ok(()) => Ok(()),
             Err(e) => Err(Error::Unexpected(anyhow::anyhow!(
                 "Failed to publish message to zenoh: {e:?}"
@@ -70,15 +79,26 @@ impl<T: RosMessageType> Subscribe<T> for ZenohSubscriber<T> {
             }
         };
 
-        let bytes = sample.payload().to_bytes();
-        // Note: Zenoh decided to not make the 4 byte length header part of the payload
-        // So we use the known length version of the deserialization
-        let msg = roslibrust_serde_rosmsg::from_slice_known_length(&bytes, bytes.len() as u32)
-            .map_err(|e| {
-                Error::SerializationError(format!("Failed to deserialize sample: {e:?}"))
-            })?;
+        let msg = deserialize_payload(sample.payload(), "sample")?;
         Ok(msg)
     }
+}
+
+fn deserialize_payload<T: RosMessageType>(payload: &ZBytes, context: &str) -> Result<T> {
+    let mut slices = payload.slices();
+    if let Some(slice) = slices.next() {
+        if slices.next().is_none() {
+            return roslibrust_serde_rosmsg::from_slice_known_length(slice, slice.len() as u32)
+                .map_err(|e| {
+                    Error::SerializationError(format!("Failed to deserialize {context}: {e:?}"))
+                });
+        }
+    }
+
+    // Note: Zenoh decided to not make the 4 byte length header part of the payload.
+    let mut reader = payload.reader();
+    roslibrust_serde_rosmsg::from_reader_known_length(&mut reader, payload.len() as u32)
+        .map_err(|e| Error::SerializationError(format!("Failed to deserialize {context}: {e:?}")))
 }
 
 impl TopicProvider for ZenohClient {
@@ -104,6 +124,7 @@ impl TopicProvider for ZenohClient {
 
         Ok(ZenohPublisher {
             publisher,
+            capacity_hint: 1024.into(),
             _marker: std::marker::PhantomData,
         })
     }
@@ -166,12 +187,11 @@ impl<T: RosServiceType> Service<T> for ZenohServiceClient<T> {
         let request_bytes = roslibrust_serde_rosmsg::to_vec_skip_length(request).map_err(|e| {
             Error::SerializationError(format!("Failed to serialize message: {e:?}"))
         })?;
-        debug!("request bytes: {request_bytes:?}");
 
         let query = match self
             .session
             .get(&self.zenoh_query)
-            .payload(&request_bytes)
+            .payload(request_bytes)
             .await
         {
             Ok(query) => query,
@@ -202,13 +222,7 @@ impl<T: RosServiceType> Service<T> for ZenohServiceClient<T> {
             }
         };
 
-        let bytes = sample.payload().to_bytes();
-
-        // Note: Zenoh decided to not make the 4 byte length header part of the payload
-        let msg = roslibrust_serde_rosmsg::from_slice_known_length(&bytes, bytes.len() as u32)
-            .map_err(|e| {
-                Error::SerializationError(format!("Failed to deserialize sample: {e:?}"))
-            })?;
+        let msg = deserialize_payload(sample.payload(), "service response")?;
         Ok(msg)
     }
 }
@@ -289,16 +303,9 @@ impl ServiceProvider for ZenohClient {
                     error!("Received a query with no payload for a ros0 service {query:?}");
                     continue;
                 };
-                let bytes = payload.to_bytes();
-                debug!("Got bytes: {bytes:?}");
-
-                // Note: Zenoh decided the 4 byte length header is not part of the payload
-                let Ok(request) =
-                    roslibrust_serde_rosmsg::from_slice_known_length(&bytes, bytes.len() as u32)
-                        .map_err(|e| {
-                            error!("Failed to deserialize request: {e:?}");
-                        })
-                else {
+                let Ok(request) = deserialize_payload(payload, "service request").map_err(|e| {
+                    error!("{e:?}");
+                }) else {
                     continue;
                 };
 

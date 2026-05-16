@@ -3579,8 +3579,10 @@ dependencies = [
  "log",
  "pprof",
  "roslibrust",
+ "roslibrust_zenoh",
  "test-log",
  "tokio",
+ "zenoh",
 ]
 
 [[package]]
