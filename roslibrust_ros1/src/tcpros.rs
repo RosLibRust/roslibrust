@@ -270,18 +270,44 @@ pub async fn receive_header(stream: &mut TcpStream) -> Result<ConnectionHeader, 
 /// It first reads the length of the body, then reads the body itself.
 /// The returned Bytes includes the length of the body at the front as serde_rosmsg expects.
 pub async fn receive_body(stream: &mut TcpStream) -> Result<Bytes, std::io::Error> {
+    receive_body_with_capacity_hint(stream, 1024).await
+}
+
+/// Reads the body of a message from the given stream, using a previously observed
+/// message size as the initial allocation.
+///
+/// This is useful for large fixed-shape streams such as images: after the first
+/// message, the receive buffer can usually be allocated at the final size before
+/// the length prefix has been read.
+pub async fn receive_body_with_capacity_hint(
+    stream: &mut TcpStream,
+    capacity_hint: usize,
+) -> Result<Bytes, std::io::Error> {
     use bytes::{BufMut, BytesMut};
     use tokio::io::AsyncReadExt;
 
-    let body_len = stream.read_u32_le().await? as usize;
+    let mut buf = BytesMut::with_capacity(capacity_hint.max(4));
+
+    while buf.len() < 4 {
+        let remaining = 4 - buf.len();
+        let n = stream.read_buf(&mut (&mut buf).limit(remaining)).await?;
+        if n == 0 {
+            return Err(std::io::Error::from(std::io::ErrorKind::UnexpectedEof));
+        }
+    }
+
+    let body_len =
+        u32::from_le_bytes(buf[..4].try_into().expect("length prefix is four bytes")) as usize;
     let total_len = 4 + body_len;
 
-    let mut buf = BytesMut::with_capacity(total_len);
-    buf.put_u32_le(body_len as u32); // len == 4, capacity == 4 + body_len
+    if buf.capacity() < total_len {
+        buf.reserve(total_len - buf.capacity());
+    }
 
     // Read until we have read the full body
     while buf.len() < total_len {
-        let n = stream.read_buf(&mut buf).await?;
+        let remaining = total_len - buf.len();
+        let n = stream.read_buf(&mut (&mut buf).limit(remaining)).await?;
         if n == 0 {
             return Err(std::io::Error::from(std::io::ErrorKind::UnexpectedEof));
         }

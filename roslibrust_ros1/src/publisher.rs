@@ -7,7 +7,10 @@ use bytes::{BufMut, Bytes};
 use log::*;
 use roslibrust_common::RosMessageType;
 use std::{
-    io::Write, marker::PhantomData, net::{Ipv4Addr, SocketAddr}, sync::atomic::{AtomicUsize, Ordering}
+    io::Write,
+    marker::PhantomData,
+    net::{Ipv4Addr, SocketAddr},
+    sync::atomic::{AtomicUsize, Ordering},
 };
 use tokio::{
     io::AsyncWriteExt,
@@ -53,7 +56,7 @@ impl<T: RosMessageType> Publisher<T> {
         let buffer = bytes::BytesMut::with_capacity(size_hint + 4);
         let mut writer = buffer.writer();
         // Write empty u32 for size
-        writer.write(&[0,0,0,0]).unwrap();
+        writer.write(&[0, 0, 0, 0]).unwrap();
         roslibrust_serde_rosmsg::to_writer_skip_length(&mut writer, data)?;
         let mut buffer = writer.into_inner();
         // Patch size back to front of buffer

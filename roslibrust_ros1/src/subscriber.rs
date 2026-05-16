@@ -301,6 +301,7 @@ async fn publisher_reader_task(
 ) {
     let mut retry_period = INITIAL_RETRY_PERIOD;
     let mut tcp_endpoint: Option<String> = None;
+    let mut receive_capacity_hint = 1024;
 
     'connection_loop: loop {
         // Check for cancellation before attempting connection
@@ -384,12 +385,15 @@ async fn publisher_reader_task(
                     log::debug!("Publisher reader task for {publisher_uri} cancelled during read");
                     break 'connection_loop;
                 }
-                result = tcpros::receive_body(&mut stream) => {
+                result = tcpros::receive_body_with_capacity_hint(&mut stream, receive_capacity_hint) => {
                     match result {
                         Ok(body) => {
                             trace!(
                                 "Subscription to {topic_name} received message from {publisher_uri}"
                             );
+                            if body.len() > receive_capacity_hint {
+                                receive_capacity_hint = body.len();
+                            }
                             if sender.send(body).is_err() {
                                 log::error!(
                                     "Unable to send message data due to dropped channel, closing connection to {publisher_uri}"
