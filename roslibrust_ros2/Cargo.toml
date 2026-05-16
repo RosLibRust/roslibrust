@@ -12,8 +12,8 @@ env_logger = "0.11"
 cdr = "0.2"
 roslibrust_common = { path = "../roslibrust_common", version = "0.20" }
 anyhow = "1.0"
-# Experimental "raw ros" library, we're going to try to build on top of
-ros-z = { git = "https://github.com/ZettaScaleLabs/ros-z.git" }
+# Main as of May 16th 2026
+ros-z = { git = "https://github.com/ZettaScaleLabs/ros-z.git", rev = "9bb6305" }
 log = "0.4"
 # Used for cancellation token
 tokio-util = "0.7"
