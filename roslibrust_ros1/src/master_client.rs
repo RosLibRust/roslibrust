@@ -517,10 +517,7 @@ mod test {
         client.register_service(service, service_uri).await.unwrap();
 
         // Confirm it exists
-        assert_eq!(
-            client.lookup_service(service).await.unwrap(),
-            service_uri
-        );
+        assert_eq!(client.lookup_service(service).await.unwrap(), service_uri);
 
         // Unregister service
         assert!(client
@@ -539,16 +536,10 @@ mod test {
         let service = "/my_service_for_testing_registration_sync";
         let service_uri = "http://localhost:11312";
         // Register
-        client
-            .register_service(service, service_uri)
-            .await
-            .unwrap();
+        client.register_service(service, service_uri).await.unwrap();
 
         // Confirm it exists
-        assert_eq!(
-            client.lookup_service(service).await.unwrap(),
-            service_uri
-        );
+        assert_eq!(client.lookup_service(service).await.unwrap(), service_uri);
 
         // Unregister service
         assert!(sync_client
