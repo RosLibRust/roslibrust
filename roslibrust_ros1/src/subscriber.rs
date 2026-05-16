@@ -1,4 +1,4 @@
-use crate::{names::Name, tcpros::ConnectionHeader};
+use crate::{names::Name, node::actor::WeakNodeServerHandle, tcpros::ConnectionHeader};
 use abort_on_drop::ChildTask;
 use bytes::Bytes;
 use log::*;
@@ -17,15 +17,23 @@ use tokio_util::sync::CancellationToken;
 use super::tcpros;
 
 pub struct Subscriber<T> {
-    // Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers
+    // Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers.
     receiver: broadcast::Receiver<Bytes>,
+    topic_name: String,
+    weak_node: WeakNodeServerHandle,
     _phantom: PhantomData<T>,
 }
 
 impl<T: RosMessageType> Subscriber<T> {
-    pub(crate) fn new(receiver: broadcast::Receiver<Bytes>) -> Self {
+    pub(crate) fn new(
+        receiver: broadcast::Receiver<Bytes>,
+        topic_name: String,
+        weak_node: WeakNodeServerHandle,
+    ) -> Self {
         Self {
             receiver,
+            topic_name,
+            weak_node,
             _phantom: PhantomData,
         }
     }
@@ -60,15 +68,23 @@ impl<T: RosMessageType> Subscriber<T> {
 }
 
 pub struct SubscriberAny {
-    // Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers
+    // Uses Bytes for efficient cloning (reference counted) when there are multiple subscribers.
     receiver: broadcast::Receiver<Bytes>,
+    topic_name: String,
+    weak_node: WeakNodeServerHandle,
     _phantom: PhantomData<ShapeShifter>,
 }
 
 impl SubscriberAny {
-    pub(crate) fn new(receiver: broadcast::Receiver<Bytes>) -> Self {
+    pub(crate) fn new(
+        receiver: broadcast::Receiver<Bytes>,
+        topic_name: String,
+        weak_node: WeakNodeServerHandle,
+    ) -> Self {
         Self {
             receiver,
+            topic_name,
+            weak_node,
             _phantom: PhantomData,
         }
     }
@@ -85,6 +101,31 @@ impl SubscriberAny {
             Err(RecvError::Lagged(n)) => return Some(Err(SubscriberError::Lagged(n))),
         };
         Some(Ok(data))
+    }
+}
+
+// Release our broadcast::Receiver BEFORE signalling the node actor so its
+// `Subscription::subscriber_count()` check sees an accurate `receiver_count()`.
+// We can't move out of `&mut self` in `Drop`, so swap in a fresh detached
+// receiver (which is dropped at end of scope) — its capacity is irrelevant.
+fn drop_receiver(slot: &mut broadcast::Receiver<Bytes>) {
+    let (_tx, dummy) = broadcast::channel(1);
+    let _ = std::mem::replace(slot, dummy);
+}
+
+impl<T> Drop for Subscriber<T> {
+    fn drop(&mut self) {
+        drop_receiver(&mut self.receiver);
+        // Use the unified helper method to unregister the subscriber
+        self.weak_node.try_unregister_subscriber(&self.topic_name);
+    }
+}
+
+impl Drop for SubscriberAny {
+    fn drop(&mut self) {
+        drop_receiver(&mut self.receiver);
+        // Use the unified helper method to unregister the subscriber
+        self.weak_node.try_unregister_subscriber(&self.topic_name);
     }
 }
 
@@ -156,6 +197,14 @@ impl Subscription {
 
     pub fn get_receiver(&self) -> broadcast::Receiver<Bytes> {
         self.msg_sender.subscribe()
+    }
+
+    /// Number of live external `Subscriber<T>` / `SubscriberAny` instances holding a receiver
+    /// for this subscription. The `Subscription` keeps one internal receiver (`_msg_receiver`)
+    /// to keep the broadcast channel alive even when there are momentarily no external
+    /// subscribers; that one is subtracted out here.
+    pub(crate) fn subscriber_count(&self) -> usize {
+        self.msg_sender.receiver_count().saturating_sub(1)
     }
 
     pub async fn add_publisher_source(
@@ -252,6 +301,7 @@ async fn publisher_reader_task(
 ) {
     let mut retry_period = INITIAL_RETRY_PERIOD;
     let mut tcp_endpoint: Option<String> = None;
+    let mut receive_capacity_hint = 1024;
 
     'connection_loop: loop {
         // Check for cancellation before attempting connection
@@ -335,12 +385,15 @@ async fn publisher_reader_task(
                     log::debug!("Publisher reader task for {publisher_uri} cancelled during read");
                     break 'connection_loop;
                 }
-                result = tcpros::receive_body(&mut stream) => {
+                result = tcpros::receive_body_with_capacity_hint(&mut stream, receive_capacity_hint) => {
                     match result {
                         Ok(body) => {
                             trace!(
                                 "Subscription to {topic_name} received message from {publisher_uri}"
                             );
+                            if body.len() > receive_capacity_hint {
+                                receive_capacity_hint = body.len();
+                            }
                             if sender.send(body).is_err() {
                                 log::error!(
                                     "Unable to send message data due to dropped channel, closing connection to {publisher_uri}"

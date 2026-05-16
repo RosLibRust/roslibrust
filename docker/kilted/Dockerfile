@@ -7,6 +7,9 @@ RUN apt update && apt install -y git
 # Install rosbridge suite for rosbridge backend testing
 RUN apt update && apt install -y ros-kilted-rosbridge-suite
 
+# Install rosbag2 for MCAP integration testing
+RUN apt update && apt install -y ros-kilted-rosbag2
+
 # Install rmw_zenoh for zenoh backend testing
 RUN apt update && apt install -y ros-kilted-rmw-zenoh-cpp
 # Set RMW_IMPLEMENTATION to rmw_zenoh_cpp for zenoh backend testing

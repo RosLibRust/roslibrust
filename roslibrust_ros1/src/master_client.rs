@@ -32,6 +32,18 @@ pub struct MasterClient {
     id: String,
 }
 
+/// A synchronous version of MasterClient for use in Drop implementations
+/// This client uses blocking HTTP calls (via ureq) and can be safely called from synchronous contexts
+#[derive(Clone)]
+pub struct SyncMasterClient {
+    // Address at which the rosmaster should be found
+    master_uri: String,
+    // Address at which this node should be reached
+    client_uri: String,
+    // An id for this node
+    id: String,
+}
+
 /// Format of data returned by rosmaster's getSystemState
 #[derive(Debug)]
 struct StateEntry {
@@ -347,9 +359,109 @@ impl MasterClient {
     }
 }
 
+impl SyncMasterClient {
+    /// Constructs a new synchronous client for communicating with a ros master
+    /// - master_uri: Expects a fully resolved uri for the master e.g. "http://localhost:11311"
+    /// - client_uri: The URI that should be told to other Nodes / Master to reach this nodes xmlrpc server
+    /// - id: A client_id to use when communicating with the master, expected to be a valid ros name e.g. "/my_node"
+    pub fn new(
+        master_uri: impl Into<String>,
+        client_uri: impl Into<String>,
+        id: impl Into<String>,
+    ) -> Self {
+        SyncMasterClient {
+            master_uri: master_uri.into(),
+            client_uri: client_uri.into(),
+            id: id.into(),
+        }
+    }
+
+    fn post<T: serde::de::DeserializeOwned + std::fmt::Debug>(
+        &self,
+        request: String,
+    ) -> Result<T, RosMasterError> {
+        trace!("Sending master (sync): {request}");
+
+        // Create a client with reasonable timeouts for cleanup operations
+        let agent = ureq::builder()
+            .timeout(std::time::Duration::from_secs(2))
+            .build();
+
+        let response = agent
+            .post(&self.master_uri)
+            .send_string(&request)
+            .map_err(|e| {
+                // Convert ureq error to our error type
+                RosMasterError::MasterError(format!("HTTP request failed: {}", e))
+            })?
+            .into_string()
+            .map_err(|e| RosMasterError::MasterError(format!("Failed to read response: {}", e)))?;
+        trace!("Got response (sync): {response}");
+        let (status_code, msg, data) =
+            serde_xmlrpc::response_from_str::<(i8, String, T)>(&response)?;
+        match status_code {
+            1 => {
+                trace!("Parsed from rosmaster (sync): {msg:?} {data:?}");
+            }
+            _ => {
+                return Err(RosMasterError::MasterError(msg));
+            }
+        };
+        Ok(data)
+    }
+
+    /// Synchronously unregister a subscriber from the master
+    pub fn unregister_subscriber(&self, topic: impl Into<String>) -> Result<bool, RosMasterError> {
+        let body = serde_xmlrpc::request_to_string(
+            "unregisterSubscriber",
+            vec![
+                self.id.clone().into(),
+                topic.into().into(),
+                self.client_uri.clone().into(),
+            ],
+        )?;
+        let x: u8 = self.post(body)?;
+        Ok(x.eq(&1))
+    }
+
+    /// Synchronously unregister a publisher from the master
+    pub fn unregister_publisher(&self, topic: impl Into<String>) -> Result<bool, RosMasterError> {
+        let body = serde_xmlrpc::request_to_string(
+            "unregisterPublisher",
+            vec![
+                self.id.clone().into(),
+                topic.into().into(),
+                self.client_uri.clone().into(),
+            ],
+        )?;
+        let x: u8 = self.post(body)?;
+        Ok(x.eq(&1))
+    }
+
+    /// Synchronously unregister a service from the master
+    pub fn unregister_service(
+        &self,
+        service: impl Into<String>,
+        service_uri: impl Into<String>,
+    ) -> Result<bool, RosMasterError> {
+        let body = serde_xmlrpc::request_to_string(
+            "unregisterService",
+            vec![
+                self.id.clone().into(),
+                service.into().into(),
+                service_uri.into().into(),
+            ],
+        )?;
+        let x: u8 = self.post(body)?;
+        Ok(x.eq(&1))
+    }
+}
+
 #[cfg(feature = "ros1_test")]
 #[cfg(test)]
 mod test {
+
+    use crate::SyncMasterClient;
 
     use super::{MasterClient, RosMasterError};
 
@@ -362,6 +474,14 @@ mod test {
             TEST_NODE_ID,
         )
         .await
+    }
+
+    fn test_sync_client() -> SyncMasterClient {
+        SyncMasterClient::new(
+            "http://localhost:11311",
+            "http://localhost:11312",
+            TEST_NODE_ID,
+        )
     }
 
     #[test_log::test(tokio::test)]
@@ -391,22 +511,43 @@ mod test {
     #[test_log::test(tokio::test)]
     async fn test_register_and_unregister_service() {
         let client = test_client().await.unwrap();
-        let service = "/my_service";
+        let service = "/my_service_for_testing_registration_async";
         let service_uri = "http://localhost:11312";
         // Register
         client.register_service(service, service_uri).await.unwrap();
 
         // Confirm it exists
-        assert_eq!(
-            client.lookup_service("/my_service").await.unwrap(),
-            service_uri
-        );
+        assert_eq!(client.lookup_service(service).await.unwrap(), service_uri);
 
         // Unregister service
         assert!(client
             .unregister_service(service, service_uri)
             .await
             .unwrap());
+
+        // Confirm it is gone
+        assert!(client.lookup_service(service).await.is_err())
+    }
+
+    #[test_log::test(tokio::test)]
+    async fn test_register_and_unregister_service_sync() {
+        let client = test_client().await.unwrap();
+        let sync_client = test_sync_client();
+        let service = "/my_service_for_testing_registration_sync";
+        let service_uri = "http://localhost:11312";
+        // Register
+        client.register_service(service, service_uri).await.unwrap();
+
+        // Confirm it exists
+        assert_eq!(client.lookup_service(service).await.unwrap(), service_uri);
+
+        // Unregister service
+        assert!(sync_client
+            .unregister_service(service, service_uri)
+            .unwrap());
+
+        // Confirm it's gone
+        assert!(client.lookup_service(service).await.is_err());
     }
 
     #[test_log::test(tokio::test)]

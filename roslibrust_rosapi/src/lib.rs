@@ -397,8 +397,7 @@ mod test {
         // Tiny sleep to throttle rate at which tests are run to try to make CI more consistent
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         let opts = ClientHandleOptions::new("ws://localhost:9090")
-            // 200 ms failed CI
-            .timeout(std::time::Duration::from_millis(500));
+            .timeout(std::time::Duration::from_millis(1000));
         ClientHandle::new_with_options(opts).await.unwrap()
     }
 

@@ -9,9 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added the roslibrust_mcap crate which provides utilities for reading and writing MCAP files compatible ROS2 bag tools with ROS message support.
+
 ### Fixed
 
+- @DomWilliamsEE fix ros1 subscribers not automatically unsubscribing from the master when dropped.
+
 ### Changed
+
+- ~20% performance improvement on large images and strings with ROS1 and ROS1-zenoh backends by removing copies, and improving pre-allocation
 
 ## 0.20.0 - March 2nd, 2026
 

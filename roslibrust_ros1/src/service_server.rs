@@ -9,7 +9,7 @@ use tokio::io::AsyncWriteExt;
 
 use crate::tcpros::{self, ConnectionHeader};
 
-use super::{names::Name, NodeHandle, TypeErasedCallback};
+use super::{names::Name, node::actor::WeakNodeServerHandle, TypeErasedCallback};
 
 /// ServiceServer is simply a lifetime control
 /// The underlying ServiceServer is kept alive while object is kept alive.
@@ -18,14 +18,14 @@ use super::{names::Name, NodeHandle, TypeErasedCallback};
 // Maybe we should just let people manually call an unadvertise_service method?
 pub struct ServiceServer {
     service_name: Name,
-    node_handle: NodeHandle,
+    weak_node: WeakNodeServerHandle,
 }
 
 impl ServiceServer {
-    pub fn new(service_name: Name, node_handle: NodeHandle) -> Self {
+    pub fn new(service_name: Name, weak_node: WeakNodeServerHandle) -> Self {
         Self {
             service_name,
-            node_handle,
+            weak_node,
         }
     }
 }
@@ -33,9 +33,9 @@ impl ServiceServer {
 impl Drop for ServiceServer {
     fn drop(&mut self) {
         debug!("Dropping service server: {:?}", self.service_name);
-        let _ = self
-            .node_handle
-            .unadvertise_service_server(&self.service_name.to_string());
+        // Use the unified helper method to unregister the service server
+        self.weak_node
+            .try_unregister_service_server(&self.service_name.to_string());
     }
 }
 

@@ -40,24 +40,13 @@ impl NodeHandle {
         Ok(nh)
     }
 
-    /// This creates a clone() of NodeHandle that doesn't keep the underlying node alive
-    /// This should be used for things like ServiceServer which wants to be able to talk to the node
-    /// but doesn't need to keep the node alive.
-    pub(crate) fn weak_clone(&self) -> NodeHandle {
-        NodeHandle {
-            inner: NodeServerHandle {
-                node_server_sender: self.inner.node_server_sender.clone(),
-                _node_task: None,
-            },
-        }
-    }
-
     /// This function may be removed...
     /// All node handles connect to a backend node server that actually handles the communication with ROS
     /// If this function returns false, the backend node server has shut down and this handle is invalid.
     /// This state should be unreachable by normal usage of the library.
     pub fn is_ok(&self) -> bool {
-        !self.inner.node_server_sender.is_closed()
+        // Check the atomic is_alive flag which is set to false during shutdown
+        self.inner.is_alive()
     }
 
     /// Returns the network uri of XMLRPC server for the underlying node.
@@ -126,7 +115,13 @@ impl NodeHandle {
             .inner
             .register_subscriber::<roslibrust_common::ShapeShifter>(topic_name, queue_size)
             .await?;
-        Ok(SubscriberAny::new(receiver))
+        // Pass a weak reference so Subscriber doesn't keep the node alive
+        let weak_node = self.inner.downgrade();
+        Ok(SubscriberAny::new(
+            receiver,
+            topic_name.to_string(),
+            weak_node,
+        ))
     }
 
     /// Subscribe to a topic with automatic deserialization to the given type.
@@ -144,7 +139,9 @@ impl NodeHandle {
             .inner
             .register_subscriber::<T>(topic_name, queue_size)
             .await?;
-        Ok(Subscriber::new(receiver))
+        // Pass a weak reference so Subscriber doesn't keep the node alive
+        let weak_node = self.inner.downgrade();
+        Ok(Subscriber::new(receiver, topic_name.to_string(), weak_node))
     }
 
     pub async fn service_client<T: roslibrust_common::RosServiceType>(
@@ -172,28 +169,8 @@ impl NodeHandle {
         self.inner
             .register_service_server::<T, F>(&service_name, server)
             .await?;
-        // Super important. Don't clone self or we create a STRONG NodeHandle that keeps the node alive
-        Ok(ServiceServer::new(service_name, self.weak_clone()))
-    }
-
-    // TODO Major: This should probably be moved to NodeServerHandle?
-    /// Not intended to be called manually
-    /// Stops hosting the specified server.
-    /// This is automatically called when dropping the ServiceServer returned by [advertise_service]
-    pub(crate) fn unadvertise_service_server(&self, service_name: &str) -> Result<(), NodeError> {
-        // TODO should we be using Name as the type of service_name here?
-        // I don't love Name's API at the moment
-        // This function is intended to be called in a "Drop impl" which is non-async
-        // so we're wrapping in a task here.
-        // This should be fine due to the "cmd dispatch" that is the current communication mechanism with NodeServer
-        let copy = self.clone();
-        let name_copy = service_name.to_string();
-        tokio::spawn(async move {
-            let result = copy.inner.unadvertise_service(&name_copy).await;
-            if let Err(e) = result {
-                log::error!("Failed to undvertise service: {e:?}");
-            }
-        });
-        Ok(())
+        // Super important: Pass a Weak reference so ServiceServer doesn't keep the node alive
+        let weak_node = self.inner.downgrade();
+        Ok(ServiceServer::new(service_name, weak_node))
     }
 }
