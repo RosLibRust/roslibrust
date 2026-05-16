@@ -550,4 +550,85 @@ mod tests {
         assert!(!after.is_subscribed("/test_cleanup_sub", "/test_node_cleanup"));
         assert!(!after.is_service_provider("/test_cleanup_srv", "/test_node_cleanup"));
     }
+
+    /// Test that dropping a subscriber, publisher, or service server after
+    /// the tokio runtime has been dropped does not panic.
+    /// This verifies the fix for the issue where `tokio::spawn` would panic
+    /// if called from Drop when no runtime exists.
+    #[test_log::test(test)]
+    fn test_drop_after_runtime_destroyed() {
+        // Create objects to be dropped later
+        let (publisher, subscriber, service_server) = {
+            // Create a new runtime
+            let rt = tokio::runtime::Runtime::new().unwrap();
+
+            // Create objects within the runtime
+            rt.block_on(async {
+                let nh = NodeHandle::new("http://localhost:11311", "/test_drop_after_runtime")
+                    .await
+                    .unwrap();
+
+                let publisher = nh
+                    .advertise::<std_msgs::String>("/test_drop_after_runtime_pub", 1, false)
+                    .await
+                    .unwrap();
+
+                let subscriber = nh
+                    .subscribe::<std_msgs::String>("/test_drop_after_runtime_sub", 1)
+                    .await
+                    .unwrap();
+
+                let service_server = nh
+                    .advertise_service::<std_srvs::Trigger, _>(
+                        "/test_drop_after_runtime_srv",
+                        |_req| {
+                            Ok(std_srvs::TriggerResponse {
+                                success: true,
+                                message: "ok".to_string(),
+                            })
+                        },
+                    )
+                    .await
+                    .unwrap();
+
+                (publisher, subscriber, service_server)
+            })
+            // Runtime is dropped here when it goes out of scope
+        };
+
+        // Now drop the objects after the runtime has been destroyed
+        // This should NOT panic - it should gracefully skip the unregister
+        std::mem::drop(publisher);
+        std::mem::drop(subscriber);
+        std::mem::drop(service_server);
+
+        // If we get here without panicking, the test passes
+    }
+
+    /// Test that dropping a NodeHandle after the tokio runtime has been
+    /// dropped does not panic.
+    /// This verifies that the Node's Drop implementation (which uses
+    /// synchronous cleanup) works correctly even after runtime shutdown.
+    #[test_log::test(test)]
+    fn test_drop_node_handle_after_runtime_destroyed() {
+        // Create node handle to be dropped later
+        let node_handle = {
+            // Create a new runtime
+            let rt = tokio::runtime::Runtime::new().unwrap();
+
+            // Create node handle within the runtime
+            rt.block_on(async {
+                NodeHandle::new("http://localhost:11311", "/test_drop_node_after_runtime")
+                    .await
+                    .unwrap()
+            })
+            // Runtime is dropped here when it goes out of scope
+        };
+
+        // Now drop the node handle after the runtime has been destroyed
+        // This should NOT panic - the Node's Drop uses sync cleanup
+        std::mem::drop(node_handle);
+
+        // If we get here without panicking, the test passes
+    }
 }

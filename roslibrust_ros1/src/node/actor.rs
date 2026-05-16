@@ -54,13 +54,19 @@ impl WeakNodeServerHandle {
     /// If the node is already gone, this is a no-op
     pub(crate) fn try_unregister_publisher(&self, topic_name: &str) {
         if let Some(node_handle) = self.upgrade() {
-            let topic_name = topic_name.to_string();
-            tokio::spawn(async move {
-                let mut node = node_handle.node.lock().await;
-                if let Err(e) = node.unregister_publisher(&topic_name).await {
-                    error!("Failed to unregister publisher {topic_name}: {e:?}");
-                }
-            });
+            // Check if a tokio runtime is available before attempting to spawn
+            // If the runtime was dropped before this object, we can't spawn the cleanup task
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let topic_name = topic_name.to_string();
+                tokio::spawn(async move {
+                    let mut node = node_handle.node.lock().await;
+                    if let Err(e) = node.unregister_publisher(&topic_name).await {
+                        error!("Failed to unregister publisher {topic_name}: {e:?}");
+                    }
+                });
+            } else {
+                debug!("No tokio runtime available, skipping publisher unadvertisement for {topic_name}");
+            }
         } else {
             debug!("Node already dropped, skipping publisher unadvertisement for {topic_name}");
         }
@@ -71,13 +77,19 @@ impl WeakNodeServerHandle {
     /// If the node is already gone, this is a no-op
     pub(crate) fn try_unregister_service_server(&self, service_name: &str) {
         if let Some(node_handle) = self.upgrade() {
-            let service_name = service_name.to_string();
-            tokio::spawn(async move {
-                let mut node = node_handle.node.lock().await;
-                if let Err(e) = node.unregister_service_server(&service_name).await {
-                    error!("Failed to unregister service server {service_name}: {e:?}");
-                }
-            });
+            // Check if a tokio runtime is available before attempting to spawn
+            // If the runtime was dropped before this object, we can't spawn the cleanup task
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let service_name = service_name.to_string();
+                tokio::spawn(async move {
+                    let mut node = node_handle.node.lock().await;
+                    if let Err(e) = node.unregister_service_server(&service_name).await {
+                        error!("Failed to unregister service server {service_name}: {e:?}");
+                    }
+                });
+            } else {
+                debug!("No tokio runtime available, skipping service unadvertisement for {service_name}");
+            }
         } else {
             debug!("Node already dropped, skipping service unadvertisement for {service_name}");
         }
@@ -88,13 +100,19 @@ impl WeakNodeServerHandle {
     /// If the node is already gone, this is a no-op
     pub(crate) fn try_unregister_subscriber(&self, topic_name: &str) {
         if let Some(node_handle) = self.upgrade() {
-            let topic_name = topic_name.to_string();
-            tokio::spawn(async move {
-                let mut node = node_handle.node.lock().await;
-                if let Err(e) = node.unregister_subscriber(&topic_name).await {
-                    error!("Failed to unregister subscriber {topic_name}: {e:?}");
-                }
-            });
+            // Check if a tokio runtime is available before attempting to spawn
+            // If the runtime was dropped before this object, we can't spawn the cleanup task
+            if tokio::runtime::Handle::try_current().is_ok() {
+                let topic_name = topic_name.to_string();
+                tokio::spawn(async move {
+                    let mut node = node_handle.node.lock().await;
+                    if let Err(e) = node.unregister_subscriber(&topic_name).await {
+                        error!("Failed to unregister subscriber {topic_name}: {e:?}");
+                    }
+                });
+            } else {
+                debug!("No tokio runtime available, skipping subscriber unregistration for {topic_name}");
+            }
         } else {
             debug!("Node already dropped, skipping subscriber unregistration for {topic_name}");
         }
