@@ -82,6 +82,23 @@ impl WeakNodeServerHandle {
             debug!("Node already dropped, skipping service unadvertisement for {service_name}");
         }
     }
+
+    /// Attempt to unregister a subscriber with the node
+    /// This is a helper method for use in Drop implementations
+    /// If the node is already gone, this is a no-op
+    pub(crate) fn try_unregister_subscriber(&self, topic_name: &str) {
+        if let Some(node_handle) = self.upgrade() {
+            let topic_name = topic_name.to_string();
+            tokio::spawn(async move {
+                let mut node = node_handle.node.lock().await;
+                if let Err(e) = node.unregister_subscriber(&topic_name).await {
+                    error!("Failed to unregister subscriber {topic_name}: {e:?}");
+                }
+            });
+        } else {
+            debug!("Node already dropped, skipping subscriber unregistration for {topic_name}");
+        }
+    }
 }
 
 impl NodeServerHandle {
@@ -167,11 +184,6 @@ impl NodeServerHandle {
         .await
     }
 
-    pub(crate) async fn unregister_publisher(&self, topic: &str) -> Result<(), NodeError> {
-        let mut node = self.node.lock().await;
-        node.unregister_publisher(topic).await
-    }
-
     /// Registers a service client with the underlying node server
     /// This returns a channel that can be used for making service calls
     /// service calls will be queued in the channel and resolved when able.
@@ -239,19 +251,6 @@ impl NodeServerHandle {
             log::error!("Failed to register service server: {err}");
             NodeError::IoError(io::Error::from(io::ErrorKind::ConnectionAborted))
         })
-    }
-
-    /// Called to remove a service server
-    /// Delegates to the NodeServer
-    pub(crate) async fn unadvertise_service(&self, service_name: &str) -> Result<(), NodeError> {
-        log::debug!("Queuing unregister service server command for: {service_name:?}");
-        let mut node = self.node.lock().await;
-        node.unregister_service_server(service_name)
-            .await
-            .map_err(|e| {
-                log::error!("Failed to unadvertise service server {service_name:?}: {e:?}");
-                NodeError::IoError(io::Error::from(io::ErrorKind::InvalidData))
-            })
     }
 
     /// Registers a subscription with the underlying node server
@@ -483,6 +482,31 @@ impl Node {
                 std::io::ErrorKind::AddrInUse,
             )));
         }
+        Ok(())
+    }
+
+    /// Tear down a subscription if no live `Subscriber<T>` / `SubscriberAny` for the topic
+    /// remain. Called when a `Subscriber` is dropped.
+    /// Dropping the `Subscription` aborts its per-publisher TCP reader tasks via the
+    /// `Vec<ChildTask<()>>` it owns.
+    async fn unregister_subscriber(&mut self, topic: &str) -> Result<(), NodeError> {
+        let Some(subscription) = self.subscriptions.get(topic) else {
+            // Already removed (e.g. by node shutdown). Not an error.
+            return Ok(());
+        };
+        if subscription.subscriber_count() != 0 {
+            // Other live Subscribers exist — keep the subscription.
+            return Ok(());
+        }
+        let _ = self.subscriptions.remove(topic);
+        self.client
+            .unregister_subscriber(topic)
+            .await
+            .map_err(|e| {
+                log::error!("Failed to unregister subscriber with master for {topic}: {e:?}");
+                NodeError::IoError(io::Error::from(io::ErrorKind::ConnectionAborted))
+            })?;
+        debug!("Removed subscription and unregistered with master: {topic}");
         Ok(())
     }
 

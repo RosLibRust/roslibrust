@@ -4,7 +4,6 @@ use crate::{
     subscriber::Subscriber, subscriber::SubscriberAny, NodeError, ServiceServer,
 };
 use roslibrust_common::ServiceFn;
-use std::sync::Arc;
 
 /// Represents a handle to an underlying Node. NodeHandle's can be freely cloned, moved, copied, etc.
 /// This class provides the user facing API for interacting with ROS.
@@ -39,13 +38,6 @@ impl NodeHandle {
         let nh = NodeHandle { inner: node };
 
         Ok(nh)
-    }
-
-    // TODO REMOVE BEFORE MERGE
-    /// Debug helper to check the Arc strong count
-    /// This is useful for debugging lifecycle issues
-    pub fn arc_strong_count(&self) -> usize {
-        Arc::strong_count(&self.inner.node)
     }
 
     /// This function may be removed...
@@ -123,7 +115,13 @@ impl NodeHandle {
             .inner
             .register_subscriber::<roslibrust_common::ShapeShifter>(topic_name, queue_size)
             .await?;
-        Ok(SubscriberAny::new(receiver))
+        // Pass a weak reference so Subscriber doesn't keep the node alive
+        let weak_node = self.inner.downgrade();
+        Ok(SubscriberAny::new(
+            receiver,
+            topic_name.to_string(),
+            weak_node,
+        ))
     }
 
     /// Subscribe to a topic with automatic deserialization to the given type.
@@ -141,7 +139,9 @@ impl NodeHandle {
             .inner
             .register_subscriber::<T>(topic_name, queue_size)
             .await?;
-        Ok(Subscriber::new(receiver))
+        // Pass a weak reference so Subscriber doesn't keep the node alive
+        let weak_node = self.inner.downgrade();
+        Ok(Subscriber::new(receiver, topic_name.to_string(), weak_node))
     }
 
     pub async fn service_client<T: roslibrust_common::RosServiceType>(
@@ -172,26 +172,5 @@ impl NodeHandle {
         // Super important: Pass a Weak reference so ServiceServer doesn't keep the node alive
         let weak_node = self.inner.downgrade();
         Ok(ServiceServer::new(service_name, weak_node))
-    }
-
-    // TODO Major: This should probably be moved to NodeServerHandle?
-    /// Not intended to be called manually
-    /// Stops hosting the specified server.
-    /// This is automatically called when dropping the ServiceServer returned by [advertise_service]
-    pub(crate) fn unadvertise_service_server(&self, service_name: &str) -> Result<(), NodeError> {
-        // TODO should we be using Name as the type of service_name here?
-        // I don't love Name's API at the moment
-        // This function is intended to be called in a "Drop impl" which is non-async
-        // so we're wrapping in a task here.
-        // This should be fine due to the "cmd dispatch" that is the current communication mechanism with NodeServer
-        let copy = self.clone();
-        let name_copy = service_name.to_string();
-        tokio::spawn(async move {
-            let result = copy.inner.unadvertise_service(&name_copy).await;
-            if let Err(e) = result {
-                log::error!("Failed to undvertise service: {e:?}");
-            }
-        });
-        Ok(())
     }
 }

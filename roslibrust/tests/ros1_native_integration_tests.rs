@@ -577,9 +577,6 @@ mod tests {
         assert!(data.is_subscribed("/test_cleanup_sub", "/test_node_cleanup"));
         assert!(data.is_service_provider("/test_cleanup_srv", "/test_node_cleanup"));
 
-        // Check the Arc strong count before drop
-        debug!("Arc strong_count before drop: {}", nh.arc_strong_count());
-
         // Drop our node handle
         std::mem::drop(nh);
         debug!("Drop has happened");
