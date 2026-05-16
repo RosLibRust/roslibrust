@@ -5,7 +5,7 @@ use std::result::Result as StdResult;
 use ros_z::{
     context::ZContext,
     entity::{TypeHash, TypeInfo},
-    msg::{CdrCompatSerdes, ZService},
+    msg::{SerdeCdrSerdes, ZMessage, ZService},
     pubsub::{ZPub, ZSub},
     ros_msg::ServiceTypeInfo,
     Builder,
@@ -19,17 +19,36 @@ pub struct ZenohClient {
     node: ros_z::node::ZNode,
 }
 
-/// The publisher type returned by [TopicProvider::advertise] on [ZenohClient].
-pub struct ZenohPublisher<T: RosMessageType> {
-    publisher: ZPub<T, CdrCompatSerdes>,
+type RosZSerdes<T> = SerdeCdrSerdes<RosZMessage<T>>;
+
+struct RosZMessage<T>(T);
+
+impl<T: RosMessageType> ZMessage for RosZMessage<T> {
+    type Serdes = RosZSerdes<T>;
 }
 
-impl<T: RosMessageType + serde::Serialize + serde::de::DeserializeOwned + Send + Sync + 'static>
-    Publish<T> for ZenohPublisher<T>
-{
+impl<T: serde::Serialize> serde::Serialize for RosZMessage<T> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> StdResult<S::Ok, S::Error> {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de, T: serde::Deserialize<'de>> serde::Deserialize<'de> for RosZMessage<T> {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> StdResult<Self, D::Error> {
+        T::deserialize(deserializer).map(Self)
+    }
+}
+
+/// The publisher type returned by [TopicProvider::advertise] on [ZenohClient].
+pub struct ZenohPublisher<T: RosMessageType> {
+    publisher: ZPub<RosZMessage<T>, RosZSerdes<T>>,
+}
+
+impl<T: RosMessageType> Publish<T> for ZenohPublisher<T> {
     async fn publish(&self, data: &T) -> Result<()> {
+        let data = RosZMessage(data.clone());
         self.publisher
-            .async_publish(data)
+            .async_publish(&data)
             .await
             .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))
     }
@@ -37,16 +56,15 @@ impl<T: RosMessageType + serde::Serialize + serde::de::DeserializeOwned + Send +
 
 /// The subscriber type returned by [TopicProvider::subscribe] on [ZenohClient].
 pub struct ZenohSubscriber<T: RosMessageType> {
-    subscriber: ZSub<T, zenoh::sample::Sample, CdrCompatSerdes>,
+    subscriber: ZSub<RosZMessage<T>, zenoh::sample::Sample, RosZSerdes<T>>,
 }
 
-impl<T: RosMessageType + serde::Serialize + serde::de::DeserializeOwned + Send + Sync + 'static>
-    Subscribe<T> for ZenohSubscriber<T>
-{
+impl<T: RosMessageType> Subscribe<T> for ZenohSubscriber<T> {
     async fn next(&mut self) -> Result<T> {
         self.subscriber
             .async_recv()
             .await
+            .map(|msg| msg.0)
             .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))
     }
 }
@@ -77,8 +95,10 @@ impl roslibrust_common::TopicProvider for ZenohClient {
         let topic: roslibrust_common::GlobalTopicName = topic.to_global_name()?;
         let publisher = self
             .node
-            .create_pub_impl::<MsgType>(topic.as_ref(), Some(ros_type_info::<MsgType>()))
-            .with_serdes::<CdrCompatSerdes>()
+            .create_pub_impl::<RosZMessage<MsgType>>(
+                topic.as_ref(),
+                Some(ros_type_info::<MsgType>()),
+            )
             .build()
             .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))?;
 
@@ -92,8 +112,10 @@ impl roslibrust_common::TopicProvider for ZenohClient {
         let topic: roslibrust_common::GlobalTopicName = topic.to_global_name()?;
         let sub = self
             .node
-            .create_sub_impl::<MsgType>(topic.as_ref(), Some(ros_type_info::<MsgType>()))
-            .with_serdes::<CdrCompatSerdes>()
+            .create_sub_impl::<RosZMessage<MsgType>>(
+                topic.as_ref(),
+                Some(ros_type_info::<MsgType>()),
+            )
             .build()
             .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))?;
 
@@ -121,8 +143,8 @@ pub struct ZenohServiceClient<T: RosServiceType> {
 struct Fake<T>(std::marker::PhantomData<T>);
 
 impl<T: RosServiceType> ZService for Fake<T> {
-    type Request = T::Request;
-    type Response = T::Response;
+    type Request = RosZMessage<T::Request>;
+    type Response = RosZMessage<T::Response>;
 }
 
 impl<T: RosServiceType> ServiceTypeInfo for Fake<T> {
@@ -133,13 +155,11 @@ impl<T: RosServiceType> ServiceTypeInfo for Fake<T> {
 
 impl<T: RosServiceType> roslibrust_common::Service<T> for ZenohServiceClient<T> {
     async fn call(&self, request: &T::Request) -> Result<T::Response> {
+        let request = RosZMessage(request.clone());
         self.client
-            .send_request(request)
+            .call(&request)
             .await
-            .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))?;
-
-        self.client
-            .take_response()
+            .map(|response| response.0)
             .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))
     }
 }
@@ -182,21 +202,9 @@ impl roslibrust_common::ServiceProvider for ZenohClient {
     ) -> Result<Self::ServiceServer> {
         let service: roslibrust_common::GlobalTopicName = service.to_global_name()?;
 
-        // Local Fake<T> for advertise_service (same orphan workaround as service_client)
-        struct LocalFake<T>(T);
-        impl<T: RosServiceType> ZService for LocalFake<T> {
-            type Request = T::Request;
-            type Response = T::Response;
-        }
-        impl<T: RosServiceType> ServiceTypeInfo for LocalFake<T> {
-            fn service_type_info() -> TypeInfo {
-                TypeInfo::new(T::ROS2_TYPE_NAME, TypeHash::new(1, *T::ROS2_HASH))
-            }
-        }
-
         let mut svc = self
             .node
-            .create_service::<LocalFake<SrvType>>(service.as_ref())
+            .create_service::<Fake<SrvType>>(service.as_ref())
             .build()
             .map_err(|e| Error::Unexpected(anyhow::anyhow!(e)))?;
 
@@ -208,8 +216,8 @@ impl roslibrust_common::ServiceProvider for ZenohClient {
         tokio::spawn(async move {
             let body_future = async {
                 loop {
-                    let req = svc.take_request_async().await;
-                    let (query, req) = match req {
+                    let req = svc.async_take_request().await;
+                    let req = match req {
                         Ok(req) => req,
                         Err(e) => {
                             error!("Failed to take request in service {service_name}: {e:?}");
@@ -218,11 +226,12 @@ impl roslibrust_common::ServiceProvider for ZenohClient {
                     };
                     debug!(
                         "Got request for service {service_name} with key {:?}",
-                        query
+                        req.id()
                     );
 
+                    let (req, reply) = req.into_parts();
                     let server_copy = server.clone();
-                    let response = tokio::task::spawn_blocking(move || server_copy(req)).await;
+                    let response = tokio::task::spawn_blocking(move || server_copy(req.0)).await;
 
                     let valid_response = match response {
                         Ok(Ok(response)) => response,
@@ -236,7 +245,8 @@ impl roslibrust_common::ServiceProvider for ZenohClient {
                         }
                     };
 
-                    let send_result = svc.send_response_async(&valid_response, &query).await;
+                    let valid_response = RosZMessage(valid_response);
+                    let send_result = reply.reply(&valid_response).await;
                     if let Err(e) = send_result {
                         error!("Failed to send response to service {service_name}: {e:?}");
                     }
