@@ -49,9 +49,24 @@ impl<T: RosMessageType> Publisher<T> {
         }
     }
 
+    /// Checks if there are any connected subscribers.
+    /// This can be used to skip expensive message construction when no one is listening.
+    pub fn has_connected_clients(&self) -> bool {
+        self.sender.receiver_count() > 0
+    }
+
     /// Queues a message to be sent on the related topic.
     // TODO Major this no longer needs to be (or should be) async
     pub async fn publish(&self, data: &T) -> Result<(), PublisherError> {
+        // Skip serialization if there are no connected clients
+        if !self.has_connected_clients() {
+            debug!(
+                "Skipping publish on topic {} - no connected clients",
+                self.topic_name
+            );
+            return Ok(());
+        }
+
         let size_hint = self.capacity_hint.load(Ordering::Relaxed);
         let buffer = bytes::BytesMut::with_capacity(size_hint + 4);
         let mut writer = buffer.writer();
@@ -101,6 +116,12 @@ impl PublisherAny {
         }
     }
 
+    /// Checks if there are any connected subscribers.
+    /// This can be used to skip expensive message construction when no one is listening.
+    pub fn has_connected_clients(&self) -> bool {
+        self.sender.receiver_count() > 0
+    }
+
     /// Queues a message to be sent on the related topic.
     ///
     /// This expects the data to be the raw bytes of the message body as they would appear going over the wire.
@@ -114,6 +135,15 @@ impl PublisherAny {
     /// - Pre-serialized ROS message data
     // TODO this no longer needs to be (or should be) async
     pub async fn publish(&self, data: impl AsRef<[u8]>) -> Result<(), PublisherError> {
+        // Skip if there are no connected clients
+        if !self.has_connected_clients() {
+            debug!(
+                "Skipping publish on topic {} - no connected clients",
+                self.topic_name
+            );
+            return Ok(());
+        }
+
         // TODO this is a pretty dumb...
         // because of the internal channel used for re-direction this future doesn't
         // actually complete when the data is sent, but merely when it is queued to be sent
@@ -133,6 +163,15 @@ impl PublisherAny {
     /// as it avoids any copying.
     // TODO this no longer needs to be (or should be) async
     pub async fn publish_bytes(&self, data: Bytes) -> Result<(), PublisherError> {
+        // Skip if there are no connected clients
+        if !self.has_connected_clients() {
+            debug!(
+                "Skipping publish on topic {} - no connected clients",
+                self.topic_name
+            );
+            return Ok(());
+        }
+
         self.sender
             .send(data)
             .map_err(|_| PublisherError::StreamClosed)?;

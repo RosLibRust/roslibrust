@@ -30,6 +30,7 @@ async fn relay<T: TopicProvider>(ros: T) -> roslibrust::Result<()> {
 
 #[tokio::main]
 async fn main() -> roslibrust::Result<()> {
+    // Experimental support in roslibrust_ros2, not yet released on crates.io
     // Relay messages over a native ROS2 connection using Zenoh
     // #[cfg(feature = "ros2")]
     // {
