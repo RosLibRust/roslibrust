@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - ~20% performance improvement on large images and strings with ROS1 and ROS1-zenoh backends by removing copies, and improving pre-allocation
+- The macro for code generation will now search BOTH ROS1 and ROS2 package paths by default.
 
 ## 0.20.0 - March 2nd, 2026
 
