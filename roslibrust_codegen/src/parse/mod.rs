@@ -126,7 +126,7 @@ fn parse_constant_field(line: &str, pkg: &Package) -> Result<ConstantInfo, Error
     let constant_name = line[sep + 1..(equal_after_sep + sep)].trim().to_string();
 
     // Handle the fact that string type should be different for constants than fields
-    if constant_type == "String" {
+    if constant_type == "string" {
         constant_type = "&'static str".to_string();
     }
 
@@ -139,11 +139,28 @@ fn parse_constant_field(line: &str, pkg: &Package) -> Result<ConstantInfo, Error
 }
 
 /// Looks for # comment character and sub-slices for characters preceding it
+/// Note: This should NOT be used for lines that contain string constants,
+/// as # characters within string constant values are part of the value.
 fn strip_comments(line: &str) -> &str {
     if let Some(token) = line.find('#') {
         return &line[..token];
     }
     line
+}
+
+/// Strips comments from a line, but respects string constant values.
+/// For string constants, # characters within the value are NOT treated as comments per ROS spec.
+fn strip_comments_respecting_string_constants(line: &str) -> &str {
+    let trimmed = line.trim_start();
+
+    // Check if this is a string/wstring constant (has both type declaration and = sign)
+    if (trimmed.starts_with("string ") || trimmed.starts_with("wstring ")) && line.contains('=') {
+        // This is a string constant - don't strip anything
+        return line;
+    }
+
+    // For everything else (fields, non-string constants, comments), strip normally
+    strip_comments(line)
 }
 
 fn parse_field_type(
@@ -298,5 +315,101 @@ mod test {
         };
         let parsed = parse_type(line, &pkg).unwrap();
         assert_eq!(parsed.array_info, ArrayType::Unbounded);
+    }
+
+    #[test_log::test]
+    fn parse_constant_with_hash_in_value() {
+        use crate::parse::parse_constant_field;
+
+        let pkg = Package {
+            name: "test_pkg".to_string(),
+            path: "./not_a_path".into(),
+            version: Some(RosVersion::ROS1),
+        };
+
+        // Test parsing a constant with # in the value
+        let line = "string HASH_IN_VALUE=foo # bar";
+        let constant = parse_constant_field(line, &pkg).unwrap();
+
+        assert_eq!(constant.constant_name, "HASH_IN_VALUE");
+        assert_eq!(constant.constant_type, "&'static str");
+        // This should be "foo # bar" according to ROS spec
+        assert_eq!(constant.constant_value.inner, "foo # bar");
+    }
+
+    #[test_log::test]
+    fn parse_message_with_hash_in_string_constant() {
+        use crate::parse::parse_ros_message_file;
+        use std::path::Path;
+
+        let pkg = Package {
+            name: "test_pkg".to_string(),
+            path: "./not_a_path".into(),
+            version: Some(RosVersion::ROS1),
+        };
+
+        let msg_content = r#"# Test message
+string HASH_IN_VALUE=foo # bar
+string NO_SPACES=test#value
+string HASH_AT_START=#start
+string HASH_AT_END=end#
+string data
+"#;
+
+        let parsed =
+            parse_ros_message_file(msg_content, "TestMsg", &pkg, Path::new("test.msg")).unwrap();
+
+        assert_eq!(parsed.constants.len(), 4);
+        assert_eq!(parsed.fields.len(), 1);
+
+        // Check all constants have correct values with # characters
+        assert_eq!(parsed.constants[0].constant_name, "HASH_IN_VALUE");
+        assert_eq!(parsed.constants[0].constant_value.inner, "foo # bar");
+
+        assert_eq!(parsed.constants[1].constant_name, "NO_SPACES");
+        assert_eq!(parsed.constants[1].constant_value.inner, "test#value");
+
+        assert_eq!(parsed.constants[2].constant_name, "HASH_AT_START");
+        assert_eq!(parsed.constants[2].constant_value.inner, "#start");
+
+        assert_eq!(parsed.constants[3].constant_name, "HASH_AT_END");
+        assert_eq!(parsed.constants[3].constant_value.inner, "end#");
+
+        // Check field is parsed correctly
+        assert_eq!(parsed.fields[0].field_name, "data");
+    }
+
+    #[test_log::test]
+    fn parse_non_string_constants_with_comments() {
+        use crate::parse::parse_ros_message_file;
+        use std::path::Path;
+
+        let pkg = Package {
+            name: "test_pkg".to_string(),
+            path: "./not_a_path".into(),
+            version: Some(RosVersion::ROS1),
+        };
+
+        // Test that non-string constants still have comments stripped correctly
+        let msg_content = r#"# Test message
+int32 INT_CONST=42 # this is a comment
+float32 FLOAT_CONST=3.14 # another comment
+bool BOOL_CONST=true # yet another comment
+"#;
+
+        let parsed =
+            parse_ros_message_file(msg_content, "TestMsg", &pkg, Path::new("test.msg")).unwrap();
+
+        assert_eq!(parsed.constants.len(), 3);
+
+        // Non-string constants should have comments stripped
+        assert_eq!(parsed.constants[0].constant_name, "INT_CONST");
+        assert_eq!(parsed.constants[0].constant_value.inner, "42");
+
+        assert_eq!(parsed.constants[1].constant_name, "FLOAT_CONST");
+        assert_eq!(parsed.constants[1].constant_value.inner, "3.14");
+
+        assert_eq!(parsed.constants[2].constant_name, "BOOL_CONST");
+        assert_eq!(parsed.constants[2].constant_value.inner, "true");
     }
 }

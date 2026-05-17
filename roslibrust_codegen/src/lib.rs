@@ -506,11 +506,12 @@ impl FieldInfo {
 }
 
 /// Describes all information for a constant within a message
-/// Note: Constants are not fully supported yet (waiting on codegen support)
 #[derive(Clone, Debug)]
 pub struct ConstantInfo {
     pub constant_type: String,
+    // Exact ros file format
     pub constant_name: String,
+    // Literal string contents of the rosmessage from the file
     pub constant_value: RosLiteral,
 }
 

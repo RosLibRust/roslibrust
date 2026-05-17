@@ -12803,7 +12803,7 @@ string frame_id"####;
     pub struct Constants {}
     impl ::roslibrust::RosMessageType for Constants {
         const ROS_TYPE_NAME: &'static str = "test_msgs/Constants";
-        const MD5SUM: &'static str = "027df5f26b72c57b1e40902038ca3eec";
+        const MD5SUM: &'static str = "ae9eec64f72349c84286c50355b978d8";
         const DEFINITION: &'static str = r####"string TEST_STR="/topic"
 string TEST_STR_2 = '/topic_2'
 # Apparently unquoted strings are also valid?

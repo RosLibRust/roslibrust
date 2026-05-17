@@ -1,4 +1,4 @@
-use crate::parse::{parse_constant_field, parse_field, strip_comments};
+use crate::parse::{parse_constant_field, parse_field, strip_comments_respecting_string_constants};
 use crate::Error;
 use crate::{ConstantInfo, FieldInfo, Package, RosVersion};
 use std::path::{Path, PathBuf};
@@ -69,7 +69,7 @@ pub fn parse_ros_message_file(
     let mut constants = vec![];
 
     for line in data.lines() {
-        let line = strip_comments(line).trim();
+        let line = strip_comments_respecting_string_constants(line).trim();
         if line.is_empty() {
             // Comment only line skip
             continue;
