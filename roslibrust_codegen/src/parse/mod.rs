@@ -1,6 +1,6 @@
 use crate::utils::{Package, RosVersion};
 use crate::{bail, ArrayType, Error};
-use crate::{ConstantInfo, FieldInfo, FieldType};
+use crate::{ConstantInfo, FieldInfo, FieldType, RosLiteral};
 use std::collections::HashMap;
 
 mod action;
@@ -75,35 +75,17 @@ pub fn convert_ros_type_to_rust_type(version: RosVersion, ros_type: &str) -> Opt
 }
 
 fn parse_field(line: &str, pkg: &Package, msg_name: &str) -> Result<FieldInfo, Error> {
-    let mut splitter = line.split_whitespace();
     let pkg_name = pkg.name.as_str();
-    let field_type = splitter.next().ok_or(Error::new(format!(
-        "Did not find field_type on line: {line} while parsing {pkg_name}/{msg_name}"
+    let (field_type, remainder) = split_type_from_line(line).ok_or(Error::new(format!(
+        "Did not find field_type and field_name on line: {line} while parsing {pkg_name}/{msg_name}"
     )))?;
     let field_type = parse_type(field_type, pkg)?;
-    let field_name = splitter.next().ok_or(Error::new(format!(
-        "Did not find field_name on line: {line} while parsing {pkg_name}/{msg_name}"
-    )))?;
+    let (field_name, default) = parse_field_name_and_default(remainder).ok_or(Error::new(
+        format!("Did not find field_name on line: {line} while parsing {pkg_name}/{msg_name}"),
+    ))?;
 
-    let sep = line.find(' ').unwrap();
-    // Determine if there is a default value for this field
     let default = if matches!(pkg.version, Some(RosVersion::ROS2)) {
-        // For ros2 packages only, check if there is a default value
-        let line_after_sep = line[sep + 1..].trim();
-        match line_after_sep.find(' ') {
-            Some(def_start) => {
-                let remainder = line_after_sep[def_start..].trim();
-                if remainder.is_empty() {
-                    None
-                } else {
-                    Some(remainder.to_owned().into())
-                }
-            }
-            None => {
-                // No extra space separator found, not default was provided
-                None
-            }
-        }
+        default.map(RosLiteral::from)
     } else {
         None
     };
@@ -116,26 +98,44 @@ fn parse_field(line: &str, pkg: &Package, msg_name: &str) -> Result<FieldInfo, E
 }
 
 fn parse_constant_field(line: &str, pkg: &Package) -> Result<ConstantInfo, Error> {
-    let sep = line.find(' ').ok_or(
-        Error::new(format!("Failed to find white space seperator ' ' while parsing constant information one line {line} for package {pkg:?}"))
-    )?;
-    let equal_after_sep = line[sep..].find('=').ok_or(
+    let (constant_type, remainder) = split_type_from_line(line).ok_or(Error::new(format!(
+        "Failed to find white space separator while parsing constant information on line {line} for package {pkg:?}"
+    )))?;
+    let equal = remainder.find('=').ok_or(
         Error::new(format!("Failed to find expected '=' while parsing constant information on line {line} for package {pkg:?}"))
     )?;
-    let mut constant_type = parse_type(line[..sep].trim(), pkg)?.field_type;
-    let constant_name = line[sep + 1..(equal_after_sep + sep)].trim().to_string();
+    let constant_type = parse_type(constant_type, pkg)?.field_type;
+    let constant_name = remainder[..equal].trim().to_string();
+    let constant_value = remainder[equal + 1..].trim().to_string();
 
-    // Handle the fact that string type should be different for constants than fields
-    if constant_type == "string" {
-        constant_type = "&'static str".to_string();
-    }
-
-    let constant_value = line[sep + equal_after_sep + 1..].trim().to_string();
     Ok(ConstantInfo {
         constant_type,
         constant_name,
         constant_value: constant_value.into(),
     })
+}
+
+fn split_type_from_line(line: &str) -> Option<(&str, &str)> {
+    let type_end = line.find(char::is_whitespace)?;
+    let remainder = line[type_end..].trim_start();
+    if remainder.is_empty() {
+        return None;
+    }
+    Some((&line[..type_end], remainder))
+}
+
+fn parse_field_name_and_default(remainder: &str) -> Option<(&str, Option<String>)> {
+    match remainder.find(char::is_whitespace) {
+        Some(name_end) => {
+            let default = remainder[name_end..].trim();
+            if default.is_empty() {
+                Some((&remainder[..name_end], None))
+            } else {
+                Some((&remainder[..name_end], Some(default.to_owned())))
+            }
+        }
+        None => Some((remainder, None)),
+    }
 }
 
 /// Looks for # comment character and sub-slices for characters preceding it
@@ -153,14 +153,23 @@ fn strip_comments(line: &str) -> &str {
 fn strip_comments_respecting_string_constants(line: &str) -> &str {
     let trimmed = line.trim_start();
 
-    // Check if this is a string/wstring constant (has both type declaration and = sign)
-    if (trimmed.starts_with("string ") || trimmed.starts_with("wstring ")) && line.contains('=') {
-        // This is a string constant - don't strip anything
+    if is_string_constant_line(trimmed) {
         return line;
     }
 
     // For everything else (fields, non-string constants, comments), strip normally
     strip_comments(line)
+}
+
+fn is_string_constant_line(line: &str) -> bool {
+    let Some((type_name, remainder)) = split_type_from_line(line) else {
+        return false;
+    };
+    (type_name == "string"
+        || type_name == "wstring"
+        || type_name.starts_with("string<=")
+        || type_name.starts_with("wstring<="))
+        && remainder.contains('=')
 }
 
 fn parse_field_type(
@@ -332,9 +341,31 @@ mod test {
         let constant = parse_constant_field(line, &pkg).unwrap();
 
         assert_eq!(constant.constant_name, "HASH_IN_VALUE");
-        assert_eq!(constant.constant_type, "&'static str");
+        assert_eq!(constant.constant_type, "string");
         // This should be "foo # bar" according to ROS spec
         assert_eq!(constant.constant_value.inner, "foo # bar");
+    }
+
+    #[test_log::test]
+    fn parse_bounded_string_constant_with_hash_in_value() {
+        use crate::parse::parse_ros_message_file;
+        use std::path::Path;
+
+        let pkg = Package {
+            name: "test_pkg".to_string(),
+            path: "./not_a_path".into(),
+            version: Some(RosVersion::ROS2),
+        };
+
+        let msg_content = r#"string<=32 HASH_IN_VALUE='foo # bar'
+string data
+"#;
+
+        let parsed =
+            parse_ros_message_file(msg_content, "TestMsg", &pkg, Path::new("test.msg")).unwrap();
+
+        assert_eq!(parsed.constants[0].constant_type, "string");
+        assert_eq!(parsed.constants[0].constant_value.inner, "'foo # bar'");
     }
 
     #[test_log::test]

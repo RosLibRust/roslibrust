@@ -498,3 +498,25 @@ fn parse_ros_value(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test_log::test]
+    fn string_constants_generate_static_str_type() {
+        let constant = ConstantInfo {
+            constant_type: "string".to_owned(),
+            constant_name: "RUNNING_STATE".to_owned(),
+            constant_value: RosLiteral::from("RUNNING".to_owned()),
+        };
+
+        let generated = generate_constant_field_definition(constant, RosVersion::ROS1)
+            .unwrap()
+            .to_string();
+
+        assert!(generated.contains("RUNNING_STATE"));
+        assert!(generated.contains("&'static str"));
+        assert!(generated.contains("= \"RUNNING\""));
+    }
+}

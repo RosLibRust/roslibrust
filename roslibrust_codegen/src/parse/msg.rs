@@ -1,4 +1,7 @@
-use crate::parse::{parse_constant_field, parse_field, strip_comments_respecting_string_constants};
+use crate::parse::{
+    parse_constant_field, parse_field, split_type_from_line,
+    strip_comments_respecting_string_constants,
+};
 use crate::Error;
 use crate::{ConstantInfo, FieldInfo, Package, RosVersion};
 use std::path::{Path, PathBuf};
@@ -74,15 +77,11 @@ pub fn parse_ros_message_file(
             // Comment only line skip
             continue;
         }
-        // Determine if we're looking at a constant or a field
-        let sep = line.find(' ').ok_or(
-            Error::new(
-                format!("Found an invalid ros field line, no space delinting type from name: {line} in {}\n{data}",
-                path.display())
-            )
-        )?;
-        let equal_after_sep = line[sep..].find('=');
-        if equal_after_sep.is_some() {
+        let (_, remainder) = split_type_from_line(line).ok_or(Error::new(format!(
+            "Found an invalid ros field line, no space delimiting type from name: {line} in {}\n{data}",
+            path.display()
+        )))?;
+        if remainder.contains('=') {
             // Since we found an equal sign after a space, this must be a constant
             constants.push(parse_constant_field(line, package)?)
         } else {
