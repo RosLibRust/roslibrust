@@ -9,6 +9,7 @@
 //! Directly depending on this crate is not recommended. Instead access it via roslibrust with the `codegen` feature enabled.
 
 use std::{
+    cell::RefCell,
     collections::{BTreeMap, BTreeSet, VecDeque},
     fmt::{Debug, Display},
     path::{Path, PathBuf},
@@ -83,6 +84,7 @@ pub struct MessageFile {
     pub md5sum: String,
     // Type Hash following the ros2 RIHS01 standard stored as bytes
     pub ros2_hash: Ros2Hash,
+    pub(crate) ros2_type_description: RefCell<Option<TypeDescriptionMsg>>,
     // This is the expanded definition of the message for use in message_definition field of
     // a connection header.
     // See how https://wiki.ros.org/ROS/TCPROS references gendeps --cat
@@ -111,6 +113,7 @@ impl MessageFile {
             parsed,
             md5sum,
             ros2_hash,
+            ros2_type_description: RefCell::new(None),
             definition,
             is_fixed_encoding_length: is_fixed_length,
         })

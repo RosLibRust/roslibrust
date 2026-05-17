@@ -32,15 +32,15 @@ pub struct TypeDescriptionFile {
 
 /// Sub-component of the ROS2 JSON file format for hashing
 /// Should not be used for other purposes
-#[derive(serde::Deserialize, serde::Serialize)]
-pub struct TypeDescriptionMsg {
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub(crate) struct TypeDescriptionMsg {
     type_description: TypeDescription,
     referenced_type_descriptions: Vec<TypeDescription>,
 }
 
 /// Sub-component of the ROS2 JSON file format for hasing
 /// Should not be used for other purposes
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct TypeDescription {
     type_name: String,
     fields: Vec<Field>,
@@ -48,7 +48,7 @@ pub struct TypeDescription {
 
 /// Sub-component of the ROS2 JSON file format for hashing
 /// Should not be used for other purposes
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct Field {
     name: String,
     #[serde(rename = "type")]
@@ -60,7 +60,7 @@ pub struct Field {
 
 /// Sub-component of the ROS2 JSON file format for hashing
 /// Should not be used for other purposes
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct FieldType {
     type_id: u8,
     capacity: u32,
@@ -215,6 +215,7 @@ pub fn calculate_ros2_srv_hash(
             parsed: event,
             // Dummy values
             ros2_hash: Default::default(),
+            ros2_type_description: Default::default(),
             md5sum: "".to_string(),
             definition: "".to_string(),
             is_fixed_encoding_length: true,
@@ -226,6 +227,7 @@ pub fn calculate_ros2_srv_hash(
             parsed: request,
             // Dummy values
             ros2_hash: Default::default(),
+            ros2_type_description: Default::default(),
             md5sum: "".to_string(),
             definition: "".to_string(),
             is_fixed_encoding_length: true,
@@ -237,6 +239,7 @@ pub fn calculate_ros2_srv_hash(
             parsed: response,
             // Dummy values
             ros2_hash: Default::default(),
+            ros2_type_description: Default::default(),
             md5sum: "".to_string(),
             definition: "".to_string(),
             is_fixed_encoding_length: true,
@@ -332,8 +335,16 @@ fn convert_to_type_description(
                         field.get_full_type_name(),
                         parsed.get_full_name()
                     ))?;
-            let sub_type_description =
-                convert_to_type_description(&sub_message.parsed, graph, true)?;
+            let cached_type_description = sub_message.ros2_type_description.borrow().clone();
+            let sub_type_description = if let Some(cached) = cached_type_description {
+                cached
+            } else {
+                let calculated = convert_to_type_description(&sub_message.parsed, graph, true)?;
+                sub_message
+                    .ros2_type_description
+                    .replace(Some(calculated.clone()));
+                calculated
+            };
             for sub_referenced_type in sub_type_description.referenced_type_descriptions {
                 referenced_type_descriptions
                     .insert(sub_referenced_type.type_name.clone(), sub_referenced_type);
