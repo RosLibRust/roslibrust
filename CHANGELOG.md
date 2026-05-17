@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - @DomWilliamsEE fix ros1 subscribers not automatically unsubscribing from the master when dropped.
+- Incorrect handling of string constants in ros message files around comments.
 
 ### Changed
 

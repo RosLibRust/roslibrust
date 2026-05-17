@@ -325,29 +325,48 @@ fn generate_constant_field_definition(
     version: RosVersion,
 ) -> Result<TokenStream, Error> {
     let constant_name = format_ident!("r#{}", constant.constant_name);
-    let constant_rust_type = convert_ros_type_to_rust_type(version, &constant.constant_type)
-        .ok_or(Error::new(format!(
-            "A constant was detected {constant:?} for which no valid rust type was found."
-        )))?;
-    let constant_rust_type = if constant_rust_type == "::std::string::String" {
-        String::from("&'static str")
-    } else {
-        // Oof it's ugly in here
-        constant_rust_type.to_owned()
-    };
-    let constant_rust_type = TokenStream::from_str(constant_rust_type.as_str()).map_err(|err| {
+    let constant_rust_type = convert_ros_constant_type_to_rust_type(version, &constant)?;
+    let constant_rust_type = TokenStream::from_str(constant_rust_type).map_err(|err| {
         Error::with(
             format!("Failed to parse {constant_rust_type} into valid rust syntax").as_str(),
             err,
         )
     })?;
     let constant_value = ros_literal_to_rust_literal(
-        &constant.constant_type,
+        ros_type_for_constant_literal(&constant.constant_type),
         &constant.constant_value,
         &ArrayType::NotArray,
         version,
     )?;
     Ok(quote! { pub const #constant_name: #constant_rust_type = #constant_value; })
+}
+
+fn convert_ros_constant_type_to_rust_type(
+    version: RosVersion,
+    constant: &ConstantInfo,
+) -> Result<&'static str, Error> {
+    if constant.constant_type == "&'static str" {
+        return Ok("&'static str");
+    }
+
+    convert_ros_type_to_rust_type(version, &constant.constant_type)
+        .map(|rust_type| {
+            if rust_type == "::std::string::String" {
+                "&'static str"
+            } else {
+                rust_type
+            }
+        })
+        .ok_or(Error::new(format!(
+            "A constant was detected {constant:?} for which no valid rust type was found."
+        )))
+}
+
+fn ros_type_for_constant_literal(constant_type: &str) -> &str {
+    match constant_type {
+        "&'static str" => "string",
+        _ => constant_type,
+    }
 }
 
 pub fn generate_mod(
@@ -477,5 +496,27 @@ fn parse_ros_value(
         _ => {
             bail!("Found default for type which does not support default: {ros_type}");
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test_log::test]
+    fn string_constants_generate_static_str_type() {
+        let constant = ConstantInfo {
+            constant_type: "string".to_owned(),
+            constant_name: "RUNNING_STATE".to_owned(),
+            constant_value: RosLiteral::from("RUNNING".to_owned()),
+        };
+
+        let generated = generate_constant_field_definition(constant, RosVersion::ROS1)
+            .unwrap()
+            .to_string();
+
+        assert!(generated.contains("RUNNING_STATE"));
+        assert!(generated.contains("&'static str"));
+        assert!(generated.contains("= \"RUNNING\""));
     }
 }
