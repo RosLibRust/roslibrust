@@ -31,8 +31,30 @@ pub struct ZenohPublisher<T> {
     _marker: std::marker::PhantomData<T>,
 }
 
+impl<T: RosMessageType> ZenohPublisher<T> {
+    /// Checks if there are any connected subscribers.
+    /// This can be used to skip expensive message construction when no one is listening.
+    pub async fn has_connected_clients(&self) -> bool {
+        match self.publisher.matching_status().await {
+            Ok(status) => status.matching(),
+            Err(e) => {
+                // If we can't determine the status, assume there might be subscribers
+                // to avoid dropping messages
+                warn!("Failed to get matching status: {e:?}, assuming subscribers exist");
+                true
+            }
+        }
+    }
+}
+
 impl<T: RosMessageType> Publish<T> for ZenohPublisher<T> {
     async fn publish(&self, data: &T) -> Result<()> {
+        // Skip serialization if there are no connected clients
+        if !self.has_connected_clients().await {
+            debug!("Skipping publish - no connected clients");
+            return Ok(());
+        }
+
         let size_hint = self.capacity_hint.load(Ordering::Relaxed);
         let mut bytes = Vec::with_capacity(size_hint);
         roslibrust_serde_rosmsg::to_writer_skip_length(&mut bytes, data).map_err(|e| {
