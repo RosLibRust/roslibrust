@@ -26,8 +26,9 @@ impl Parse for RosLibRustMessagePaths {
 /// ros messages found within those paths.
 /// Paths are relative to where rustc is being invoked from your mileage may vary.
 ///
-/// In addition to provided paths, this will search paths found in the environment
-/// variable ROS_PACKAGE_PATH.
+/// In addition to provided paths, this will search ROS1 paths found in
+/// `ROS_PACKAGE_PATH` and ROS2 packages found through the ament resource indexes
+/// in `AMENT_PREFIX_PATH` and `COLCON_PREFIX_PATH`.
 #[proc_macro]
 pub fn find_and_generate_ros_messages(input_stream: TokenStream) -> TokenStream {
     // Note: there is not currently a way for proc_macros to indicate that they need to be re-generated

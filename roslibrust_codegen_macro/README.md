@@ -6,6 +6,8 @@ This macro cannot detect if the message files it generates from have changed. If
 
 ## Usage
 If you're generating messages in an environment with ROS installed, no arguments need to be passed.
+ROS1 packages are found through `ROS_PACKAGE_PATH`; ROS2 packages are found through
+the ament resource indexes in `AMENT_PREFIX_PATH` and `COLCON_PREFIX_PATH`.
 
 ```rust
 use roslibrust_codegen_macro::find_and_generate_ros_messages;

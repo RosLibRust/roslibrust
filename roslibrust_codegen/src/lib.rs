@@ -533,11 +533,12 @@ impl PartialEq for ConstantInfo {
 /// modified would trigger re-generation of the source. This function is designed to
 /// be used either in a build.rs file or via the roslibrust_codegen_macro crate.
 /// * `additional_search_paths` - A list of additional paths to search beyond those
-///   found in ROS_PACKAGE_PATH environment variable.
+///   found in ROS_PACKAGE_PATH, AMENT_PREFIX_PATH, and COLCON_PREFIX_PATH environment variables.
 pub fn find_and_generate_ros_messages(
     additional_search_paths: Vec<PathBuf>,
 ) -> Result<(TokenStream, Vec<PathBuf>), Error> {
     let mut ros_package_paths = utils::get_search_paths();
+    ros_package_paths.extend(utils::get_ros2_search_paths());
     ros_package_paths.extend(additional_search_paths);
     find_and_generate_ros_messages_without_ros_package_path(ros_package_paths)
 }

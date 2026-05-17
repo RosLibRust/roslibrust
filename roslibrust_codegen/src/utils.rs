@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -25,24 +25,86 @@ pub enum RosVersion {
 }
 
 const CATKIN_IGNORE: &str = "CATKIN_IGNORE";
+const AMENT_IGNORE: &str = "AMENT_IGNORE";
+const COLCON_IGNORE: &str = "COLCON_IGNORE";
 const PACKAGE_FILE_NAME: &str = "package.xml";
 const ROS_PACKAGE_PATH_ENV_VAR: &str = "ROS_PACKAGE_PATH";
+const AMENT_PREFIX_PATH_ENV_VAR: &str = "AMENT_PREFIX_PATH";
+const COLCON_PREFIX_PATH_ENV_VAR: &str = "COLCON_PREFIX_PATH";
+const AMENT_INDEX_PATH: [&str; 4] = ["share", "ament_index", "resource_index", "packages"];
 
 pub fn get_search_paths() -> Vec<PathBuf> {
-    if let Ok(paths) = std::env::var(ROS_PACKAGE_PATH_ENV_VAR) {
-        #[cfg(not(windows))]
-        let separator = ":";
-        #[cfg(windows)]
-        let separator = ";";
-
-        paths
-            .split(separator)
-            .map(PathBuf::from)
-            .collect::<Vec<PathBuf>>()
+    if let Some(paths) = std::env::var_os(ROS_PACKAGE_PATH_ENV_VAR) {
+        std::env::split_paths(&paths).collect()
     } else {
         log::warn!("No ROS_PACKAGE_PATH defined.");
         vec![]
     }
+}
+
+pub fn get_ros2_search_paths() -> Vec<PathBuf> {
+    let prefixes = [AMENT_PREFIX_PATH_ENV_VAR, COLCON_PREFIX_PATH_ENV_VAR]
+        .into_iter()
+        .flat_map(|env_var| match std::env::var_os(env_var) {
+            Some(paths) => std::env::split_paths(&paths).collect::<Vec<_>>(),
+            None => {
+                log::debug!("No {env_var} defined.");
+                vec![]
+            }
+        })
+        .collect::<Vec<_>>();
+
+    get_ros2_search_paths_from_prefixes(&prefixes)
+}
+
+/// Finds ROS 2 package share directories by reading each prefix's ament resource index.
+///
+/// A ROS 2 install prefix marks packages with files under
+/// `share/ament_index/resource_index/packages/<package_name>`. The corresponding
+/// package share directory is expected at `share/<package_name>`.
+pub fn get_ros2_search_paths_from_prefixes<P: AsRef<Path>>(prefixes: &[P]) -> Vec<PathBuf> {
+    let mut package_paths = Vec::new();
+    let mut seen = HashSet::new();
+
+    for prefix in prefixes {
+        let prefix = prefix.as_ref();
+        let package_index = AMENT_INDEX_PATH
+            .into_iter()
+            .fold(prefix.to_path_buf(), |path, component| path.join(component));
+        let Ok(entries) = std::fs::read_dir(&package_index) else {
+            log::debug!(
+                "No ament package resource index found at {}",
+                package_index.display()
+            );
+            continue;
+        };
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+
+            let Some(package_name) = path.file_name() else {
+                continue;
+            };
+            let package_path = prefix.join("share").join(package_name);
+            if !package_path.join(PACKAGE_FILE_NAME).is_file() {
+                log::warn!(
+                    "Ament package marker {} did not have a matching package.xml at {}",
+                    path.display(),
+                    package_path.display()
+                );
+                continue;
+            }
+
+            if seen.insert(package_path.clone()) {
+                package_paths.push(package_path);
+            }
+        }
+    }
+
+    package_paths
 }
 
 /// Finds ROS packages within a list of search paths.
@@ -80,13 +142,12 @@ pub fn packages_from_path(mut path: PathBuf, depth: u16) -> io::Result<Vec<Packa
     }
 
     if path.as_path().is_dir() {
-        // We have a valid path
-        path.push(CATKIN_IGNORE);
-        // We'll only check this directory if no CATKIN_IGNORE file is present
-        // TODO: support for ament ignore and colcon ignore
-        if !path.as_path().is_file() {
-            assert!(path.pop());
+        let ignored = [CATKIN_IGNORE, AMENT_IGNORE, COLCON_IGNORE]
+            .into_iter()
+            .any(|ignore_file| path.join(ignore_file).is_file());
 
+        // We'll only check this directory if no ignore marker file is present.
+        if !ignored {
             path.push(PACKAGE_FILE_NAME);
             if path.as_path().is_file() {
                 // And there's a package.xml here!
@@ -249,7 +310,7 @@ fn parse_ros_package_info(
                         "catkin" => {
                             version = Some(RosVersion::ROS1);
                         }
-                        "ament_cmake" => {
+                        "ament_cmake" | "ament_cmake_ros" | "ament_python" => {
                             version = Some(RosVersion::ROS2);
                         }
                         _ => {}
@@ -276,6 +337,34 @@ fn parse_ros_package_info(
 #[cfg(test)]
 mod test {
     use crate::utils;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_test_dir(name: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!("roslibrust_codegen_{name}_{nanos}"))
+    }
+
+    fn write_package_xml(path: &std::path::Path, package_name: &str, build_tool: &str) {
+        fs::write(
+            path.join("package.xml"),
+            format!(
+                r#"<package format="3">
+  <name>{package_name}</name>
+  <version>0.0.0</version>
+  <description>test</description>
+  <maintainer email="test@example.com">test</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>{build_tool}</buildtool_depend>
+</package>"#
+            ),
+        )
+        .unwrap();
+    }
 
     #[test]
     fn verify_deduplicate_packages() {
@@ -308,5 +397,54 @@ mod test {
 
         let deduplicated = utils::deduplicate_packages(packages);
         assert_eq!(deduplicated.len(), 3);
+    }
+
+    #[test]
+    fn discovers_ros2_packages_from_ament_resource_index() {
+        let prefix = temp_test_dir("ament_index");
+        let index = prefix.join("share/ament_index/resource_index/packages");
+        let package = prefix.join("share/example_interfaces");
+        let malformed_package = prefix.join("share/missing_package");
+        fs::create_dir_all(&index).unwrap();
+        fs::create_dir_all(&package).unwrap();
+        fs::write(index.join("example_interfaces"), "").unwrap();
+        fs::write(index.join("missing_package"), "").unwrap();
+        write_package_xml(&package, "example_interfaces", "ament_cmake");
+
+        let package_paths = utils::get_ros2_search_paths_from_prefixes(&[&prefix]);
+        assert_eq!(package_paths, vec![package]);
+        assert!(!package_paths.contains(&malformed_package));
+
+        fs::remove_dir_all(prefix).unwrap();
+    }
+
+    #[test]
+    fn crawl_respects_ros2_ignore_markers() {
+        for ignore_file in ["AMENT_IGNORE", "COLCON_IGNORE"] {
+            let root = temp_test_dir(ignore_file);
+            let ignored_package = root.join("ignored_package");
+            fs::create_dir_all(&ignored_package).unwrap();
+            fs::write(ignored_package.join(ignore_file), "").unwrap();
+            write_package_xml(&ignored_package, "ignored_package", "ament_cmake");
+
+            let packages = utils::crawl(&[&root]);
+            assert!(packages.is_empty());
+
+            fs::remove_dir_all(root).unwrap();
+        }
+    }
+
+    #[test]
+    fn parses_ament_python_packages_as_ros2() {
+        let root = temp_test_dir("ament_python");
+        let package = root.join("python_package");
+        fs::create_dir_all(&package).unwrap();
+        write_package_xml(&package, "python_package", "ament_python");
+
+        let packages = utils::crawl(&[&root]);
+        assert_eq!(packages.len(), 1);
+        assert_eq!(packages[0].version, Some(utils::RosVersion::ROS2));
+
+        fs::remove_dir_all(root).unwrap();
     }
 }
