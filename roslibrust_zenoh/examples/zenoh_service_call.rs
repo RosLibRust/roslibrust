@@ -12,7 +12,7 @@ use roslibrust::ServiceProvider;
 use roslibrust_zenoh::ZenohClient;
 
 // Generate rust definitions for our messages compatible with roslibrust
-roslibrust_codegen_macro::find_and_generate_ros_messages!("assets/ros1_common_interfaces");
+roslibrust_codegen_macro::generate_ros_types!("assets/ros1_common_interfaces");
 
 #[tokio::main]
 async fn main() {

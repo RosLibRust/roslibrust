@@ -1,6 +1,6 @@
 // One way to import message definitions:
 #[cfg(feature = "rosbridge")]
-roslibrust_codegen_macro::find_and_generate_ros_messages!("assets/ros1_common_interfaces");
+roslibrust_codegen_macro::generate_ros_types!("assets/ros1_common_interfaces");
 
 // A basic service server exampple, that logs the request is recieves and returns
 // a canned response.

@@ -3,12 +3,9 @@
 use roslibrust::Publish;
 
 // We're using the macro to generate our types
-// We provide the macro with additional search paths beyond the ROS_PACKAGE_PATH
+// We provide the macro with the exact paths to search, skipping environment discovery.
 // The paths are assumed to be relative to the crate (or workspace) root
-roslibrust::find_and_generate_ros_messages!(
-    "assets/ros1_test_msgs",
-    "assets/ros1_common_interfaces"
-);
+roslibrust::generate_ros_types!("assets/ros1_test_msgs", "assets/ros1_common_interfaces");
 
 // Writing a simple behavior that uses the generic traits from roslibrust
 // and the generated types from the macro above.

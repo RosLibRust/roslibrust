@@ -22,17 +22,7 @@ impl Parse for RosLibRustMessagePaths {
     }
 }
 
-/// Given a list of paths, generates struct definitions and trait impls for any
-/// ros messages found within those paths.
-/// Paths are relative to where rustc is being invoked from your mileage may vary.
-///
-/// In addition to provided paths, this will search ROS1 paths found in
-/// `ROS_PACKAGE_PATH` and ROS2 packages found through the ament resource indexes
-/// in `AMENT_PREFIX_PATH` and `COLCON_PREFIX_PATH`.
-#[proc_macro]
-pub fn find_and_generate_ros_messages(input_stream: TokenStream) -> TokenStream {
-    // Note: there is not currently a way for proc_macros to indicate that they need to be re-generated
-    // We discard the "dependent_paths" part of the response here...
+fn generate_with_environment(input_stream: TokenStream) -> TokenStream {
     let RosLibRustMessagePaths { paths } =
         parse_macro_input!(input_stream as RosLibRustMessagePaths);
     match roslibrust_codegen::find_and_generate_ros_messages(paths) {
@@ -44,12 +34,7 @@ pub fn find_and_generate_ros_messages(input_stream: TokenStream) -> TokenStream 
     }
 }
 
-/// Similar to `find_and_generate_ros_messages`, but does not search the
-/// `ROS_PACKAGE_PATH` environment variable paths (useful in some situations).
-#[proc_macro]
-pub fn find_and_generate_ros_messages_without_ros_package_path(
-    input_stream: TokenStream,
-) -> TokenStream {
+fn generate_from_paths_only(input_stream: TokenStream) -> TokenStream {
     let RosLibRustMessagePaths { paths } =
         parse_macro_input!(input_stream as RosLibRustMessagePaths);
     match roslibrust_codegen::find_and_generate_ros_messages_without_ros_package_path(paths) {
@@ -61,4 +46,40 @@ pub fn find_and_generate_ros_messages_without_ros_package_path(
             quote::quote!( compile_error!(#error_msg); ).into()
         }
     }
+}
+
+/// Generates struct definitions and trait impls for ROS types found in the
+/// paths provided to the macro, skipping ROS environment discovery.
+#[proc_macro]
+pub fn generate_ros_types(input_stream: TokenStream) -> TokenStream {
+    // Note: there is not currently a way for proc_macros to indicate that they need to be re-generated
+    // We discard the "dependent_paths" part of the response here...
+    generate_from_paths_only(input_stream)
+}
+
+/// Generates struct definitions and trait impls for ROS types found in the
+/// paths provided to the macro plus ROS1 paths from `ROS_PACKAGE_PATH` and ROS2
+/// packages found through ament resource indexes in `AMENT_PREFIX_PATH` and
+/// `COLCON_PREFIX_PATH`.
+#[proc_macro]
+pub fn generate_ros_types_with_env(input_stream: TokenStream) -> TokenStream {
+    // Note: there is not currently a way for proc_macros to indicate that they need to be re-generated
+    // We discard the "dependent_paths" part of the response here...
+    generate_with_environment(input_stream)
+}
+
+/// Deprecated alias for [`generate_ros_types_with_env`].
+#[deprecated(note = "use generate_ros_types_with_env! instead")]
+#[proc_macro]
+pub fn find_and_generate_ros_messages(input_stream: TokenStream) -> TokenStream {
+    generate_with_environment(input_stream)
+}
+
+/// Deprecated alias for [`generate_ros_types`].
+#[deprecated(note = "use generate_ros_types! instead")]
+#[proc_macro]
+pub fn find_and_generate_ros_messages_without_ros_package_path(
+    input_stream: TokenStream,
+) -> TokenStream {
+    generate_from_paths_only(input_stream)
 }

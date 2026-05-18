@@ -10,7 +10,7 @@ use roslibrust_zenoh::ZenohClient;
 // Otherwise the service will not be advertised to ROS1 master.
 
 // Generate rust definitions for our messages
-roslibrust_codegen_macro::find_and_generate_ros_messages!("assets/ros1_common_interfaces");
+roslibrust_codegen_macro::generate_ros_types!("assets/ros1_common_interfaces");
 
 #[tokio::main]
 async fn main() {

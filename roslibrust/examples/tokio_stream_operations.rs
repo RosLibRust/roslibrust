@@ -2,7 +2,7 @@
 use roslibrust_common::traits::*;
 use tokio_stream::StreamExt;
 
-roslibrust_codegen_macro::find_and_generate_ros_messages!("assets/ros1_common_interfaces");
+roslibrust_codegen_macro::generate_ros_types!("assets/ros1_common_interfaces");
 
 async fn example_publisher_task(publisher: impl roslibrust::Publish<std_msgs::Header>) {
     for seq in 0..50 {

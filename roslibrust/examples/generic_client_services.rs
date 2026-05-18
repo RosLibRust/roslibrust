@@ -2,7 +2,7 @@
 //! to create code that is generic of which communication backend it will use.
 
 #[cfg(all(feature = "rosbridge", feature = "ros1"))]
-roslibrust_codegen_macro::find_and_generate_ros_messages!("assets/ros1_common_interfaces");
+roslibrust_codegen_macro::generate_ros_types!("assets/ros1_common_interfaces");
 
 #[cfg(all(feature = "rosbridge", feature = "ros1"))]
 #[tokio::main]

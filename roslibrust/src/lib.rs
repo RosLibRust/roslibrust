@@ -29,3 +29,7 @@ pub use roslibrust_codegen as codegen;
 pub use roslibrust_codegen_macro::find_and_generate_ros_messages;
 #[cfg(feature = "macro")]
 pub use roslibrust_codegen_macro::find_and_generate_ros_messages_without_ros_package_path;
+#[cfg(feature = "macro")]
+pub use roslibrust_codegen_macro::generate_ros_types;
+#[cfg(feature = "macro")]
+pub use roslibrust_codegen_macro::generate_ros_types_with_env;

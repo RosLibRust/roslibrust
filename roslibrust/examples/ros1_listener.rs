@@ -1,5 +1,5 @@
 #[cfg(feature = "ros1")]
-roslibrust_codegen_macro::find_and_generate_ros_messages!("assets/ros1_common_interfaces/std_msgs");
+roslibrust_codegen_macro::generate_ros_types!("assets/ros1_common_interfaces/std_msgs");
 
 #[cfg(feature = "ros1")]
 #[tokio::main]

@@ -9,7 +9,7 @@ use roslibrust::ServiceProvider;
 // This macro isn't going to expand correctly when not used from this crate's workspace
 // We almost certainly need to generate and commit the resulting messages, or
 // do some include_str!() hax to be able to ship these types with the crate...
-roslibrust::find_and_generate_ros_messages!("assets/ros1_common_interfaces/rosapi");
+roslibrust::generate_ros_types!("assets/ros1_common_interfaces/rosapi");
 
 /// Represents the ability to interact with the interfaces provided by the rosapi node.
 /// This trait is implemented for ClientHandle when the `rosapi` feature is enabled.
