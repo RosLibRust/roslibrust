@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - ~20% performance improvement on large images and strings with ROS1 and ROS1-zenoh backends by removing copies, and improving pre-allocation
+- The macro for code generation will now search BOTH ROS1 and ROS2 package paths by default.
+- Added code generation proc macros with shorter names: `generate_ros_types!` searches only explicit paths, `generate_ros_types_with_env!` searches explicit paths plus ROS environment paths, and the original macro names are deprecated aliases.
 
 ## 0.20.0 - March 2nd, 2026
 

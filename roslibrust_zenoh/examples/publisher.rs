@@ -8,7 +8,7 @@ use roslibrust::Publish;
 use roslibrust::TopicProvider;
 
 // Generate rust definitions for our messages
-roslibrust_codegen_macro::find_and_generate_ros_messages!("assets/ros1_common_interfaces");
+roslibrust_codegen_macro::generate_ros_types!("assets/ros1_common_interfaces");
 
 // The example expects a zenoh-ros1-bridge to be running see [here](https://github.com/eclipse-zenoh/zenoh-plugin-ros1)
 // for details on running the bridge.

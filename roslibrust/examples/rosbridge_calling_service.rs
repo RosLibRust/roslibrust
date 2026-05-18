@@ -1,5 +1,5 @@
 #[cfg(feature = "rosbridge")]
-roslibrust_codegen_macro::find_and_generate_ros_messages!("assets/ros1_common_interfaces/rosapi");
+roslibrust_codegen_macro::generate_ros_types!("assets/ros1_common_interfaces/rosapi");
 
 /// This example shows calling a service
 /// To run this example rosbridge and a roscore should be running

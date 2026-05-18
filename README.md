@@ -74,8 +74,8 @@ All of this is backed by common traits for ROS messages, topics, and services. `
 `roslibrust_codegen_macro` provides a convenient macro for generating these types:
 
 ```rust,ignore
-// Will generate types from all packages in ROS_PACKAGE_PATH
-roslibrust_codegen_macro::find_and_generate_ros_messages!();
+// Will generate types from all packages in ROS_PACKAGE_PATH, AMENT_PREFIX_PATH, and COLCON_PREFIX_PATH
+roslibrust_codegen_macro::generate_ros_types_with_env!();
 ```
 
 If you want to see what the generated code looks like checkout [our generated messages in our test crate](https://github.com/RosLibRust/roslibrust/blob/master/roslibrust_test/src/ros1.rs).
