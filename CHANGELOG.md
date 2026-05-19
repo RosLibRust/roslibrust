@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Fixed
+
+### Changed
+
+## 0.21.0 - May 19th, 2026
+
+### Added
+
 - Added the roslibrust_mcap crate which provides utilities for reading and writing MCAP files compatible ROS2 bag tools with ROS message support.
 - ROS1 and Zenoh backends now provide an API for checking number of connected subscribers directly at the publisher. This is used to skip serialization if no subscribers are connected and can provide a substantial CPU savings if idle topics.
 
