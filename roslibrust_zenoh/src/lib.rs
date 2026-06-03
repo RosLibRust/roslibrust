@@ -5,27 +5,186 @@ use roslibrust_common::topic_name::{GlobalTopicName, ToGlobalTopicName};
 use roslibrust_common::*;
 
 use log::*;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+    time::{Duration, Instant},
+};
+use tokio::sync::RwLock;
 use zenoh::bytes::ZBytes;
+
+const DISCOVERY_NAMESPACE: &str = "*";
+const BRIDGE_NAMESPACE: &str = "*";
+const DISCOVERY_KEYEXPR: &str = "ros1_discovery_info/*/*/*/*/*/**";
+const DISCOVERY_BEACON_PERIOD: Duration = Duration::from_secs(1);
+const DISCOVERY_LOST_AFTER: Duration = Duration::from_secs(3);
 
 /// A wrapper around a normal zenoh session that adds roslibrust specific functionality.
 /// Should be created via [ZenohClient::new], and then used via the [TopicProvider] and [ServiceProvider] traits.
 #[derive(Clone)]
 pub struct ZenohClient {
     session: zenoh::Session,
+    graph: Arc<RwLock<BTreeMap<String, DiscoveryFact>>>,
 }
 
 impl ZenohClient {
     /// Creates a new client wrapped around a Zenoh session
     pub fn new(session: zenoh::Session) -> Self {
-        Self { session }
+        let graph = Arc::new(RwLock::new(BTreeMap::new()));
+        spawn_discovery_monitor(session.clone(), graph.clone());
+        Self { session, graph }
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum DiscoveryClass {
+    Publisher,
+    Subscriber,
+    Service,
+    Client,
+}
+
+impl DiscoveryClass {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Publisher => "pub",
+            Self::Subscriber => "sub",
+            Self::Service => "srv",
+            Self::Client => "cl",
+        }
+    }
+
+    fn parse(value: &str) -> Option<Self> {
+        match value {
+            "pub" => Some(Self::Publisher),
+            "sub" => Some(Self::Subscriber),
+            "srv" => Some(Self::Service),
+            "cl" => Some(Self::Client),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct DiscoveryFact {
+    class: DiscoveryClass,
+    name: String,
+    type_name: String,
+    md5sum: String,
+}
+
+struct DiscoveryDeclaration {
+    shutdown: Option<tokio::sync::oneshot::Sender<()>>,
+}
+
+impl Drop for DiscoveryDeclaration {
+    fn drop(&mut self) {
+        if let Some(shutdown) = self.shutdown.take() {
+            let _ = shutdown.send(());
+        }
+    }
+}
+
+impl DiscoveryDeclaration {
+    async fn new(
+        session: zenoh::Session,
+        class: DiscoveryClass,
+        name: &str,
+        type_name: &str,
+        md5sum: &str,
+    ) -> Result<Self> {
+        let key = make_discovery_key(class, name, type_name, md5sum);
+        let publisher = session.declare_publisher(key).await.map_err(|e| {
+            Error::Unexpected(anyhow::anyhow!(
+                "Failed to declare discovery publisher: {e:?}"
+            ))
+        })?;
+        let (shutdown_tx, mut shutdown_rx) = tokio::sync::oneshot::channel();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(DISCOVERY_BEACON_PERIOD);
+            loop {
+                if let Err(e) = publisher.put(ZBytes::default()).await {
+                    error!("Failed to publish discovery info: {e:?}");
+                }
+                tokio::select! {
+                    _ = interval.tick() => {}
+                    _ = &mut shutdown_rx => break,
+                }
+            }
+        });
+        Ok(Self {
+            shutdown: Some(shutdown_tx),
+        })
+    }
+}
+
+fn spawn_discovery_monitor(
+    session: zenoh::Session,
+    graph: Arc<RwLock<BTreeMap<String, DiscoveryFact>>>,
+) {
+    let Ok(handle) = tokio::runtime::Handle::try_current() else {
+        error!("Failed to start Zenoh discovery monitor: no active Tokio runtime");
+        return;
+    };
+
+    handle.spawn(async move {
+        let subscriber = match session.declare_subscriber(DISCOVERY_KEYEXPR).await {
+            Ok(subscriber) => subscriber,
+            Err(e) => {
+                error!("Failed to subscribe to {DISCOVERY_KEYEXPR}: {e:?}");
+                return;
+            }
+        };
+        let mut active_facts: HashMap<String, Instant> = HashMap::new();
+        let mut interval = tokio::time::interval(DISCOVERY_BEACON_PERIOD);
+        loop {
+            tokio::select! {
+                sample = subscriber.recv_async() => {
+                    let sample = match sample {
+                        Ok(sample) => sample,
+                        Err(e) => {
+                            error!("Failed to receive discovery info: {e:?}");
+                            continue;
+                        }
+                    };
+                    let key = sample.key_expr().as_str().to_string();
+                    let Some(fact) = parse_discovery_key(&key) else {
+                        continue;
+                    };
+                    active_facts.insert(key.clone(), Instant::now());
+                    graph.write().await.insert(key, fact);
+                }
+                _ = interval.tick() => {
+                    let now = Instant::now();
+                    let lost: Vec<_> = active_facts
+                        .iter()
+                        .filter_map(|(key, last_seen)| {
+                            now.duration_since(*last_seen)
+                                .gt(&DISCOVERY_LOST_AFTER)
+                                .then(|| key.clone())
+                        })
+                        .collect();
+                    if !lost.is_empty() {
+                        let mut graph = graph.write().await;
+                        for key in lost {
+                            active_facts.remove(&key);
+                            graph.remove(&key);
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 /// The publisher type returned by [TopicProvider::advertise] on [ZenohClient]
 /// This type is self de-registering, and dropping the publisher will automatically un-advertise the topic.
 pub struct ZenohPublisher<T> {
     publisher: zenoh::pubsub::Publisher<'static>,
+    _discovery: DiscoveryDeclaration,
     // Used to track buffer capacity size to minimize allocations for fixed-size streams.
     capacity_hint: AtomicUsize,
     _marker: std::marker::PhantomData<T>,
@@ -84,6 +243,7 @@ type ZenohSubInner =
 /// It is typically used with types generated by roslibrust's codegen.
 pub struct ZenohSubscriber<T> {
     subscriber: ZenohSubInner,
+    _discovery: DiscoveryDeclaration,
     _marker: std::marker::PhantomData<T>,
 }
 
@@ -133,9 +293,18 @@ impl TopicProvider for ZenohClient {
                 )));
             }
         };
+        let discovery = DiscoveryDeclaration::new(
+            self.session.clone(),
+            DiscoveryClass::Publisher,
+            topic.as_ref(),
+            MsgType::ROS_TYPE_NAME,
+            MsgType::MD5SUM,
+        )
+        .await?;
 
         Ok(ZenohPublisher {
             publisher,
+            _discovery: discovery,
             capacity_hint: 1024.into(),
             _marker: std::marker::PhantomData,
         })
@@ -156,8 +325,17 @@ impl TopicProvider for ZenohClient {
                 )));
             }
         };
+        let discovery = DiscoveryDeclaration::new(
+            self.session.clone(),
+            DiscoveryClass::Subscriber,
+            topic.as_ref(),
+            MsgType::ROS_TYPE_NAME,
+            MsgType::MD5SUM,
+        )
+        .await?;
         Ok(ZenohSubscriber {
             subscriber: sub,
+            _discovery: discovery,
             _marker: std::marker::PhantomData,
         })
     }
@@ -174,15 +352,98 @@ fn mangle_topic(topic: &str, type_str: &str, md5sum: &str) -> String {
     let topic = topic.trim_start_matches('/').trim_end_matches("/");
     // Encode the type as hex
     let type_str = hex::encode(type_str.as_bytes());
-    format!("{type_str}/{md5sum}/{topic}")
+    format!("{type_str}/{md5sum}/{BRIDGE_NAMESPACE}/{topic}")
 }
 
-/// Identical to mangle_topic, but for services we want to separate the datatype stuff from the service name
-fn mangle_service(service: &str, type_str: &str, md5sum: &str) -> (String, String) {
-    let service = service.trim_start_matches('/').trim_end_matches("/");
+impl GraphProvider for ZenohClient {
+    async fn list_topics(&self) -> Result<Vec<TopicInfo>> {
+        let graph = self.graph.read().await;
+        let mut topics = BTreeMap::new();
+        for fact in graph.values() {
+            if matches!(
+                fact.class,
+                DiscoveryClass::Publisher | DiscoveryClass::Subscriber
+            ) {
+                insert_discovered_type(
+                    &mut topics,
+                    fact.name.clone(),
+                    fact.type_name.clone(),
+                    "topic",
+                )?;
+            }
+        }
+        Ok(topics
+            .into_iter()
+            .map(|(name, type_name)| TopicInfo { name, type_name })
+            .collect())
+    }
 
-    let type_str = hex::encode(type_str.as_bytes());
-    (format!("{type_str}/{md5sum}"), service.to_string())
+    async fn list_services(&self) -> Result<Vec<ServiceInfo>> {
+        let graph = self.graph.read().await;
+        let mut services = BTreeMap::new();
+        for fact in graph.values() {
+            if fact.class == DiscoveryClass::Service {
+                insert_discovered_type(
+                    &mut services,
+                    fact.name.clone(),
+                    fact.type_name.clone(),
+                    "service",
+                )?;
+            }
+        }
+        Ok(services
+            .into_iter()
+            .map(|(name, type_name)| ServiceInfo { name, type_name })
+            .collect())
+    }
+}
+
+fn make_discovery_key(class: DiscoveryClass, name: &str, type_name: &str, md5sum: &str) -> String {
+    let name = name.trim_start_matches('/').trim_end_matches('/');
+    format!(
+        "ros1_discovery_info/{DISCOVERY_NAMESPACE}/{}/{}/{md5sum}/{BRIDGE_NAMESPACE}/{name}",
+        class.as_str(),
+        hex::encode(type_name.as_bytes()),
+    )
+}
+
+fn parse_discovery_key(key: &str) -> Option<DiscoveryFact> {
+    let parts: Vec<_> = key.split('/').collect();
+    if parts.len() < 7 || parts[0] != "ros1_discovery_info" {
+        return None;
+    }
+    let class = DiscoveryClass::parse(parts[2])?;
+    let type_name = decode_hex_type(parts[3])?;
+    let md5sum = parts[4].to_string();
+    let name = format!("/{}", parts[6..].join("/"));
+    Some(DiscoveryFact {
+        class,
+        name,
+        type_name,
+        md5sum,
+    })
+}
+
+fn decode_hex_type(hex_type: &str) -> Option<String> {
+    String::from_utf8(hex::decode(hex_type).ok()?).ok()
+}
+
+fn insert_discovered_type(
+    types: &mut BTreeMap<String, String>,
+    name: String,
+    type_name: String,
+    kind: &str,
+) -> Result<()> {
+    if let Some(existing) = types.get(&name) {
+        if existing != &type_name {
+            return Err(Error::ServerError(format!(
+                "{kind} {name} discovered with conflicting types {existing} and {type_name}"
+            )));
+        }
+    } else {
+        types.insert(name, type_name);
+    }
+    Ok(())
 }
 
 /// The client type returned by [ServiceProvider::service_client] on [ZenohClient]
@@ -190,6 +451,7 @@ fn mangle_service(service: &str, type_str: &str, md5sum: &str) -> (String, Strin
 pub struct ZenohServiceClient<T: RosServiceType> {
     session: zenoh::Session,
     zenoh_query: String,
+    _discovery: DiscoveryDeclaration,
     _marker: std::marker::PhantomData<T>,
 }
 
@@ -244,8 +506,7 @@ impl<T: RosServiceType> Service<T> for ZenohServiceClient<T> {
 pub struct ZenohServiceServer {
     // Dropping this will stop zenoh's declaration of the queryable
     _queryable: zenoh::query::Queryable<()>,
-    // Dropping this will stop the advertising of the service
-    _shutdown_channel: tokio::sync::oneshot::Sender<()>,
+    _discovery: DiscoveryDeclaration,
 }
 
 impl ServiceProvider for ZenohClient {
@@ -270,10 +531,19 @@ impl ServiceProvider for ZenohClient {
         let service: GlobalTopicName = service.to_global_name()?;
         let mangled_topic =
             mangle_topic(service.as_ref(), SrvType::ROS_SERVICE_NAME, SrvType::MD5SUM);
+        let discovery = DiscoveryDeclaration::new(
+            self.session.clone(),
+            DiscoveryClass::Client,
+            service.as_ref(),
+            SrvType::ROS_SERVICE_NAME,
+            SrvType::MD5SUM,
+        )
+        .await?;
 
         Ok(ZenohServiceClient {
             session: self.session.clone(),
             zenoh_query: mangled_topic,
+            _discovery: discovery,
             _marker: std::marker::PhantomData,
         })
     }
@@ -288,7 +558,6 @@ impl ServiceProvider for ZenohClient {
             mangle_topic(service.as_ref(), SrvType::ROS_SERVICE_NAME, SrvType::MD5SUM);
 
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-        let (shutdown_tx, mut shutdown_rx) = tokio::sync::oneshot::channel();
 
         let x = self
             .session
@@ -302,6 +571,14 @@ impl ServiceProvider for ZenohClient {
             .map_err(|e| {
                 Error::Unexpected(anyhow::anyhow!("Failed to declare queryable: {e:?}"))
             })?;
+        let discovery = DiscoveryDeclaration::new(
+            self.session.clone(),
+            DiscoveryClass::Service,
+            service.as_ref(),
+            SrvType::ROS_SERVICE_NAME,
+            SrvType::MD5SUM,
+        )
+        .await?;
 
         // Move the server into an Arc so we can ensure lifetime of it remains valid across spawn_blocking:
         let server = std::sync::Arc::new(server);
@@ -352,54 +629,10 @@ impl ServiceProvider for ZenohClient {
                     });
             }
         });
-        // zenoh-ros1-bridge won't serve our service without us publishing info on 'ros1_discovery_info'
-        // We don't have to worry about this for publishers, because zenoh will initiate the bridge whenever someone subscribes on the ros side.
-        // For service, zenoh-ros1-bridge has to create the service before anyone can call it so it has to know that it needs to do that.
-        // This is a bit of a brittle implementation as it relies on internal implementation details for zenoh-ros1-bridge, but it works for now.
-        // See: https://github.com/eclipse-zenoh/zenoh-plugin-ros1/blob/main/zenoh-plugin-ros1/src/ros_to_zenoh_bridge/discovery.rs
-
-        // Note: I'm uncertain about "discovery_namespace" and just using * for now
-        // Note: I'm uncertain about "bridge_namespace" and just using * for now
-        let (type_mangle, svc_name) =
-            mangle_service(service.as_ref(), SrvType::ROS_SERVICE_NAME, SrvType::MD5SUM);
-        let zenoh_info_topic = format!("ros1_discovery_info/*/srv/{type_mangle}/*/{svc_name}");
-
-        let q2 = self
-            .session
-            .declare_publisher(zenoh_info_topic)
-            .await
-            .map_err(|e| {
-                Error::Unexpected(anyhow::anyhow!(
-                    "Failed to declare queryable for service discovery: {e:?}"
-                ))
-            })?;
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
-            loop {
-                let shutdown = shutdown_rx.try_recv();
-                match shutdown {
-                    Ok(_) => {
-                        break;
-                    }
-                    Err(tokio::sync::oneshot::error::TryRecvError::Empty) => {
-                        // Continue no shutdown yet
-                    }
-                    Err(tokio::sync::oneshot::error::TryRecvError::Closed) => {
-                        break;
-                    }
-                }
-                // Send an empty message to the discovery topic
-                let res = q2.put(ZBytes::default()).await;
-                if let Err(e) = res {
-                    error!("Failed to publish service discovery info: {e:?}");
-                }
-                interval.tick().await;
-            }
-        });
 
         Ok(ZenohServiceServer {
             _queryable: x,
-            _shutdown_channel: shutdown_tx,
+            _discovery: discovery,
         })
     }
 }
@@ -416,7 +649,7 @@ mod tests {
                 "std_msgs/String",
                 "992ce8a1687cec8c8bd883ec73ca41d1"
             ),
-            "7374645f6d7367732f537472696e67/992ce8a1687cec8c8bd883ec73ca41d1/chatter"
+            "7374645f6d7367732f537472696e67/992ce8a1687cec8c8bd883ec73ca41d1/*/chatter"
         );
     }
 
@@ -428,7 +661,35 @@ mod tests {
                 "std_srvs/SetBool",
                 "09fb03525b03e7ea1fd3992bafd87e16"
             ),
-            "7374645f737276732f536574426f6f6c/09fb03525b03e7ea1fd3992bafd87e16/service_server_rs/my_set_bool");
+            "7374645f737276732f536574426f6f6c/09fb03525b03e7ea1fd3992bafd87e16/*/service_server_rs/my_set_bool");
+    }
+
+    #[test]
+    fn test_make_discovery_key() {
+        assert_eq!(
+            make_discovery_key(
+                DiscoveryClass::Service,
+                "/service_server_rs/my_set_bool",
+                "std_srvs/SetBool",
+                "09fb03525b03e7ea1fd3992bafd87e16"
+            ),
+            "ros1_discovery_info/*/srv/7374645f737276732f536574426f6f6c/09fb03525b03e7ea1fd3992bafd87e16/*/service_server_rs/my_set_bool"
+        );
+    }
+
+    #[test]
+    fn test_parse_discovery_key() {
+        assert_eq!(
+            parse_discovery_key(
+                "ros1_discovery_info/*/srv/7374645f737276732f536574426f6f6c/09fb03525b03e7ea1fd3992bafd87e16/*/service_server_rs/my_set_bool"
+            ),
+            Some(DiscoveryFact {
+                class: DiscoveryClass::Service,
+                name: "/service_server_rs/my_set_bool".to_string(),
+                type_name: "std_srvs/SetBool".to_string(),
+                md5sum: "09fb03525b03e7ea1fd3992bafd87e16".to_string(),
+            })
+        );
     }
 
     #[test]

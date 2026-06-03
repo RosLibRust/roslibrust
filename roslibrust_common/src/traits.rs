@@ -2,6 +2,20 @@ use crate::topic_name::*;
 use crate::{Result, ServiceError};
 use std::future::Future;
 
+/// Information about a topic currently visible in the ROS graph.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TopicInfo {
+    pub name: String,
+    pub type_name: String,
+}
+
+/// Information about a service currently visible in the ROS graph.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ServiceInfo {
+    pub name: String,
+    pub type_name: String,
+}
+
 /// Fundamental traits for message types this crate works with
 /// This trait will be satisfied for any types generated with this crate's message_gen functionality
 pub trait RosMessageType:
@@ -192,6 +206,15 @@ pub trait ServiceProvider {
         service: impl ToGlobalTopicName,
         server: F,
     ) -> impl Future<Output = Result<Self::ServiceServer>> + Send;
+}
+
+/// Describes the ability to inspect the visible ROS graph.
+pub trait GraphProvider {
+    /// List topics currently visible to this backend.
+    fn list_topics(&self) -> impl Future<Output = Result<Vec<TopicInfo>>> + Send;
+
+    /// List services currently visible to this backend.
+    fn list_services(&self) -> impl Future<Output = Result<Vec<ServiceInfo>>> + Send;
 }
 
 // ANCHOR: ros_trait

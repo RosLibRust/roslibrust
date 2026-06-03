@@ -245,6 +245,49 @@ pub async fn establish_connection(
     .map_err(std::io::Error::from)
 }
 
+/// Connects to a ROS1 service server only long enough to discover its connection header.
+pub async fn probe_service_type(
+    caller_id: &str,
+    service_name: &str,
+    service_uri: &str,
+) -> Result<String, std::io::Error> {
+    use tokio::io::AsyncWriteExt;
+
+    let server_uri = service_uri.replace("rosrpc://", "");
+    let mut stream = TcpStream::connect(&server_uri).await.map_err(|err| {
+        log::error!(
+            "Failed to establish TCPROS probe connection to service {service_name} at {server_uri}: {err}"
+        );
+        err
+    })?;
+
+    let mut header_data = Vec::with_capacity(256);
+    WriteBytesExt::write_u32::<LittleEndian>(&mut header_data, 0)?;
+    for field in [
+        format!("callerid={caller_id}"),
+        "md5sum=*".to_string(),
+        format!("service={service_name}"),
+        "probe=1".to_string(),
+    ] {
+        WriteBytesExt::write_u32::<LittleEndian>(&mut header_data, field.len() as u32)?;
+        std::io::Write::write_all(&mut header_data, field.as_bytes())?;
+    }
+
+    let total_length = (header_data.len() - 4) as u32;
+    header_data[..4].copy_from_slice(&total_length.to_le_bytes());
+    stream.write_all(&header_data).await?;
+
+    let responded_header = receive_header(&mut stream).await?;
+    if responded_header.topic_type.is_empty() {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("Service {service_name} probe response did not include a type field"),
+        ))
+    } else {
+        Ok(responded_header.topic_type)
+    }
+}
+
 pub async fn receive_header_bytes(stream: &mut TcpStream) -> Result<Vec<u8>, std::io::Error> {
     // Bring trait def into scope
     use tokio::io::AsyncReadExt;

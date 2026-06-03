@@ -88,6 +88,14 @@ impl SystemState {
         };
         entry.nodes.iter().any(|name| name.as_str().eq(node))
     }
+
+    /// Returns all service names currently registered with the master.
+    pub fn service_names(&self) -> Vec<String> {
+        self.service_providers
+            .iter()
+            .map(|entry| entry.topic.clone())
+            .collect()
+    }
 }
 
 impl MasterClient {

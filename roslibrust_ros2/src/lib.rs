@@ -123,6 +123,32 @@ impl roslibrust_common::TopicProvider for ZenohClient {
     }
 }
 
+impl roslibrust_common::GraphProvider for ZenohClient {
+    async fn list_topics(&self) -> Result<Vec<TopicInfo>> {
+        let mut topics: Vec<_> = self
+            .node
+            .graph()
+            .get_topic_names_and_types()
+            .into_iter()
+            .map(|(name, type_name)| TopicInfo { name, type_name })
+            .collect();
+        topics.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(topics)
+    }
+
+    async fn list_services(&self) -> Result<Vec<ServiceInfo>> {
+        let mut services: Vec<_> = self
+            .node
+            .graph()
+            .get_service_names_and_types()
+            .into_iter()
+            .map(|(name, type_name)| ServiceInfo { name, type_name })
+            .collect();
+        services.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(services)
+    }
+}
+
 pub struct ZenohServiceServer {
     cancellation_token: tokio_util::sync::CancellationToken,
 }

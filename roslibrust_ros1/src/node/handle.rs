@@ -3,7 +3,7 @@ use crate::{
     names::Name, publisher::Publisher, publisher::PublisherAny, service_client::ServiceClient,
     subscriber::Subscriber, subscriber::SubscriberAny, NodeError, ServiceServer,
 };
-use roslibrust_common::ServiceFn;
+use roslibrust_common::{GraphProvider, ServiceFn, ServiceInfo, TopicInfo};
 
 /// Represents a handle to an underlying Node. NodeHandle's can be freely cloned, moved, copied, etc.
 /// This class provides the user facing API for interacting with ROS.
@@ -172,5 +172,56 @@ impl NodeHandle {
         // Super important: Pass a Weak reference so ServiceServer doesn't keep the node alive
         let weak_node = self.inner.downgrade();
         Ok(ServiceServer::new(service_name, weak_node))
+    }
+}
+
+impl GraphProvider for NodeHandle {
+    async fn list_topics(&self) -> roslibrust_common::Result<Vec<TopicInfo>> {
+        let client = {
+            let node = self.inner.node.lock().await;
+            node.client.clone()
+        };
+
+        let mut topics: Vec<_> = client
+            .get_topic_types()
+            .await
+            .map_err(NodeError::from)?
+            .into_iter()
+            .map(|(name, type_name)| TopicInfo { name, type_name })
+            .collect();
+        topics.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(topics)
+    }
+
+    async fn list_services(&self) -> roslibrust_common::Result<Vec<ServiceInfo>> {
+        let (client, caller_id) = {
+            let node = self.inner.node.lock().await;
+            (node.client.clone(), node.node_name.to_string())
+        };
+
+        let service_names = client
+            .get_system_state()
+            .await
+            .map_err(NodeError::from)?
+            .service_names();
+
+        let mut services = Vec::with_capacity(service_names.len());
+        for service_name in service_names {
+            let service_uri = client
+                .lookup_service(&service_name)
+                .await
+                .map_err(NodeError::from)?;
+            let type_name =
+                crate::tcpros::probe_service_type(&caller_id, &service_name, &service_uri)
+                    .await
+                    .map_err(NodeError::from)?;
+            services.push(ServiceInfo {
+                name: service_name,
+                type_name,
+            });
+        }
+
+        services.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(services)
     }
 }

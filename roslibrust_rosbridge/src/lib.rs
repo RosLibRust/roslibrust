@@ -60,6 +60,7 @@ type TestResult = std::result::Result<(), anyhow::Error>;
 
 /// Communication primitives for the rosbridge_suite protocol
 mod comm;
+mod rosapi_discovery;
 
 use futures_util::stream::{SplitSink, SplitStream};
 use std::collections::HashMap;
@@ -191,6 +192,61 @@ impl ServiceProvider for crate::ClientHandle {
     ) -> Result<Self::ServiceServer> {
         let service: GlobalTopicName = service.to_global_name()?;
         ClientHandle::advertise_service(self, service.as_ref(), server).await
+    }
+}
+
+impl GraphProvider for crate::ClientHandle {
+    async fn list_topics(&self) -> Result<Vec<TopicInfo>> {
+        let response = self
+            .call_service::<rosapi_discovery::Topics>(
+                "/rosapi/topics",
+                rosapi_discovery::EmptyRequest {},
+            )
+            .await?;
+
+        if response.topics.len() != response.types.len() {
+            return Err(Error::SerializationError(format!(
+                "rosapi returned {} topic names but {} topic types",
+                response.topics.len(),
+                response.types.len()
+            )));
+        }
+
+        let mut topics: Vec<_> = response
+            .topics
+            .into_iter()
+            .zip(response.types)
+            .map(|(name, type_name)| TopicInfo { name, type_name })
+            .collect();
+        topics.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(topics)
+    }
+
+    async fn list_services(&self) -> Result<Vec<ServiceInfo>> {
+        let response = self
+            .call_service::<rosapi_discovery::Services>(
+                "/rosapi/services",
+                rosapi_discovery::EmptyRequest {},
+            )
+            .await?;
+
+        let mut services = Vec::with_capacity(response.services.len());
+        for service in response.services {
+            let service_type = self
+                .call_service::<rosapi_discovery::ServiceType>(
+                    "/rosapi/service_type",
+                    rosapi_discovery::ServiceTypeRequest {
+                        service: service.clone(),
+                    },
+                )
+                .await?;
+            services.push(ServiceInfo {
+                name: service,
+                type_name: service_type.type_name,
+            });
+        }
+        services.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(services)
     }
 }
 
