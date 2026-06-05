@@ -246,45 +246,84 @@ pub async fn establish_connection(
 }
 
 /// Connects to a ROS1 service server only long enough to discover its connection header.
-pub async fn probe_service_type(
-    caller_id: &str,
-    service_name: &str,
-    service_uri: &str,
-) -> Result<String, std::io::Error> {
+///
+/// # Empty String Fallback
+///
+/// If the service type cannot be determined (e.g., due to connection failures, timeouts,
+/// or missing type information in the response), this function returns an empty string (`""`)
+/// instead of an error. This behavior matches the rosapi node's convention and allows
+/// service discovery to proceed even when some services are unreachable.
+pub async fn probe_service_type(caller_id: &str, service_name: &str, service_uri: &str) -> String {
     use tokio::io::AsyncWriteExt;
 
     let server_uri = service_uri.replace("rosrpc://", "");
-    let mut stream = TcpStream::connect(&server_uri).await.map_err(|err| {
-        log::error!(
-            "Failed to establish TCPROS probe connection to service {service_name} at {server_uri}: {err}"
-        );
-        err
-    })?;
+    let mut stream = match TcpStream::connect(&server_uri).await {
+        Ok(s) => s,
+        Err(err) => {
+            log::warn!(
+                "Failed to establish TCPROS probe connection to service {service_name} at {server_uri}: {err}. Returning empty type."
+            );
+            return String::new();
+        }
+    };
 
     let mut header_data = Vec::with_capacity(256);
-    WriteBytesExt::write_u32::<LittleEndian>(&mut header_data, 0)?;
+    if let Err(err) = WriteBytesExt::write_u32::<LittleEndian>(&mut header_data, 0) {
+        log::warn!(
+            "Failed to write header length for service {service_name}: {err}. Returning empty type."
+        );
+        return String::new();
+    }
+
     for field in [
         format!("callerid={caller_id}"),
         "md5sum=*".to_string(),
         format!("service={service_name}"),
         "probe=1".to_string(),
     ] {
-        WriteBytesExt::write_u32::<LittleEndian>(&mut header_data, field.len() as u32)?;
-        std::io::Write::write_all(&mut header_data, field.as_bytes())?;
+        if let Err(err) =
+            WriteBytesExt::write_u32::<LittleEndian>(&mut header_data, field.len() as u32)
+        {
+            log::warn!(
+                "Failed to write field length for service {service_name}: {err}. Returning empty type."
+            );
+            return String::new();
+        }
+        if let Err(err) = std::io::Write::write_all(&mut header_data, field.as_bytes()) {
+            log::warn!(
+                "Failed to write field data for service {service_name}: {err}. Returning empty type."
+            );
+            return String::new();
+        }
     }
 
     let total_length = (header_data.len() - 4) as u32;
     header_data[..4].copy_from_slice(&total_length.to_le_bytes());
-    stream.write_all(&header_data).await?;
 
-    let responded_header = receive_header(&mut stream).await?;
+    if let Err(err) = stream.write_all(&header_data).await {
+        log::warn!(
+            "Failed to send probe header to service {service_name}: {err}. Returning empty type."
+        );
+        return String::new();
+    }
+
+    let responded_header = match receive_header(&mut stream).await {
+        Ok(h) => h,
+        Err(err) => {
+            log::warn!(
+                "Failed to receive header from service {service_name}: {err}. Returning empty type."
+            );
+            return String::new();
+        }
+    };
+
     if responded_header.topic_type.is_empty() {
-        Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            format!("Service {service_name} probe response did not include a type field"),
-        ))
+        log::warn!(
+            "Service {service_name} probe response did not include a type field. Returning empty type."
+        );
+        String::new()
     } else {
-        Ok(responded_header.topic_type)
+        responded_header.topic_type
     }
 }
 

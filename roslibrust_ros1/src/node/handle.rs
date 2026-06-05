@@ -205,20 +205,31 @@ impl GraphProvider for NodeHandle {
             .map_err(NodeError::from)?
             .service_names();
 
-        let mut services = Vec::with_capacity(service_names.len());
-        for service_name in service_names {
-            let service_uri = client
-                .lookup_service(&service_name)
-                .await
-                .map_err(NodeError::from)?;
-            let type_name =
-                crate::tcpros::probe_service_type(&caller_id, &service_name, &service_uri)
-                    .await
-                    .map_err(NodeError::from)?;
-            services.push(ServiceInfo {
-                name: service_name,
-                type_name,
-            });
+        // Spawn parallel tasks to probe service types for all services
+        let probe_tasks: Vec<_> = service_names
+            .into_iter()
+            .map(|service_name| {
+                let client = client.clone();
+                let caller_id = caller_id.clone();
+                tokio::spawn(async move {
+                    let service_uri = client.lookup_service(&service_name).await.ok()?;
+                    let type_name =
+                        crate::tcpros::probe_service_type(&caller_id, &service_name, &service_uri)
+                            .await;
+                    Some(ServiceInfo {
+                        name: service_name,
+                        type_name,
+                    })
+                })
+            })
+            .collect();
+
+        // Collect results from all parallel tasks
+        let mut services = Vec::with_capacity(probe_tasks.len());
+        for task in probe_tasks {
+            if let Ok(Some(service_info)) = task.await {
+                services.push(service_info);
+            }
         }
 
         services.sort_by(|a, b| a.name.cmp(&b.name));

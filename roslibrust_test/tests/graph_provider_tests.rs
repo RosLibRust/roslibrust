@@ -169,7 +169,7 @@ mod ros2_zenoh_tests {
             .unwrap()
     }
 
-    #[test_log::test(tokio::test)]
+    #[test_log::test(tokio::test(flavor = "multi_thread", worker_threads = 1))]
     async fn test_ros2_zenoh_graph_provider_topics() {
         let ctx = make_test_context();
         let ros = ZenohClient::new(&ctx, "test_graph_provider_topics")
@@ -178,7 +178,7 @@ mod ros2_zenoh_tests {
         test_graph_provider_topics(ros).await.unwrap();
     }
 
-    #[test_log::test(tokio::test)]
+    #[test_log::test(tokio::test(flavor = "multi_thread", worker_threads = 1))]
     async fn test_ros2_zenoh_graph_provider_services() {
         let ctx = make_test_context();
         let ros = ZenohClient::new(&ctx, "test_graph_provider_services")

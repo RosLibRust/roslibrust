@@ -214,6 +214,14 @@ pub trait GraphProvider {
     fn list_topics(&self) -> impl Future<Output = Result<Vec<TopicInfo>>> + Send;
 
     /// List services currently visible to this backend.
+    ///
+    /// # Type Resolution
+    ///
+    /// When a service type cannot be determined (e.g., due to connection failures,
+    /// timeouts, or missing service metadata), implementations should return an
+    /// empty string (`""`) for the `type_name` field rather than failing the entire
+    /// operation. This behavior matches the rosapi node's convention and allows
+    /// partial service discovery to succeed even when some services are unreachable.
     fn list_services(&self) -> impl Future<Output = Result<Vec<ServiceInfo>>> + Send;
 }
 

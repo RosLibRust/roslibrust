@@ -222,6 +222,14 @@ impl GraphProvider for crate::ClientHandle {
         Ok(topics)
     }
 
+    /// List all services visible through rosbridge.
+    ///
+    /// # Type Resolution
+    ///
+    /// This implementation queries the rosapi node for service information. The rosapi node
+    /// follows the convention of returning an empty string for service types that cannot be
+    /// determined (e.g., due to connection failures or missing metadata), which matches the
+    /// behavior documented in the [`GraphProvider::list_services`] trait method.
     async fn list_services(&self) -> Result<Vec<ServiceInfo>> {
         let response = self
             .call_service::<rosapi_discovery::Services>(
@@ -230,21 +238,38 @@ impl GraphProvider for crate::ClientHandle {
             )
             .await?;
 
-        let mut services = Vec::with_capacity(response.services.len());
-        for service in response.services {
-            let service_type = self
-                .call_service::<rosapi_discovery::ServiceType>(
-                    "/rosapi/service_type",
-                    rosapi_discovery::ServiceTypeRequest {
-                        service: service.clone(),
-                    },
-                )
-                .await?;
-            services.push(ServiceInfo {
-                name: service,
-                type_name: service_type.type_name,
-            });
+        // Spawn parallel tasks to query service types for all services
+        let probe_tasks: Vec<_> = response
+            .services
+            .into_iter()
+            .map(|service| {
+                let handle = self.clone();
+                tokio::spawn(async move {
+                    let service_type = handle
+                        .call_service::<rosapi_discovery::ServiceType>(
+                            "/rosapi/service_type",
+                            rosapi_discovery::ServiceTypeRequest {
+                                service: service.clone(),
+                            },
+                        )
+                        .await
+                        .ok()?;
+                    Some(ServiceInfo {
+                        name: service,
+                        type_name: service_type.type_name,
+                    })
+                })
+            })
+            .collect();
+
+        // Collect results from all parallel tasks
+        let mut services = Vec::with_capacity(probe_tasks.len());
+        for task in probe_tasks {
+            if let Ok(Some(service_info)) = task.await {
+                services.push(service_info);
+            }
         }
+
         services.sort_by(|a, b| a.name.cmp(&b.name));
         Ok(services)
     }
