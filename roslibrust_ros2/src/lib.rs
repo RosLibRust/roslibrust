@@ -84,6 +84,27 @@ fn ros_type_info<T: RosMessageType>() -> TypeInfo {
     TypeInfo::new(T::ROS2_TYPE_NAME, TypeHash::new(1, *T::ROS2_HASH))
 }
 
+// Converts a name that looks like std_msgs::msg::dds_::String_ to std_msgs/String
+fn normalize_ros2_graph_type(type_name: String) -> String {
+    if let Some((package, rest)) = type_name.split_once("::") {
+        if let Some(type_name) = rest
+            .strip_prefix("msg::dds_::")
+            .or_else(|| rest.strip_prefix("srv::dds_::"))
+            .and_then(|name| name.strip_suffix('_'))
+        {
+            return format!("{package}/{type_name}");
+        }
+    }
+
+    let mut parts = type_name.split('/');
+    match (parts.next(), parts.next(), parts.next(), parts.next()) {
+        (Some(package), Some("msg" | "srv"), Some(type_name), None) => {
+            format!("{package}/{type_name}")
+        }
+        _ => type_name,
+    }
+}
+
 impl roslibrust_common::TopicProvider for ZenohClient {
     type Publisher<T: RosMessageType> = ZenohPublisher<T>;
     type Subscriber<T: RosMessageType> = ZenohSubscriber<T>;
@@ -130,7 +151,10 @@ impl roslibrust_common::GraphProvider for ZenohClient {
             .graph()
             .get_topic_names_and_types()
             .into_iter()
-            .map(|(name, type_name)| TopicInfo { name, type_name })
+            .map(|(name, type_name)| TopicInfo {
+                name,
+                type_name: normalize_ros2_graph_type(type_name),
+            })
             .collect();
         topics.sort_by(|a, b| a.name.cmp(&b.name));
         Ok(topics)
@@ -142,7 +166,10 @@ impl roslibrust_common::GraphProvider for ZenohClient {
             .graph()
             .get_service_names_and_types()
             .into_iter()
-            .map(|(name, type_name)| ServiceInfo { name, type_name })
+            .map(|(name, type_name)| ServiceInfo {
+                name,
+                type_name: normalize_ros2_graph_type(type_name),
+            })
             .collect();
         services.sort_by(|a, b| a.name.cmp(&b.name));
         Ok(services)
@@ -288,5 +315,46 @@ impl roslibrust_common::ServiceProvider for ZenohClient {
         });
 
         Ok(ZenohServiceServer { cancellation_token })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_ros2_graph_type;
+
+    #[test]
+    fn normalizes_ros2_dds_message_type_names() {
+        assert_eq!(
+            normalize_ros2_graph_type("std_msgs::msg::dds_::String_".to_string()),
+            "std_msgs/String"
+        );
+    }
+
+    #[test]
+    fn normalizes_ros2_dds_service_type_names() {
+        assert_eq!(
+            normalize_ros2_graph_type("std_srvs::srv::dds_::SetBool_".to_string()),
+            "std_srvs/SetBool"
+        );
+    }
+
+    #[test]
+    fn normalizes_ros2_interface_type_names() {
+        assert_eq!(
+            normalize_ros2_graph_type("std_msgs/msg/String".to_string()),
+            "std_msgs/String"
+        );
+        assert_eq!(
+            normalize_ros2_graph_type("std_srvs/srv/SetBool".to_string()),
+            "std_srvs/SetBool"
+        );
+    }
+
+    #[test]
+    fn leaves_unknown_type_names_unchanged() {
+        assert_eq!(
+            normalize_ros2_graph_type("std_msgs/String".to_string()),
+            "std_msgs/String"
+        );
     }
 }

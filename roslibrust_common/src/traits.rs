@@ -5,7 +5,12 @@ use std::future::Future;
 /// Information about a topic currently visible in the ROS graph.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TopicInfo {
+    /// Name of the topic in the ROS graph following ROS1 conventions
+    /// e.g. /chatter
     pub name: String,
+    /// Name of the type of the topic in the ROS graph following ROS1 conventions
+    /// e.g. std_msgs/String
+    /// ROS2 names like 'std_msgs::msg::dds_::String_' will be normalized to ROS1 naming conventions for ease of use with this crate
     pub type_name: String,
 }
 
