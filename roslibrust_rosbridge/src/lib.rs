@@ -156,6 +156,26 @@ pub(crate) struct PublisherHandle {
     pub(crate) topic_type: String,
 }
 
+fn normalize_graph_type(type_name: String) -> String {
+    if let Some((package, rest)) = type_name.split_once("::") {
+        if let Some(type_name) = rest
+            .strip_prefix("msg::dds_::")
+            .or_else(|| rest.strip_prefix("srv::dds_::"))
+            .and_then(|name| name.strip_suffix('_'))
+        {
+            return format!("{package}/{type_name}");
+        }
+    }
+
+    let mut parts = type_name.split('/');
+    match (parts.next(), parts.next(), parts.next(), parts.next()) {
+        (Some(package), Some("msg" | "srv"), Some(type_name), None) => {
+            format!("{package}/{type_name}")
+        }
+        _ => type_name,
+    }
+}
+
 // Implement the generic Service trait for our ServiceClient
 impl<T: RosServiceType> Service<T> for crate::ServiceClient<T> {
     async fn call(&self, request: &T::Request) -> Result<T::Response> {
@@ -216,7 +236,10 @@ impl GraphProvider for crate::ClientHandle {
             .topics
             .into_iter()
             .zip(response.types)
-            .map(|(name, type_name)| TopicInfo { name, type_name })
+            .map(|(name, type_name)| TopicInfo {
+                name,
+                type_name: normalize_graph_type(type_name),
+            })
             .collect();
         topics.sort_by(|a, b| a.name.cmp(&b.name));
         Ok(topics)
@@ -256,7 +279,7 @@ impl GraphProvider for crate::ClientHandle {
                         .ok()?;
                     Some(ServiceInfo {
                         name: service,
-                        type_name: service_type.type_name,
+                        type_name: normalize_graph_type(service_type.type_name),
                     })
                 })
             })
@@ -331,6 +354,7 @@ impl<T: Send + Sync> MapError for std::result::Result<T, tokio_tungstenite::tung
 
 #[cfg(test)]
 mod test {
+    use super::normalize_graph_type;
     use roslibrust_common::*;
 
     // Prove that we've implemented the topic provider trait fully for ClientHandle
@@ -368,5 +392,37 @@ mod test {
             // when this test compiles
             _client: new_mock.unwrap(),
         };
+    }
+
+    #[test]
+    fn normalizes_ros2_interface_graph_types() {
+        assert_eq!(
+            normalize_graph_type("std_msgs/msg/String".to_string()),
+            "std_msgs/String"
+        );
+        assert_eq!(
+            normalize_graph_type("std_srvs/srv/SetBool".to_string()),
+            "std_srvs/SetBool"
+        );
+    }
+
+    #[test]
+    fn normalizes_ros2_dds_graph_types() {
+        assert_eq!(
+            normalize_graph_type("std_msgs::msg::dds_::String_".to_string()),
+            "std_msgs/String"
+        );
+        assert_eq!(
+            normalize_graph_type("std_srvs::srv::dds_::SetBool_".to_string()),
+            "std_srvs/SetBool"
+        );
+    }
+
+    #[test]
+    fn leaves_ros1_graph_types_unchanged() {
+        assert_eq!(
+            normalize_graph_type("std_msgs/String".to_string()),
+            "std_msgs/String"
+        );
     }
 }
