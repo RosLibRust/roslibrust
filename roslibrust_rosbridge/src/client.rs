@@ -358,18 +358,29 @@ impl ClientHandle {
         }
         {
             let mut comm = client.writer.write().await;
-            timeout(
+            if let Err(e) = timeout(
                 client.opts.timeout,
                 comm.call_service(service, &rand_string, req),
             )
-            .await?;
+            .await
+            {
+                // The request never made it onto the wire, no response is coming
+                client.service_calls.remove(&rand_string);
+                return Err(e);
+            }
         }
 
         // Having to do manual timeout logic here because of error types
         let recv = if let Some(timeout) = client.opts.timeout {
-            tokio::time::timeout(timeout, rx)
-                .await
-                .map_err(|e| Error::Timeout(format!("Service call timed out: {e:?}")))?
+            match tokio::time::timeout(timeout, rx).await {
+                Ok(recv) => recv,
+                Err(e) => {
+                    // Stop tracking the call so a late response is discarded
+                    // instead of accumulating in the map
+                    client.service_calls.remove(&rand_string);
+                    return Err(Error::Timeout(format!("Service call timed out: {e:?}")));
+                }
+            }
         } else {
             rx.await
         };
@@ -377,9 +388,13 @@ impl ClientHandle {
         // Attempt to actually pull data out
         let msg = match recv {
             Ok(msg) => msg,
-            Err(e) =>
-            // TODO remove panic! here, this could result from dropping communication, need to handle disconnect better
-            panic!("The sender end of a service channel was dropped while rx was being awaited, this should not be possible: {}", e),
+            Err(e) => {
+                // The sender was dropped without a response, which happens when the
+                // connection is lost and reconnect() clears the in-flight calls
+                return Err(Error::Unexpected(anyhow!(
+                    "Connection was reset while waiting for a service response: {e}"
+                )));
+            }
         };
 
         // Attempt to convert data to response type
@@ -586,17 +601,24 @@ impl Client {
         match msg {
             Message::Text(text) => {
                 debug!("got message: {}", text);
-                // TODO better error handling here serde_json::Error not send
-                let parsed: serde_json::Value = serde_json::from_str(text.as_str()).unwrap();
-                let parsed_object = parsed
-                    .as_object()
-                    .expect("Recieved non-object json response");
-                let op = parsed_object
-                    .get("op")
-                    .expect("Op field not present on returned object.")
-                    .as_str()
-                    .expect("Op field was not of string type.");
-                let op = Ops::from_str(op)?;
+                let parsed: serde_json::Value = match serde_json::from_str(text.as_str()) {
+                    Ok(parsed) => parsed,
+                    Err(e) => {
+                        warn!("Received malformed json message, ignoring: {e}, message: {text}");
+                        return Ok(());
+                    }
+                };
+                let Some(op) = parsed.get("op").and_then(|op| op.as_str()) else {
+                    warn!("Received message without a string `op` field, ignoring: {text}");
+                    return Ok(());
+                };
+                let op = match Ops::from_str(op) {
+                    Ok(op) => op,
+                    Err(e) => {
+                        warn!("Received message with unrecognized op `{op}`, ignoring: {e}");
+                        return Ok(());
+                    }
+                };
                 match op {
                     Ops::Publish => {
                         trace!("handling publish for {:?}", &parsed);
@@ -616,9 +638,11 @@ impl Client {
                 }
             }
             Message::Close(close) => {
-                // TODO how should we respond to this?
-                // How do we represent connection status via our API well?
-                panic!("Close requested from server: {:?}", close);
+                // Returning an error here hands control back to stubborn_spin,
+                // which marks the client disconnected and reconnects.
+                return Err(Error::Unexpected(anyhow!(
+                    "Close requested from server: {close:?}"
+                )));
             }
             Message::Ping(ping) => {
                 debug!("Ping received: {:?}", ping);
@@ -627,7 +651,7 @@ impl Client {
                 debug!("Pong received {:?}", pong);
             }
             _ => {
-                panic!("Non-text response received");
+                warn!("Unexpected non-text response received, ignoring...");
             }
         }
 
@@ -635,51 +659,72 @@ impl Client {
     }
 
     async fn handle_response(&self, data: Value) {
-        // TODO lots of error handling!
-        let id = data.get("id").unwrap().as_str().unwrap();
-        let (_id, call) = self.service_calls.remove(id).unwrap();
-        let res = data.get("values").unwrap();
-        call.send(res.clone()).unwrap();
+        let Some(id) = data.get("id").and_then(|id| id.as_str()) else {
+            warn!("Received service response without a string `id` field, ignoring: {data:?}");
+            return;
+        };
+        let Some((_id, call)) = self.service_calls.remove(id) else {
+            // Can occur legitimately when a response arrives after the caller
+            // stopped waiting (e.g. the caller's timeout expired).
+            warn!("Received service response for unknown or abandoned call id `{id}`, ignoring");
+            return;
+        };
+        let res = data.get("values").cloned().unwrap_or(Value::Null);
+        if call.send(res).is_err() {
+            // The caller gave up on the call (dropped the receiver) before the
+            // response arrived; nothing to deliver it to.
+            debug!("Service response receiver for call id `{id}` was dropped before the response arrived");
+        }
     }
 
     /// Response handler for receiving a service call looks up if we have a service
     /// registered for the incoming topic and if so dispatches to the callback
     async fn handle_service(&self, data: Value) {
-        // Unwrap is okay, field is fully required and strictly type
-        let topic = data.get("service").unwrap().as_str().unwrap();
-        // Unwrap is okay, field is strictly typed to string
-        let id = data.get("id").map(|id| id.as_str().unwrap().to_string());
+        let Some(topic) = data.get("service").and_then(|s| s.as_str()) else {
+            warn!("Received call_service without a string `service` field, ignoring: {data:?}");
+            return;
+        };
+        let id = data
+            .get("id")
+            .and_then(|id| id.as_str())
+            .map(|id| id.to_string());
 
         // Lookup if we have a service for the message
         let callback = self.services.get(topic);
         let callback = match callback {
             Some(callback) => callback,
-            _ => panic!("Received call_service for unadvertised service!"),
+            _ => {
+                warn!("Received call_service for unadvertised service `{topic}`, ignoring");
+                return;
+            }
         };
-        // TODO likely bugs here remove this unwrap. Unclear what we are expected to get for empty service
-        let request = data.get("args").unwrap().to_string();
+        // TODO likely bugs here. Unclear what we are expected to get for empty service
+        let Some(request) = data.get("args").map(|args| args.to_string()) else {
+            warn!("Received empty service, ignoring...");
+            return;
+        };
+
         let mut writer = self.writer.write().await;
 
         // Wrap evaluation of callback in a spawn_blocking to match trait expectations from roslibrust_common
         let callback = callback.value().clone();
         let response = tokio::task::spawn_blocking(move || (callback)(&request))
             .await
-            .expect("Tokio should not cancel or panic in service task");
-        match response {
-            Ok(res) => {
-                // TODO unwrap here is probably bad... Failure to write means disconnected?
-                writer.service_response(topic, id, true, res).await.unwrap();
-            }
+            .unwrap_or_else(|e| Err(format!("Service callback panicked: {e}").into()));
+        // A failed write means the connection dropped; spin_once will notice and
+        // trigger a reconnect, so logging is all we can usefully do here
+        let write_result = match response {
+            Ok(res) => writer.service_response(topic, id, true, res).await,
             Err(e) => {
                 error!("A service callback on topic {:?} failed with {:?} sending response false in service_response", data.get("service"), e);
                 writer
                     .service_response(topic, id, false, serde_json::json!(format!("{e}")))
                     .await
-                    .unwrap();
             }
         };
-
-        // Now we need to send the service_response back
+        if let Err(e) = write_result {
+            error!("Failed to send service_response for `{topic}`: {e}");
+        }
     }
 
     async fn spin_once(&self) -> Result<()> {
@@ -703,21 +748,29 @@ impl Client {
     /// Converts the return message to the subscribed type and calls any callbacks
     /// Panics if publish is received for unexpected topic
     async fn handle_publish(&self, data: Value) {
-        // TODO lots of error handling!
-        let callbacks = self
-            .subscriptions
-            .get(data.get("topic").unwrap().as_str().unwrap());
-        let callbacks = match callbacks {
+        let Some(topic) = data.get("topic").and_then(|t| t.as_str()) else {
+            warn!("Received publish without a string `topic` field, ignoring: {data:?}");
+            return;
+        };
+        let callbacks = match self.subscriptions.get(topic) {
             Some(callbacks) => callbacks,
-            _ => panic!("Received publish message for unsubscribed topic!"), // TODO probably shouldn't be a panic?
+            // Can occur legitimately in the window between rosbridge sending a
+            // message and it processing our unsubscribe
+            _ => {
+                debug!("Received publish for unsubscribed topic `{topic}`, ignoring");
+                return;
+            }
+        };
+        let Some(msg) = data.get("msg") else {
+            warn!("Received publish without a `msg` field on topic `{topic}`, ignoring");
+            return;
+        };
+        let Ok(msg) = serde_json::to_string(msg) else {
+            warn!("Failed to re-serialize `msg` field on topic `{topic}`, ignoring");
+            return;
         };
         for callback in callbacks.handles.values() {
-            callback(
-                // TODO possible bug here if "msg" isn't defined remove this unwrap
-                serde_json::to_string(data.get("msg").unwrap())
-                    .unwrap()
-                    .as_str(),
-            )
+            callback(msg.as_str())
         }
     }
 
@@ -726,6 +779,10 @@ impl Client {
         let (writer, reader) = stubborn_connect(&self.opts.url).await;
         self.reader = RwLock::new(reader);
         self.writer = RwLock::new(writer);
+
+        // Responses to calls made on the old connection will never arrive;
+        // dropping the senders errors out the waiting callers immediately
+        self.service_calls.clear();
 
         // TODO re-establish service servers?
 
@@ -772,7 +829,12 @@ async fn stubborn_spin(
             Ok(Err(err)) => {
                 is_disconnected.store(true, Ordering::Relaxed);
                 warn!("Spin failed with error: {err}, attempting to reconnect");
-                client.write().await.reconnect().await?;
+                // Never propagate a reconnect failure: this task is the only
+                // thing keeping the connection alive, so keep retrying
+                while let Err(e) = client.write().await.reconnect().await {
+                    warn!("Reconnect attempt failed: {e}, retrying");
+                    tokio::time::sleep(Duration::from_millis(200)).await;
+                }
                 is_disconnected.store(false, Ordering::Relaxed);
             }
             Err(_) => {
