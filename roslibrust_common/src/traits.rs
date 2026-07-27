@@ -2,6 +2,25 @@ use crate::topic_name::*;
 use crate::{Result, ServiceError};
 use std::future::Future;
 
+/// Information about a topic currently visible in the ROS graph.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TopicInfo {
+    /// Name of the topic in the ROS graph following ROS1 conventions
+    /// e.g. /chatter
+    pub name: String,
+    /// Name of the type of the topic in the ROS graph following ROS1 conventions
+    /// e.g. std_msgs/String
+    /// ROS2 names like 'std_msgs::msg::dds_::String_' will be normalized to ROS1 naming conventions for ease of use with this crate
+    pub type_name: String,
+}
+
+/// Information about a service currently visible in the ROS graph.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ServiceInfo {
+    pub name: String,
+    pub type_name: String,
+}
+
 /// Fundamental traits for message types this crate works with
 /// This trait will be satisfied for any types generated with this crate's message_gen functionality
 pub trait RosMessageType:
@@ -192,6 +211,23 @@ pub trait ServiceProvider {
         service: impl ToGlobalTopicName,
         server: F,
     ) -> impl Future<Output = Result<Self::ServiceServer>> + Send;
+}
+
+/// Describes the ability to inspect the visible ROS graph.
+pub trait GraphProvider {
+    /// List topics currently visible to this backend.
+    fn list_topics(&self) -> impl Future<Output = Result<Vec<TopicInfo>>> + Send;
+
+    /// List services currently visible to this backend.
+    ///
+    /// # Type Resolution
+    ///
+    /// When a service type cannot be determined (e.g., due to connection failures,
+    /// timeouts, or missing service metadata), implementations should return an
+    /// empty string (`""`) for the `type_name` field rather than failing the entire
+    /// operation. This behavior matches the rosapi node's convention and allows
+    /// partial service discovery to succeed even when some services are unreachable.
+    fn list_services(&self) -> impl Future<Output = Result<Vec<ServiceInfo>>> + Send;
 }
 
 // ANCHOR: ros_trait

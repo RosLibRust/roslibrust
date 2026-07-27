@@ -60,12 +60,16 @@ type TestResult = std::result::Result<(), anyhow::Error>;
 
 /// Communication primitives for the rosbridge_suite protocol
 mod comm;
+mod rosapi_discovery;
 
 use futures_util::stream::{SplitSink, SplitStream};
 use std::collections::HashMap;
+use std::time::Duration;
 use tokio::net::TcpStream;
 use tokio_tungstenite::*;
 use tungstenite::Message;
+
+const SERVICE_TYPE_QUERY_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Used for type erasure of message type so that we can store arbitrary handles
 type Callback = std::sync::Arc<dyn Fn(&str) + Send + Sync>;
@@ -155,6 +159,26 @@ pub(crate) struct PublisherHandle {
     pub(crate) topic_type: String,
 }
 
+fn normalize_graph_type(type_name: String) -> String {
+    if let Some((package, rest)) = type_name.split_once("::") {
+        if let Some(type_name) = rest
+            .strip_prefix("msg::dds_::")
+            .or_else(|| rest.strip_prefix("srv::dds_::"))
+            .and_then(|name| name.strip_suffix('_'))
+        {
+            return format!("{package}/{type_name}");
+        }
+    }
+
+    let mut parts = type_name.split('/');
+    match (parts.next(), parts.next(), parts.next(), parts.next()) {
+        (Some(package), Some("msg" | "srv"), Some(type_name), None) => {
+            format!("{package}/{type_name}")
+        }
+        _ => type_name,
+    }
+}
+
 // Implement the generic Service trait for our ServiceClient
 impl<T: RosServiceType> Service<T> for crate::ServiceClient<T> {
     async fn call(&self, request: &T::Request) -> Result<T::Response> {
@@ -191,6 +215,105 @@ impl ServiceProvider for crate::ClientHandle {
     ) -> Result<Self::ServiceServer> {
         let service: GlobalTopicName = service.to_global_name()?;
         ClientHandle::advertise_service(self, service.as_ref(), server).await
+    }
+}
+
+impl GraphProvider for crate::ClientHandle {
+    async fn list_topics(&self) -> Result<Vec<TopicInfo>> {
+        let response = self
+            .call_service::<rosapi_discovery::Topics>(
+                "/rosapi/topics",
+                rosapi_discovery::EmptyRequest {},
+            )
+            .await?;
+
+        if response.topics.len() != response.types.len() {
+            return Err(Error::SerializationError(format!(
+                "rosapi returned {} topic names but {} topic types",
+                response.topics.len(),
+                response.types.len()
+            )));
+        }
+
+        let mut topics: Vec<_> = response
+            .topics
+            .into_iter()
+            .zip(response.types)
+            .map(|(name, type_name)| TopicInfo {
+                name,
+                type_name: normalize_graph_type(type_name),
+            })
+            .collect();
+        topics.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(topics)
+    }
+
+    /// List all services visible through rosbridge.
+    ///
+    /// # Type Resolution
+    ///
+    /// This implementation queries the rosapi node for service information. The rosapi node
+    /// follows the convention of returning an empty string for service types that cannot be
+    /// determined (e.g., due to connection failures or missing metadata), which matches the
+    /// behavior documented in the [`GraphProvider::list_services`] trait method.
+    async fn list_services(&self) -> Result<Vec<ServiceInfo>> {
+        let response = self
+            .call_service::<rosapi_discovery::Services>(
+                "/rosapi/services",
+                rosapi_discovery::EmptyRequest {},
+            )
+            .await?;
+
+        // Spawn parallel tasks to query service types for all services
+        let probe_tasks: Vec<_> = response
+            .services
+            .into_iter()
+            .map(|service| {
+                let handle = self.clone();
+                tokio::spawn(async move {
+                    let type_name = match tokio::time::timeout(
+                        SERVICE_TYPE_QUERY_TIMEOUT,
+                        handle.call_service::<rosapi_discovery::ServiceType>(
+                            "/rosapi/service_type",
+                            rosapi_discovery::ServiceTypeRequest {
+                                service: service.clone(),
+                            },
+                        ),
+                    )
+                    .await
+                    {
+                        Ok(Ok(service_type)) => normalize_graph_type(service_type.type_name),
+                        Ok(Err(err)) => {
+                            log::warn!(
+                                "Failed to resolve type for service {service}: {err}. Returning empty type."
+                            );
+                            String::new()
+                        }
+                        Err(_) => {
+                            log::warn!(
+                                "Timed out resolving type for service {service}. Returning empty type."
+                            );
+                            String::new()
+                        }
+                    };
+                    ServiceInfo {
+                        name: service,
+                        type_name,
+                    }
+                })
+            })
+            .collect();
+
+        // Collect results from all parallel tasks
+        let mut services = Vec::with_capacity(probe_tasks.len());
+        for task in probe_tasks {
+            if let Ok(service_info) = task.await {
+                services.push(service_info);
+            }
+        }
+
+        services.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(services)
     }
 }
 
@@ -250,6 +373,7 @@ impl<T: Send + Sync> MapError for std::result::Result<T, tokio_tungstenite::tung
 
 #[cfg(test)]
 mod test {
+    use super::normalize_graph_type;
     use roslibrust_common::*;
 
     // Prove that we've implemented the topic provider trait fully for ClientHandle
@@ -287,5 +411,37 @@ mod test {
             // when this test compiles
             _client: new_mock.unwrap(),
         };
+    }
+
+    #[test]
+    fn normalizes_ros2_interface_graph_types() {
+        assert_eq!(
+            normalize_graph_type("std_msgs/msg/String".to_string()),
+            "std_msgs/String"
+        );
+        assert_eq!(
+            normalize_graph_type("std_srvs/srv/SetBool".to_string()),
+            "std_srvs/SetBool"
+        );
+    }
+
+    #[test]
+    fn normalizes_ros2_dds_graph_types() {
+        assert_eq!(
+            normalize_graph_type("std_msgs::msg::dds_::String_".to_string()),
+            "std_msgs/String"
+        );
+        assert_eq!(
+            normalize_graph_type("std_srvs::srv::dds_::SetBool_".to_string()),
+            "std_srvs/SetBool"
+        );
+    }
+
+    #[test]
+    fn leaves_ros1_graph_types_unchanged() {
+        assert_eq!(
+            normalize_graph_type("std_msgs/String".to_string()),
+            "std_msgs/String"
+        );
     }
 }

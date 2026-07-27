@@ -3,7 +3,10 @@ use crate::{
     names::Name, publisher::Publisher, publisher::PublisherAny, service_client::ServiceClient,
     subscriber::Subscriber, subscriber::SubscriberAny, NodeError, ServiceServer,
 };
-use roslibrust_common::ServiceFn;
+use roslibrust_common::{GraphProvider, ServiceFn, ServiceInfo, TopicInfo};
+use std::time::Duration;
+
+const SERVICE_TYPE_PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Represents a handle to an underlying Node. NodeHandle's can be freely cloned, moved, copied, etc.
 /// This class provides the user facing API for interacting with ROS.
@@ -172,5 +175,90 @@ impl NodeHandle {
         // Super important: Pass a Weak reference so ServiceServer doesn't keep the node alive
         let weak_node = self.inner.downgrade();
         Ok(ServiceServer::new(service_name, weak_node))
+    }
+}
+
+impl GraphProvider for NodeHandle {
+    async fn list_topics(&self) -> roslibrust_common::Result<Vec<TopicInfo>> {
+        let client = {
+            let node = self.inner.node.lock().await;
+            node.client.clone()
+        };
+
+        let mut topics: Vec<_> = client
+            .get_topic_types()
+            .await
+            .map_err(NodeError::from)?
+            .into_iter()
+            .map(|(name, type_name)| TopicInfo { name, type_name })
+            .collect();
+        topics.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(topics)
+    }
+
+    async fn list_services(&self) -> roslibrust_common::Result<Vec<ServiceInfo>> {
+        let (client, caller_id) = {
+            let node = self.inner.node.lock().await;
+            (node.client.clone(), node.node_name.to_string())
+        };
+
+        let service_names = client
+            .get_system_state()
+            .await
+            .map_err(NodeError::from)?
+            .service_names();
+
+        // Spawn parallel tasks to probe service types for all services
+        let probe_tasks: Vec<_> = service_names
+            .into_iter()
+            .map(|service_name| {
+                let client = client.clone();
+                let caller_id = caller_id.clone();
+                tokio::spawn(async move {
+                    let type_name = match tokio::time::timeout(SERVICE_TYPE_PROBE_TIMEOUT, async {
+                        let service_uri = client.lookup_service(&service_name).await.ok()?;
+                        Some(
+                            crate::tcpros::probe_service_type(
+                                &caller_id,
+                                &service_name,
+                                &service_uri,
+                            )
+                            .await,
+                        )
+                    })
+                    .await
+                    {
+                        Ok(Some(type_name)) => type_name,
+                        Ok(None) => {
+                            log::warn!(
+                                "Failed to look up service {service_name}. Returning empty type."
+                            );
+                            String::new()
+                        }
+                        Err(_) => {
+                            log::warn!(
+                                "Timed out probing service {service_name}. Returning empty type."
+                            );
+                            String::new()
+                        }
+                    };
+                    ServiceInfo {
+                        name: service_name,
+                        type_name,
+                    }
+                })
+            })
+            .collect();
+
+        // Collect results from all parallel tasks
+        let mut services = Vec::with_capacity(probe_tasks.len());
+        for task in probe_tasks {
+            if let Ok(service_info) = task.await {
+                services.push(service_info);
+            }
+        }
+
+        services.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(services)
     }
 }

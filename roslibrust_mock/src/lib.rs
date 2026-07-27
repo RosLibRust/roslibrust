@@ -44,8 +44,19 @@ type TypeErasedCallback = Arc<
         + 'static,
 >;
 
+struct TopicEntry {
+    sender: Channel::Sender<Vec<u8>>,
+    receiver: Channel::Receiver<Vec<u8>>,
+    type_name: String,
+}
+
+struct ServiceEntry {
+    callback: TypeErasedCallback,
+    type_name: String,
+}
+
 // Internal type for storing services
-type ServiceStore = RwLock<BTreeMap<String, TypeErasedCallback>>;
+type ServiceStore = RwLock<BTreeMap<String, ServiceEntry>>;
 
 /// A mock ROS implementation that can be substituted for any roslibrust backend in unit tests.
 ///
@@ -55,7 +66,7 @@ type ServiceStore = RwLock<BTreeMap<String, TypeErasedCallback>>;
 pub struct MockRos {
     // We could probably achieve some fancier type erasure than actually serializing the data
     // but this ends up being pretty simple
-    topics: Arc<RwLock<BTreeMap<String, (Channel::Sender<Vec<u8>>, Channel::Receiver<Vec<u8>>)>>>,
+    topics: Arc<RwLock<BTreeMap<String, TopicEntry>>>,
     services: Arc<ServiceStore>,
 }
 
@@ -89,10 +100,17 @@ impl TopicProvider for MockRos {
         // Check if we already have this channel
         {
             let topics = self.topics.read().await;
-            if let Some((sender, _)) = topics.get(topic_str) {
+            if let Some(entry) = topics.get(topic_str) {
+                if entry.type_name != MsgType::ROS_TYPE_NAME {
+                    return Err(Error::ServerError(format!(
+                        "Topic {topic_str} already registered with type {}, cannot also use {}",
+                        entry.type_name,
+                        MsgType::ROS_TYPE_NAME
+                    )));
+                }
                 debug!("Issued new publisher to existing topic {}", topic_str);
                 return Ok(MockPublisher {
-                    sender: sender.clone(),
+                    sender: entry.sender.clone(),
                     _marker: Default::default(),
                 });
             }
@@ -101,7 +119,14 @@ impl TopicProvider for MockRos {
         let tx_rx = Channel::channel(10);
         let tx_copy = tx_rx.0.clone();
         let mut topics = self.topics.write().await;
-        topics.insert(topic_str.to_string(), tx_rx);
+        topics.insert(
+            topic_str.to_string(),
+            TopicEntry {
+                sender: tx_rx.0,
+                receiver: tx_rx.1,
+                type_name: MsgType::ROS_TYPE_NAME.to_string(),
+            },
+        );
         debug!("Created new publisher and channel for topic {}", topic_str);
         Ok(MockPublisher {
             sender: tx_copy,
@@ -118,10 +143,17 @@ impl TopicProvider for MockRos {
         // Check if we already have this channel
         {
             let topics = self.topics.read().await;
-            if let Some((_, receiver)) = topics.get(topic_str) {
+            if let Some(entry) = topics.get(topic_str) {
+                if entry.type_name != MsgType::ROS_TYPE_NAME {
+                    return Err(Error::ServerError(format!(
+                        "Topic {topic_str} already registered with type {}, cannot also use {}",
+                        entry.type_name,
+                        MsgType::ROS_TYPE_NAME
+                    )));
+                }
                 debug!("Issued new subscriber to existing topic {}", topic_str);
                 return Ok(MockSubscriber {
-                    receiver: receiver.resubscribe(),
+                    receiver: entry.receiver.resubscribe(),
                     _marker: Default::default(),
                 });
             }
@@ -130,7 +162,14 @@ impl TopicProvider for MockRos {
         let tx_rx = Channel::channel(10);
         let rx_copy = tx_rx.1.resubscribe();
         let mut topics = self.topics.write().await;
-        topics.insert(topic_str.to_string(), tx_rx);
+        topics.insert(
+            topic_str.to_string(),
+            TopicEntry {
+                sender: tx_rx.0,
+                receiver: tx_rx.1,
+                type_name: MsgType::ROS_TYPE_NAME.to_string(),
+            },
+        );
         debug!("Created new subscriber and channel for topic {}", topic_str);
         Ok(MockSubscriber {
             receiver: rx_copy,
@@ -172,7 +211,9 @@ impl<T: RosServiceType> Service<T> for MockServiceClient<T> {
         // Check if a service exists for this topic
         let callback = {
             let services = services.read().await;
-            services.get(&self.topic).cloned()
+            services
+                .get(&self.topic)
+                .map(|entry| entry.callback.clone())
         };
         let callback = match callback {
             Some(callback) => callback,
@@ -237,6 +278,19 @@ impl ServiceProvider for MockRos {
         server: F,
     ) -> Result<Self::ServiceServer> {
         let service: GlobalTopicName = service.to_global_name()?;
+        let service_name = service.as_ref().to_string();
+        {
+            let services = self.services.read().await;
+            if let Some(existing) = services.get(&service_name) {
+                if existing.type_name != SrvType::ROS_SERVICE_NAME {
+                    return Err(Error::ServerError(format!(
+                        "Service {service_name} already registered with type {}, cannot also use {}",
+                        existing.type_name,
+                        SrvType::ROS_SERVICE_NAME
+                    )));
+                }
+            }
+        }
         // Type erase the service function here
         let erased_closure = move |message: Vec<u8>| -> std::result::Result<
             Vec<u8>,
@@ -251,11 +305,41 @@ impl ServiceProvider for MockRos {
         };
         let erased_closure = Arc::new(erased_closure);
         let mut services = self.services.write().await;
-        services.insert(String::from(service), erased_closure);
+        services.insert(
+            service_name,
+            ServiceEntry {
+                callback: erased_closure,
+                type_name: SrvType::ROS_SERVICE_NAME.to_string(),
+            },
+        );
 
         // We technically need to hand back a token that shuts the service down here
         // But we haven't implemented that yet in this mock
         Ok(())
+    }
+}
+
+impl GraphProvider for MockRos {
+    async fn list_topics(&self) -> Result<Vec<TopicInfo>> {
+        let topics = self.topics.read().await;
+        Ok(topics
+            .iter()
+            .map(|(name, entry)| TopicInfo {
+                name: name.clone(),
+                type_name: entry.type_name.clone(),
+            })
+            .collect())
+    }
+
+    async fn list_services(&self) -> Result<Vec<ServiceInfo>> {
+        let services = self.services.read().await;
+        Ok(services
+            .iter()
+            .map(|(name, entry)| ServiceInfo {
+                name: name.clone(),
+                type_name: entry.type_name.clone(),
+            })
+            .collect())
     }
 }
 
@@ -351,6 +435,40 @@ mod tests {
         let response = client.call(&request).await.unwrap();
         assert!(response.success);
         assert_eq!(response.message, "You set my bool!");
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_mock_graph_provider() {
+        let mock_ros = MockRos::new();
+
+        let _publisher = mock_ros
+            .advertise::<std_msgs::String>("/test_topic")
+            .await
+            .unwrap();
+        mock_ros
+            .advertise_service::<std_srvs::SetBool, _>("/test_service", |request| {
+                Ok(std_srvs::SetBoolResponse {
+                    success: request.data,
+                    message: String::new(),
+                })
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(
+            mock_ros.list_topics().await.unwrap(),
+            vec![TopicInfo {
+                name: "/test_topic".to_string(),
+                type_name: "std_msgs/String".to_string(),
+            }]
+        );
+        assert_eq!(
+            mock_ros.list_services().await.unwrap(),
+            vec![ServiceInfo {
+                name: "/test_service".to_string(),
+                type_name: "std_srvs/SetBool".to_string(),
+            }]
+        );
     }
 
     #[tokio::test(flavor = "multi_thread")]

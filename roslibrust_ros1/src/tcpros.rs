@@ -245,6 +245,88 @@ pub async fn establish_connection(
     .map_err(std::io::Error::from)
 }
 
+/// Connects to a ROS1 service server only long enough to discover its connection header.
+///
+/// # Empty String Fallback
+///
+/// If the service type cannot be determined (e.g., due to connection failures, timeouts,
+/// or missing type information in the response), this function returns an empty string (`""`)
+/// instead of an error. This behavior matches the rosapi node's convention and allows
+/// service discovery to proceed even when some services are unreachable.
+pub async fn probe_service_type(caller_id: &str, service_name: &str, service_uri: &str) -> String {
+    use tokio::io::AsyncWriteExt;
+
+    let server_uri = service_uri.replace("rosrpc://", "");
+    let mut stream = match TcpStream::connect(&server_uri).await {
+        Ok(s) => s,
+        Err(err) => {
+            log::warn!(
+                "Failed to establish TCPROS probe connection to service {service_name} at {server_uri}: {err}. Returning empty type."
+            );
+            return String::new();
+        }
+    };
+
+    let mut header_data = Vec::with_capacity(256);
+    if let Err(err) = WriteBytesExt::write_u32::<LittleEndian>(&mut header_data, 0) {
+        log::warn!(
+            "Failed to write header length for service {service_name}: {err}. Returning empty type."
+        );
+        return String::new();
+    }
+
+    for field in [
+        format!("callerid={caller_id}"),
+        "md5sum=*".to_string(),
+        format!("service={service_name}"),
+        "probe=1".to_string(),
+    ] {
+        if let Err(err) =
+            WriteBytesExt::write_u32::<LittleEndian>(&mut header_data, field.len() as u32)
+        {
+            log::warn!(
+                "Failed to write field length for service {service_name}: {err}. Returning empty type."
+            );
+            return String::new();
+        }
+        if let Err(err) = std::io::Write::write_all(&mut header_data, field.as_bytes()) {
+            log::warn!(
+                "Failed to write field data for service {service_name}: {err}. Returning empty type."
+            );
+            return String::new();
+        }
+    }
+
+    let total_length = (header_data.len() - 4) as u32;
+    header_data[..4].copy_from_slice(&total_length.to_le_bytes());
+
+    if let Err(err) = stream.write_all(&header_data).await {
+        log::warn!(
+            "Failed to send probe header to service {service_name}: {err}. Returning empty type."
+        );
+        return String::new();
+    }
+
+    let responded_header = match receive_header(&mut stream).await {
+        Ok(h) => h,
+        Err(err) => {
+            log::warn!(
+                "Failed to receive header from service {service_name}: {err}. Returning empty type."
+            );
+            return String::new();
+        }
+    };
+
+    if responded_header.topic_type.is_empty() {
+        log::warn!(
+            "Service {service_name} probe response did not include a type field. Returning empty type."
+        );
+        String::new()
+    } else {
+        responded_header.topic_type
+    }
+}
+
 pub async fn receive_header_bytes(stream: &mut TcpStream) -> Result<Vec<u8>, std::io::Error> {
     // Bring trait def into scope
     use tokio::io::AsyncReadExt;
