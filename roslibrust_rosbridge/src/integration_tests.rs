@@ -532,6 +532,7 @@ mod integration_tests {
     #[cfg(feature = "ros2_test")]
     #[test_log::test(tokio::test)]
     async fn test_wstring_roundtrip_through_rclpy_node() {
+        use std::io::{BufRead, BufReader};
         use std::process::{Child, Command, Stdio};
         use test_msgs::WStrings;
 
@@ -558,18 +559,26 @@ mod integration_tests {
             .subscribe::<WStrings>(OUTPUT_TOPIC)
             .await
             .expect("Failed to subscribe");
-        let _relay = ChildGuard(
-            Command::new("python3")
-                .arg(concat!(
-                    env!("CARGO_MANIFEST_DIR"),
-                    "/../roslibrust_test/tests/ros2_wstring_relay.py"
-                ))
-                .args([INPUT_TOPIC, OUTPUT_TOPIC])
-                .stdout(Stdio::null())
-                .stderr(Stdio::inherit())
-                .spawn()
-                .expect("Failed to start the rclpy wstring relay"),
+        let mut relay = Command::new("python3")
+            .arg(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../roslibrust_test/tests/ros2_wstring_relay.py"
+            ))
+            .args([INPUT_TOPIC, OUTPUT_TOPIC])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .expect("Failed to start the rclpy wstring relay");
+        let mut ready = std::string::String::new();
+        BufReader::new(relay.stdout.take().unwrap())
+            .read_line(&mut ready)
+            .expect("Failed to read readiness from the rclpy wstring relay");
+        assert_eq!(
+            ready.trim(),
+            "READY",
+            "rclpy wstring relay exited before becoming ready"
         );
+        let _relay = ChildGuard(relay);
 
         tokio::time::sleep(Duration::from_secs(2)).await;
         let expected = WStrings {

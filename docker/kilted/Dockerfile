@@ -5,7 +5,7 @@ LABEL maintainer="Carter Schultz <carterjschultz@gmail.com>"
 RUN apt update && apt install -y git
 
 # Install rosbridge suite for rosbridge backend testing
-RUN apt update && apt install -y ros-kilted-rosbridge-suite
+RUN apt update && apt install -y ros-kilted-rosbridge-suite ros-kilted-test-msgs
 
 # Install rosbag2 for MCAP integration testing
 RUN apt update && apt install -y ros-kilted-rosbag2

@@ -5,6 +5,7 @@ mod common;
 use roslibrust_common::traits::*;
 use roslibrust_ros2::ZenohClient;
 use roslibrust_test::ros2::test_msgs::WStrings;
+use std::io::{BufRead, BufReader};
 use std::process::{Child, Command, Stdio};
 use tokio::time::{sleep, timeout, Duration};
 
@@ -18,18 +19,26 @@ impl Drop for ChildGuard {
 }
 
 fn spawn_ros2_relay(input_topic: &str, output_topic: &str) -> ChildGuard {
-    ChildGuard(
-        Command::new("python3")
-            .arg(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/../roslibrust_test/tests/ros2_wstring_relay.py"
-            ))
-            .args([input_topic, output_topic])
-            .stdout(Stdio::null())
-            .stderr(Stdio::inherit())
-            .spawn()
-            .expect("failed to start the rclpy wstring relay"),
-    )
+    let mut child = Command::new("python3")
+        .arg(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../roslibrust_test/tests/ros2_wstring_relay.py"
+        ))
+        .args([input_topic, output_topic])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .expect("failed to start the rclpy wstring relay");
+    let mut ready = String::new();
+    BufReader::new(child.stdout.take().unwrap())
+        .read_line(&mut ready)
+        .expect("failed to read readiness from the rclpy wstring relay");
+    assert_eq!(
+        ready.trim(),
+        "READY",
+        "rclpy wstring relay exited before becoming ready"
+    );
+    ChildGuard(child)
 }
 
 fn test_message() -> WStrings {

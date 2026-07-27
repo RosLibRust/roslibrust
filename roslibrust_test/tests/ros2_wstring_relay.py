@@ -19,6 +19,7 @@ class WStringRelay(Node):
 def main() -> None:
     rclpy.init()
     node = WStringRelay(sys.argv[1], sys.argv[2])
+    print("READY", flush=True)
     try:
         rclpy.spin(node)
     finally:

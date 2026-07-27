@@ -4,7 +4,7 @@ LABEL maintainer="Carter Schultz <carterjschultz@gmail.com>"
 # Required by github CI for submodule support
 RUN apt update && apt install -y git
 
-RUN apt update && apt install -y ros-galactic-rosbridge-suite
+RUN apt update && apt install -y ros-galactic-rosbridge-suite ros-galactic-test-msgs
 
 # Install rosbag2 and MCAP storage plugin for MCAP integration testing
 # Note: MCAP is not the default storage format in Galactic, so we need the plugin
