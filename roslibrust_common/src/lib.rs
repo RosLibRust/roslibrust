@@ -67,6 +67,12 @@ impl RosMessageType for ShapeShifter {
 /// These functions are needed both in roslibrust_ros1 and roslibrust_codegen so they're in this crate
 /// for the moment.
 pub mod md5sum;
+mod serialization_context;
+#[doc(hidden)]
+pub use serialization_context::{
+    ros1_message_description, ros1_wstring_compatibility_enabled, with_ros1_wstring_compatibility,
+    Ros1MessageDescription,
+};
 
 /// Contains the generic traits represent a pubsub system and service system.
 /// These traits will be implemented for specific backends to provides access to "ROS Like" functionality.

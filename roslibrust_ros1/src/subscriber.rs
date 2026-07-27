@@ -53,7 +53,9 @@ impl<T: RosMessageType> Subscriber<T> {
             T::ROS_TYPE_NAME
         );
         let tick = tokio::time::Instant::now();
-        match roslibrust_serde_rosmsg::from_slice::<T>(&data[..]) {
+        match roslibrust_common::with_ros1_wstring_compatibility(|| {
+            roslibrust_serde_rosmsg::from_slice::<T>(&data[..])
+        }) {
             Ok(p) => {
                 let duration = tick.elapsed();
                 trace!(

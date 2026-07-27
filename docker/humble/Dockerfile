@@ -4,7 +4,7 @@ LABEL maintainer="Carter Schultz <carterjschultz@gmail.com>"
 # Required by github CI for submodule support
 RUN apt update && apt install -y git
 
-RUN apt update && apt install -y ros-humble-rosbridge-suite
+RUN apt update && apt install -y ros-humble-rosbridge-suite ros-humble-test-msgs
 
 # Install rosbag2 and MCAP storage plugin for MCAP integration testing
 # Note: MCAP is not the default storage format in Humble, so we need the plugin

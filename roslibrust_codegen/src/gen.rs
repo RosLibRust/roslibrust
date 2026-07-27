@@ -351,7 +351,10 @@ fn convert_ros_constant_type_to_rust_type(
 
     convert_ros_type_to_rust_type(version, &constant.constant_type)
         .map(|rust_type| {
-            if rust_type == "::std::string::String" {
+            if matches!(
+                rust_type,
+                "::std::string::String" | "::roslibrust::codegen::WString"
+            ) {
                 "&'static str"
             } else {
                 rust_type
@@ -457,14 +460,20 @@ fn parse_ros_value(
         "int32" => generic_parse_value::<i32>(value, is_list),
         "uint64" => generic_parse_value::<u64>(value, is_list),
         "int64" => generic_parse_value::<i64>(value, is_list),
-        "string" => {
+        "string" | "wstring" => {
             // String is a special case because of quotes and to_string()
             if is_list {
                 // TODO there is a bug here, no idea how I should be attempting to convert / escape single quotes here...
                 let parsed: Vec<String> = serde_json::from_str(value).map_err(|e|
                     Error::with(format!("Failed to parse a literal value in a message file to the corresponding rust type: {value} to Vec<String>").as_str(), e)
                 )?;
-                let vec_str = format!("{parsed:?}.iter().map(|x| x.to_string()).collect()");
+                let vec_str = if ros_type == "wstring" {
+                    format!(
+                        "{parsed:?}.iter().map(|x| ::roslibrust::codegen::WString::from(*x)).collect()"
+                    )
+                } else {
+                    format!("{parsed:?}.iter().map(|x| x.to_string()).collect()")
+                };
                 Ok(quote! { #vec_str })
             } else {
                 match version {

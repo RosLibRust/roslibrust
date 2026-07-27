@@ -52,9 +52,9 @@ lazy_static::lazy_static! {
         ("float32", "f32"),
         ("float64", "f64"),
         ("string", "::std::string::String"),
+        ("wstring", "::roslibrust::codegen::WString"),
         ("builtin_interfaces/Time", "::roslibrust::codegen::integral_types::Time"),
         ("builtin_interfaces/Duration", "::roslibrust::codegen::integral_types::Duration"),
-        // ("wstring", TODO),
     ].into_iter().collect();
 }
 
@@ -216,17 +216,26 @@ fn parse_field_type(
     }
 }
 
-/// Specifically handles bounded string types, e.g. "string<=10"
+/// Specifically handles bounded string types, e.g. "string<=10" or "wstring<=10".
 /// Returns the field_type and the string_capacity if it is a bounded string
 /// Otherwise returns the original type and None for the capacity
 fn parse_bounded_string(type_str: &str) -> Result<(String, Option<usize>), Error> {
-    if let Some(stripped) = type_str.strip_prefix("string<=") {
-        let capacity = stripped.parse::<usize>().map_err(|err| {
+    let bounded_type = type_str
+        .strip_prefix("string<=")
+        .map(|capacity| ("string", capacity))
+        .or_else(|| {
+            type_str
+                .strip_prefix("wstring<=")
+                .map(|capacity| ("wstring", capacity))
+        });
+
+    if let Some((field_type, capacity)) = bounded_type {
+        let capacity = capacity.parse::<usize>().map_err(|err| {
             Error::new(format!(
                 "Unable to parse capacity of bounded string: {type_str}: {err}"
             ))
         })?;
-        Ok(("string".to_string(), Some(capacity)))
+        Ok((field_type.to_string(), Some(capacity)))
     } else {
         Ok((type_str.to_string(), None))
     }
@@ -324,6 +333,21 @@ mod test {
         };
         let parsed = parse_type(line, &pkg).unwrap();
         assert_eq!(parsed.array_info, ArrayType::Unbounded);
+    }
+
+    #[test_log::test]
+    fn parse_type_handles_bounded_wstring_correctly() {
+        let pkg = Package {
+            name: "test_pkg".to_string(),
+            path: "./not_a_path".into(),
+            version: Some(RosVersion::ROS2),
+        };
+        let parsed = parse_type("wstring<=32[<=4]", &pkg).unwrap();
+
+        assert_eq!(parsed.field_type, "wstring");
+        assert_eq!(parsed.string_capacity, Some(32));
+        assert_eq!(parsed.array_info, ArrayType::Bounded(4));
+        assert_eq!(parsed.package_name, None);
     }
 
     #[test_log::test]

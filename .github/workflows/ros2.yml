@@ -58,6 +58,11 @@ jobs:
       - name: Lint
         run: source /root/.cargo/env && cargo fmt --all -- --check
 
+      - name: Install wstring interoperability test messages
+        run: |
+          apt-get update
+          apt-get install -y ros-${{ matrix.distro }}-test-msgs
+
       - name: Start rosbridge services
         run: |
           source /opt/ros/${{ matrix.distro }}/setup.bash

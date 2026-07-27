@@ -5,7 +5,7 @@ LABEL maintainer="Carter Schultz <carterjschultz@gmail.com>"
 RUN apt update && apt install -y git
 
 # Install rosbridge suite for rosbridge backend testing
-RUN apt update && apt install -y ros-rolling-rosbridge-suite
+RUN apt update && apt install -y ros-rolling-rosbridge-suite ros-rolling-test-msgs
 
 # Install rosbag2 for MCAP integration testing
 RUN apt update && apt install -y ros-rolling-rosbag2
@@ -24,4 +24,3 @@ WORKDIR /
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
-

@@ -12,6 +12,30 @@ fn test_defaults() {
 }
 
 #[test]
+fn wstrings_generate_for_scalar_array_and_sequence_fields() {
+    use roslibrust::codegen::WString;
+
+    let message = ros2_test_msgs::WStrings {
+        wstring_value: "ハローワールド".into(),
+        wstring_value_default1: "Hello world!".into(),
+        wstring_value_default2: "Hellö wörld!".into(),
+        wstring_value_default3: "ハローワールド".into(),
+        array_of_wstrings: ["one".into(), "二".into(), "🌍".into()],
+        bounded_sequence_of_wstrings: vec!["bounded".into(), "文字列".into()],
+        unbounded_sequence_of_wstrings: vec!["".into(), "ascii".into()],
+    };
+
+    assert_eq!(message.wstring_value, "ハローワールド");
+    assert_eq!(message.array_of_wstrings[2], WString::from("🌍"));
+    assert_eq!(message.bounded_sequence_of_wstrings[1], "文字列");
+
+    let defaults = ros2_test_msgs::WStrings::default();
+    assert_eq!(defaults.wstring_value_default1, "Hello world!");
+    assert_eq!(defaults.wstring_value_default2, "Hellö wörld!");
+    assert_eq!(defaults.wstring_value_default3, "ハローワールド");
+}
+
+#[test]
 fn fixed_sized_arrays() {
     // Prove the default works, compiler failure here is the test
     let x: sensor_msgs::NavSatFix = Default::default();

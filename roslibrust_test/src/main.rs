@@ -26,12 +26,17 @@ const ROS_2_SERVICE_MSGS_PATH: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../assets/ros2_required_msgs/rcl_interfaces/service_msgs"
 );
+const ROS_2_WSTRING_TEST_MSGS_PATH: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../assets/ros2_wstring_test_msgs"
+);
 lazy_static! {
     static ref ROS_2_PATHS: Vec<PathBuf> = vec![
         ROS_2_PATH.into(),
         ROS_2_TEST_PATH.into(),
         ROS_2_REQUIRED_PATH.into(),
-        ROS_2_SERVICE_MSGS_PATH.into()
+        ROS_2_SERVICE_MSGS_PATH.into(),
+        ROS_2_WSTRING_TEST_MSGS_PATH.into()
     ];
 }
 

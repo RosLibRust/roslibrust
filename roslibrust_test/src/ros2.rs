@@ -11,6 +11,7 @@ pub mod actionlib_msgs {
     use super::std_msgs;
     use super::std_srvs;
     use super::stereo_msgs;
+    use super::test_msgs;
     use super::trajectory_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
@@ -325,6 +326,7 @@ pub mod builtin_interfaces {
     use super::std_msgs;
     use super::std_srvs;
     use super::stereo_msgs;
+    use super::test_msgs;
     use super::trajectory_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
@@ -414,6 +416,7 @@ pub mod diagnostic_msgs {
     use super::std_msgs;
     use super::std_srvs;
     use super::stereo_msgs;
+    use super::test_msgs;
     use super::trajectory_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
@@ -801,6 +804,7 @@ pub mod geometry_msgs {
     use super::std_msgs;
     use super::std_srvs;
     use super::stereo_msgs;
+    use super::test_msgs;
     use super::trajectory_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
@@ -2943,6 +2947,7 @@ pub mod nav_msgs {
     use super::std_msgs;
     use super::std_srvs;
     use super::stereo_msgs;
+    use super::test_msgs;
     use super::trajectory_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
@@ -5498,6 +5503,7 @@ pub mod ros2_test_msgs {
     use super::std_msgs;
     use super::std_srvs;
     use super::stereo_msgs;
+    use super::test_msgs;
     use super::trajectory_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
@@ -5759,6 +5765,49 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    pub struct WStrings {
+        pub r#wstring_value: ::roslibrust::codegen::WString,
+        #[default("Hello world!")]
+        pub r#wstring_value_default1: ::roslibrust::codegen::WString,
+        #[default("Hellö wörld!")]
+        pub r#wstring_value_default2: ::roslibrust::codegen::WString,
+        #[default("ハローワールド")]
+        pub r#wstring_value_default3: ::roslibrust::codegen::WString,
+        pub r#array_of_wstrings: [::roslibrust::codegen::WString; 3],
+        pub r#bounded_sequence_of_wstrings: ::std::vec::Vec<::roslibrust::codegen::WString>,
+        pub r#unbounded_sequence_of_wstrings: ::std::vec::Vec<::roslibrust::codegen::WString>,
+    }
+    impl ::roslibrust::RosMessageType for WStrings {
+        const ROS_TYPE_NAME: &'static str = "ros2_test_msgs/WStrings";
+        const MD5SUM: &'static str = "036bafa324da8e3fa41a7cb28fb90abe";
+        const DEFINITION: &'static str = r####"wstring wstring_value
+wstring wstring_value_default1 "Hello world!"
+wstring wstring_value_default2 "Hellö wörld!"
+wstring wstring_value_default3 "ハローワールド"
+#wstring WSTRING_CONST="Hello world!"
+#wstring<=22 bounded_wstring_value
+#wstring<=22 bounded_wstring_value_default1 "Hello world!"
+wstring[3] array_of_wstrings
+wstring[<=3] bounded_sequence_of_wstrings
+wstring[] unbounded_sequence_of_wstrings"####;
+        const ROS2_HASH: &'static [u8; 32] = &[
+            0x97, 0x46, 0xec, 0x29, 0xfa, 0x17, 0x7c, 0xc8, 0x91, 0x64, 0xe1, 0x88, 0xe0, 0xa7,
+            0xcd, 0xae, 0x9f, 0xfb, 0x9f, 0xd0, 0xf3, 0x03, 0x5b, 0x8a, 0xa7, 0x71, 0x1f, 0x79,
+            0x5d, 0x36, 0xca, 0x00,
+        ];
+        const ROS2_TYPE_NAME: &'static str = "ros2_test_msgs::msg::dds_::WStrings_";
+    }
+    #[allow(non_snake_case)]
+    #[allow(dead_code)]
+    #[derive(
+        :: roslibrust :: codegen :: Deserialize,
+        :: roslibrust :: codegen :: Serialize,
+        :: roslibrust :: codegen :: SmartDefault,
+        Debug,
+        Clone,
+        PartialEq,
+    )]
+    #[serde(crate = "::roslibrust::codegen::serde")]
     pub struct AddTwoIntsRequest {
         pub r#a: i64,
         pub r#b: i64,
@@ -5828,6 +5877,7 @@ pub mod sensor_msgs {
     use super::std_msgs;
     use super::std_srvs;
     use super::stereo_msgs;
+    use super::test_msgs;
     use super::trajectory_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
@@ -8645,6 +8695,7 @@ pub mod service_msgs {
     use super::std_msgs;
     use super::std_srvs;
     use super::stereo_msgs;
+    use super::test_msgs;
     use super::trajectory_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
@@ -8729,6 +8780,7 @@ pub mod shape_msgs {
     use super::std_msgs;
     use super::std_srvs;
     use super::stereo_msgs;
+    use super::test_msgs;
     use super::trajectory_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
@@ -8970,6 +9022,7 @@ pub mod std_msgs {
     use super::shape_msgs;
     use super::std_srvs;
     use super::stereo_msgs;
+    use super::test_msgs;
     use super::trajectory_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
@@ -10577,6 +10630,7 @@ pub mod std_srvs {
     use super::shape_msgs;
     use super::std_msgs;
     use super::stereo_msgs;
+    use super::test_msgs;
     use super::trajectory_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
@@ -10784,6 +10838,7 @@ pub mod stereo_msgs {
     use super::shape_msgs;
     use super::std_msgs;
     use super::std_srvs;
+    use super::test_msgs;
     use super::trajectory_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
@@ -10971,6 +11026,66 @@ uint32 nanosec"####;
     }
 }
 #[allow(unused_imports)]
+pub mod test_msgs {
+    use super::actionlib_msgs;
+    use super::builtin_interfaces;
+    use super::diagnostic_msgs;
+    use super::geometry_msgs;
+    use super::nav_msgs;
+    use super::ros2_test_msgs;
+    use super::sensor_msgs;
+    use super::service_msgs;
+    use super::shape_msgs;
+    use super::std_msgs;
+    use super::std_srvs;
+    use super::stereo_msgs;
+    use super::trajectory_msgs;
+    use super::visualization_msgs;
+    #[allow(non_snake_case)]
+    #[allow(dead_code)]
+    #[derive(
+        :: roslibrust :: codegen :: Deserialize,
+        :: roslibrust :: codegen :: Serialize,
+        :: roslibrust :: codegen :: SmartDefault,
+        Debug,
+        Clone,
+        PartialEq,
+    )]
+    #[serde(crate = "::roslibrust::codegen::serde")]
+    pub struct WStrings {
+        pub r#wstring_value: ::roslibrust::codegen::WString,
+        #[default("Hello world!")]
+        pub r#wstring_value_default1: ::roslibrust::codegen::WString,
+        #[default("Hellö wörld!")]
+        pub r#wstring_value_default2: ::roslibrust::codegen::WString,
+        #[default("ハローワールド")]
+        pub r#wstring_value_default3: ::roslibrust::codegen::WString,
+        pub r#array_of_wstrings: [::roslibrust::codegen::WString; 3],
+        pub r#bounded_sequence_of_wstrings: ::std::vec::Vec<::roslibrust::codegen::WString>,
+        pub r#unbounded_sequence_of_wstrings: ::std::vec::Vec<::roslibrust::codegen::WString>,
+    }
+    impl ::roslibrust::RosMessageType for WStrings {
+        const ROS_TYPE_NAME: &'static str = "test_msgs/WStrings";
+        const MD5SUM: &'static str = "036bafa324da8e3fa41a7cb28fb90abe";
+        const DEFINITION: &'static str = r####"wstring wstring_value
+wstring wstring_value_default1 "Hello world!"
+wstring wstring_value_default2 "Hellö wörld!"
+wstring wstring_value_default3 "ハローワールド"
+#wstring WSTRING_CONST="Hello world!"
+#wstring<=22 bounded_wstring_value
+#wstring<=22 bounded_wstring_value_default1 "Hello world!"
+wstring[3] array_of_wstrings
+wstring[<=3] bounded_sequence_of_wstrings
+wstring[] unbounded_sequence_of_wstrings"####;
+        const ROS2_HASH: &'static [u8; 32] = &[
+            0x5a, 0x2c, 0x8d, 0xdb, 0x20, 0x54, 0x60, 0x00, 0x23, 0xb9, 0xa1, 0x80, 0x65, 0x2f,
+            0x2b, 0xa8, 0x95, 0x37, 0x32, 0x17, 0xca, 0xd4, 0xb1, 0xf0, 0xfc, 0x12, 0x58, 0xc9,
+            0xe4, 0x42, 0x4a, 0x79,
+        ];
+        const ROS2_TYPE_NAME: &'static str = "test_msgs::msg::dds_::WStrings_";
+    }
+}
+#[allow(unused_imports)]
 pub mod trajectory_msgs {
     use super::actionlib_msgs;
     use super::builtin_interfaces;
@@ -10984,6 +11099,7 @@ pub mod trajectory_msgs {
     use super::std_msgs;
     use super::std_srvs;
     use super::stereo_msgs;
+    use super::test_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
@@ -11548,6 +11664,7 @@ pub mod visualization_msgs {
     use super::std_msgs;
     use super::std_srvs;
     use super::stereo_msgs;
+    use super::test_msgs;
     use super::trajectory_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
