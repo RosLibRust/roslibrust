@@ -25,11 +25,18 @@ async fn test_graph_provider_topics<T: TopicProvider + ServiceProvider + GraphPr
         .advertise::<std_msgs::String>("/test_graph_topic")
         .await?;
 
-    // Give the graph time to update (backends may need time to propagate)
-    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
-    // List topics again
-    let topics = ros.list_topics().await?;
+    // Graph propagation is asynchronous, so poll with an overall deadline.
+    let topics = tokio::time::timeout(tokio::time::Duration::from_secs(10), async {
+        loop {
+            let topics = ros.list_topics().await?;
+            if topics.iter().any(|topic| topic.name == "/test_graph_topic") {
+                break Ok::<_, roslibrust::Error>(topics);
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        }
+    })
+    .await
+    .expect("Timed out waiting for /test_graph_topic to appear")?;
 
     // Verify our topic appears in the list
     let found = topics.iter().any(|t| t.name == "/test_graph_topic");
@@ -75,11 +82,21 @@ async fn test_graph_provider_services<T: TopicProvider + ServiceProvider + Graph
         })
         .await?;
 
-    // Give the graph time to update
-    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
-    // List services
-    let services = ros.list_services().await?;
+    // Graph propagation is asynchronous, so poll with an overall deadline.
+    let services = tokio::time::timeout(tokio::time::Duration::from_secs(10), async {
+        loop {
+            let services = ros.list_services().await?;
+            if services
+                .iter()
+                .any(|service| service.name == "/test_graph_service")
+            {
+                break Ok::<_, roslibrust::Error>(services);
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        }
+    })
+    .await
+    .expect("Timed out waiting for /test_graph_service to appear")?;
 
     // Verify our service appears in the list
     let found = services.iter().any(|s| s.name == "/test_graph_service");

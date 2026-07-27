@@ -4,6 +4,9 @@ use crate::{
     subscriber::Subscriber, subscriber::SubscriberAny, NodeError, ServiceServer,
 };
 use roslibrust_common::{GraphProvider, ServiceFn, ServiceInfo, TopicInfo};
+use std::time::Duration;
+
+const SERVICE_TYPE_PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Represents a handle to an underlying Node. NodeHandle's can be freely cloned, moved, copied, etc.
 /// This class provides the user facing API for interacting with ROS.
@@ -212,14 +215,37 @@ impl GraphProvider for NodeHandle {
                 let client = client.clone();
                 let caller_id = caller_id.clone();
                 tokio::spawn(async move {
-                    let service_uri = client.lookup_service(&service_name).await.ok()?;
-                    let type_name =
-                        crate::tcpros::probe_service_type(&caller_id, &service_name, &service_uri)
-                            .await;
-                    Some(ServiceInfo {
+                    let type_name = match tokio::time::timeout(SERVICE_TYPE_PROBE_TIMEOUT, async {
+                        let service_uri = client.lookup_service(&service_name).await.ok()?;
+                        Some(
+                            crate::tcpros::probe_service_type(
+                                &caller_id,
+                                &service_name,
+                                &service_uri,
+                            )
+                            .await,
+                        )
+                    })
+                    .await
+                    {
+                        Ok(Some(type_name)) => type_name,
+                        Ok(None) => {
+                            log::warn!(
+                                "Failed to look up service {service_name}. Returning empty type."
+                            );
+                            String::new()
+                        }
+                        Err(_) => {
+                            log::warn!(
+                                "Timed out probing service {service_name}. Returning empty type."
+                            );
+                            String::new()
+                        }
+                    };
+                    ServiceInfo {
                         name: service_name,
                         type_name,
-                    })
+                    }
                 })
             })
             .collect();
@@ -227,7 +253,7 @@ impl GraphProvider for NodeHandle {
         // Collect results from all parallel tasks
         let mut services = Vec::with_capacity(probe_tasks.len());
         for task in probe_tasks {
-            if let Ok(Some(service_info)) = task.await {
+            if let Ok(service_info) = task.await {
                 services.push(service_info);
             }
         }

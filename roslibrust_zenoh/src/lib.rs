@@ -26,6 +26,7 @@ const DISCOVERY_LOST_AFTER: Duration = Duration::from_secs(3);
 /// Should be created via [ZenohClient::new], and then used via the [TopicProvider] and [ServiceProvider] traits.
 #[derive(Clone)]
 pub struct ZenohClient {
+    _discovery_monitor: Arc<DiscoveryMonitor>,
     session: zenoh::Session,
     graph: Arc<RwLock<BTreeMap<String, DiscoveryFact>>>,
 }
@@ -34,8 +35,12 @@ impl ZenohClient {
     /// Creates a new client wrapped around a Zenoh session
     pub fn new(session: zenoh::Session) -> Self {
         let graph = Arc::new(RwLock::new(BTreeMap::new()));
-        spawn_discovery_monitor(session.clone(), graph.clone());
-        Self { session, graph }
+        let discovery_monitor = Arc::new(spawn_discovery_monitor(session.clone(), graph.clone()));
+        Self {
+            _discovery_monitor: discovery_monitor,
+            session,
+            graph,
+        }
     }
 }
 
@@ -78,6 +83,18 @@ struct DiscoveryFact {
 
 struct DiscoveryDeclaration {
     shutdown: Option<tokio::sync::oneshot::Sender<()>>,
+}
+
+struct DiscoveryMonitor {
+    shutdown: Option<tokio::sync::oneshot::Sender<()>>,
+}
+
+impl Drop for DiscoveryMonitor {
+    fn drop(&mut self) {
+        if let Some(shutdown) = self.shutdown.take() {
+            let _ = shutdown.send(());
+        }
+    }
 }
 
 impl Drop for DiscoveryDeclaration {
@@ -124,19 +141,25 @@ impl DiscoveryDeclaration {
 fn spawn_discovery_monitor(
     session: zenoh::Session,
     graph: Arc<RwLock<BTreeMap<String, DiscoveryFact>>>,
-) {
+) -> DiscoveryMonitor {
     let Ok(handle) = tokio::runtime::Handle::try_current() else {
         error!("Failed to start Zenoh discovery monitor: no active Tokio runtime");
-        return;
+        return DiscoveryMonitor { shutdown: None };
     };
+    let (shutdown_tx, mut shutdown_rx) = tokio::sync::oneshot::channel();
 
     handle.spawn(async move {
-        let subscriber = match session.declare_subscriber(DISCOVERY_KEYEXPR).await {
-            Ok(subscriber) => subscriber,
-            Err(e) => {
-                error!("Failed to subscribe to {DISCOVERY_KEYEXPR}: {e:?}");
-                return;
+        let subscriber = tokio::select! {
+            subscriber = session.declare_subscriber(DISCOVERY_KEYEXPR) => {
+                match subscriber {
+                    Ok(subscriber) => subscriber,
+                    Err(e) => {
+                        error!("Failed to subscribe to {DISCOVERY_KEYEXPR}: {e:?}");
+                        return;
+                    }
+                }
             }
+            _ = &mut shutdown_rx => return,
         };
         let mut active_facts: HashMap<String, Instant> = HashMap::new();
         let mut interval = tokio::time::interval(DISCOVERY_BEACON_PERIOD);
@@ -147,7 +170,7 @@ fn spawn_discovery_monitor(
                         Ok(sample) => sample,
                         Err(e) => {
                             error!("Failed to receive discovery info: {e:?}");
-                            continue;
+                            break;
                         }
                     };
                     let key = sample.key_expr().as_str().to_string();
@@ -175,9 +198,13 @@ fn spawn_discovery_monitor(
                         }
                     }
                 }
+                _ = &mut shutdown_rx => break,
             }
         }
     });
+    DiscoveryMonitor {
+        shutdown: Some(shutdown_tx),
+    }
 }
 
 /// The publisher type returned by [TopicProvider::advertise] on [ZenohClient]

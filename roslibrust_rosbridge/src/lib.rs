@@ -64,9 +64,12 @@ mod rosapi_discovery;
 
 use futures_util::stream::{SplitSink, SplitStream};
 use std::collections::HashMap;
+use std::time::Duration;
 use tokio::net::TcpStream;
 use tokio_tungstenite::*;
 use tungstenite::Message;
+
+const SERVICE_TYPE_QUERY_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Used for type erasure of message type so that we can store arbitrary handles
 type Callback = std::sync::Arc<dyn Fn(&str) + Send + Sync>;
@@ -268,19 +271,35 @@ impl GraphProvider for crate::ClientHandle {
             .map(|service| {
                 let handle = self.clone();
                 tokio::spawn(async move {
-                    let service_type = handle
-                        .call_service::<rosapi_discovery::ServiceType>(
+                    let type_name = match tokio::time::timeout(
+                        SERVICE_TYPE_QUERY_TIMEOUT,
+                        handle.call_service::<rosapi_discovery::ServiceType>(
                             "/rosapi/service_type",
                             rosapi_discovery::ServiceTypeRequest {
                                 service: service.clone(),
                             },
-                        )
-                        .await
-                        .ok()?;
-                    Some(ServiceInfo {
+                        ),
+                    )
+                    .await
+                    {
+                        Ok(Ok(service_type)) => normalize_graph_type(service_type.type_name),
+                        Ok(Err(err)) => {
+                            log::warn!(
+                                "Failed to resolve type for service {service}: {err}. Returning empty type."
+                            );
+                            String::new()
+                        }
+                        Err(_) => {
+                            log::warn!(
+                                "Timed out resolving type for service {service}. Returning empty type."
+                            );
+                            String::new()
+                        }
+                    };
+                    ServiceInfo {
                         name: service,
-                        type_name: normalize_graph_type(service_type.type_name),
-                    })
+                        type_name,
+                    }
                 })
             })
             .collect();
@@ -288,7 +307,7 @@ impl GraphProvider for crate::ClientHandle {
         // Collect results from all parallel tasks
         let mut services = Vec::with_capacity(probe_tasks.len());
         for task in probe_tasks {
-            if let Ok(Some(service_info)) = task.await {
+            if let Ok(service_info) = task.await {
                 services.push(service_info);
             }
         }
