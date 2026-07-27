@@ -43,6 +43,7 @@ anyhow = "1.0"
 tokio = { workspace = true }
 env_logger = "0.10"
 test-log = { workspace = true }
+cdr = "0.2"
 
 [features]
 # For use with CI environment or any environment with ROS1 installed

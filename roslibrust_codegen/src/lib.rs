@@ -34,6 +34,8 @@ mod ros2_builtin_interfaces;
 
 pub mod integral_types;
 pub use integral_types::*;
+mod wstring;
+pub use wstring::WString;
 
 // Custom serde module for Vec<u8> that handles both base64 (rosbridge) and arrays (other formats)
 pub mod serde_rosmsg_bytes;

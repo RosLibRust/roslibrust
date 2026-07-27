@@ -5759,6 +5759,49 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    pub struct WStrings {
+        pub r#wstring_value: ::roslibrust::codegen::WString,
+        #[default("Hello world!")]
+        pub r#wstring_value_default1: ::roslibrust::codegen::WString,
+        #[default("Hellö wörld!")]
+        pub r#wstring_value_default2: ::roslibrust::codegen::WString,
+        #[default("ハローワールド")]
+        pub r#wstring_value_default3: ::roslibrust::codegen::WString,
+        pub r#array_of_wstrings: [::roslibrust::codegen::WString; 3],
+        pub r#bounded_sequence_of_wstrings: ::std::vec::Vec<::roslibrust::codegen::WString>,
+        pub r#unbounded_sequence_of_wstrings: ::std::vec::Vec<::roslibrust::codegen::WString>,
+    }
+    impl ::roslibrust::RosMessageType for WStrings {
+        const ROS_TYPE_NAME: &'static str = "ros2_test_msgs/WStrings";
+        const MD5SUM: &'static str = "036bafa324da8e3fa41a7cb28fb90abe";
+        const DEFINITION: &'static str = r####"wstring wstring_value
+wstring wstring_value_default1 "Hello world!"
+wstring wstring_value_default2 "Hellö wörld!"
+wstring wstring_value_default3 "ハローワールド"
+#wstring WSTRING_CONST="Hello world!"
+#wstring<=22 bounded_wstring_value
+#wstring<=22 bounded_wstring_value_default1 "Hello world!"
+wstring[3] array_of_wstrings
+wstring[<=3] bounded_sequence_of_wstrings
+wstring[] unbounded_sequence_of_wstrings"####;
+        const ROS2_HASH: &'static [u8; 32] = &[
+            0x97, 0x46, 0xec, 0x29, 0xfa, 0x17, 0x7c, 0xc8, 0x91, 0x64, 0xe1, 0x88, 0xe0, 0xa7,
+            0xcd, 0xae, 0x9f, 0xfb, 0x9f, 0xd0, 0xf3, 0x03, 0x5b, 0x8a, 0xa7, 0x71, 0x1f, 0x79,
+            0x5d, 0x36, 0xca, 0x00,
+        ];
+        const ROS2_TYPE_NAME: &'static str = "ros2_test_msgs::msg::dds_::WStrings_";
+    }
+    #[allow(non_snake_case)]
+    #[allow(dead_code)]
+    #[derive(
+        :: roslibrust :: codegen :: Deserialize,
+        :: roslibrust :: codegen :: Serialize,
+        :: roslibrust :: codegen :: SmartDefault,
+        Debug,
+        Clone,
+        PartialEq,
+    )]
+    #[serde(crate = "::roslibrust::codegen::serde")]
     pub struct AddTwoIntsRequest {
         pub r#a: i64,
         pub r#b: i64,
