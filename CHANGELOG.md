@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- @JesseGuillory-CM removed several panics and poor error handling from rosbridge client.
+
 ### Changed
 
 ## 0.21.0 - May 19th, 2026
