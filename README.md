@@ -82,6 +82,32 @@ If you want to see what the generated code looks like checkout [our generated me
 While the macro is useful for getting started, we recommend using `roslibrust_codegen` with a `build.rs` as shown in [example_package](https://github.com/RosLibRust/roslibrust/tree/master/example_package).
 This allows cargo to know when message files are edited and automatically re-generate the code.
 
+## ROS 2 `wstring` compatibility
+
+ROS 2 `wstring` fields are generated as `roslibrust::codegen::WString`. The
+Rust value contains a normal UTF-8 `String` and supports conversion from `&str`
+and `String` with `.into()`.
+
+The wire representation is selected automatically by the backend:
+
+- Native ROS 2 CDR backends, including ros-z, convert the Rust string to a DDS
+  `wstring`: a sequence of UTF-16 code units. Received UTF-16 is validated and
+  converted back to UTF-8; invalid UTF-16 produces a serialization error.
+- Rosbridge represents `wstring` as a normal JSON string. JSON handles scalar,
+  array, and sequence fields without a special wrapper representation.
+- ROS 1 has no native `wstring` type. The TCPROS and ROS 1 Zenoh backends
+  therefore encode each `WString` as an ordinary ROS 1 UTF-8 `string` and
+  convert it back automatically when receiving. This compatibility conversion
+  also applies to `wstring` arrays and sequences.
+
+The ROS 1 conversion does not add `wstring` to the ROS 1 type system. For topic
+connections, the TCPROS and ROS 1 Zenoh backends automatically advertise a
+compatible definition and MD5 using `string`, `string[N]`, or `string[]` in the
+corresponding fields. The ROS 1 peer must have that compatible definition under
+the same package and message name. String and sequence bounds remain in the
+generated ROS 2 metadata but, like the existing bounded collection support,
+are not enforced at runtime.
+
 ## Getting Started / Examples
 
 - Checkout the [Quick Getting Started Guide](https://roslibrust.github.io/roslibrust/quick_getting_started.html) for a brief guide on how to get started with RosLibRust.

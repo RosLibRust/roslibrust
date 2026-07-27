@@ -72,7 +72,9 @@ impl<T: RosMessageType> Publisher<T> {
         let mut writer = buffer.writer();
         // Write empty u32 for size
         writer.write(&[0, 0, 0, 0]).unwrap();
-        roslibrust_serde_rosmsg::to_writer_skip_length(&mut writer, data)?;
+        roslibrust_common::with_ros1_wstring_compatibility(|| {
+            roslibrust_serde_rosmsg::to_writer_skip_length(&mut writer, data)
+        })?;
         let mut buffer = writer.into_inner();
         // Patch size back to front of buffer
         let size = buffer.len() as u32 - 4;
@@ -489,5 +491,43 @@ pub enum PublisherError {
 impl From<roslibrust_serde_rosmsg::Error> for PublisherError {
     fn from(value: roslibrust_serde_rosmsg::Error) -> Self {
         Self::SerializingError(value.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use roslibrust_test::ros2::test_msgs::WStrings;
+
+    #[tokio::test]
+    async fn publisher_encodes_wstring_as_an_ordinary_ros1_string() {
+        let (sender, mut receiver) = broadcast::channel(1);
+        let (shutdown_sender, _shutdown_receiver) = tokio::sync::mpsc::channel(1);
+        let publisher = Publisher::new("/wstring_test", sender, shutdown_sender);
+        let mut message = WStrings::default();
+        message.wstring_value = "ハロー 🌍".into();
+        let description = roslibrust_common::ros1_message_description::<WStrings>();
+
+        assert!(description.definition.contains("string wstring_value"));
+        assert!(description
+            .definition
+            .contains("string[] bounded_sequence_of_wstrings"));
+        assert!(!description.definition.contains("wstring wstring_value"));
+        assert!(description
+            .definition
+            .contains("string wstring_value_default1\n"));
+        assert!(!description
+            .definition
+            .contains("string wstring_value_default1 \"Hello world!\""));
+
+        publisher.publish(&message).await.unwrap();
+        let bytes = receiver.recv().await.unwrap();
+
+        let encoded_length = u32::from_le_bytes(bytes[4..8].try_into().unwrap()) as usize;
+        assert_eq!(encoded_length, message.wstring_value.len());
+        assert_eq!(
+            &bytes[8..8 + encoded_length],
+            message.wstring_value.as_bytes()
+        );
     }
 }

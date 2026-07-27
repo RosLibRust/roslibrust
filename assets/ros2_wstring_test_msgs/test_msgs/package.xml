@@ -1,0 +1,10 @@
+<package format="3">
+  <name>test_msgs</name>
+  <version>2.0.0</version>
+  <description>Minimal ROS 2 test_msgs fixture for wstring interoperability tests.</description>
+  <maintainer email="roslibrust@example.com">RosLibRust</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>rosidl_default_generators</build_depend>
+  <member_of_group>rosidl_interface_packages</member_of_group>
+</package>

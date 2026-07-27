@@ -22,6 +22,8 @@ roslibrust_zenoh = { path = "../roslibrust_zenoh" }
 roslibrust_ros2 = { path = "../roslibrust_ros2" }
 roslibrust_rosbridge = { path = "../roslibrust_rosbridge" }
 ros-z = { git = "https://github.com/ZettaScaleLabs/ros-z.git", rev = "9bb6305" }
+roslibrust_serde_rosmsg = { workspace = true }
+serde_json = "1.0"
 
 [[bin]]
 path = "src/performance_ramp.rs"

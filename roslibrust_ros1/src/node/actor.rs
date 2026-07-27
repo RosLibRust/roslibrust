@@ -150,13 +150,14 @@ impl NodeServerHandle {
     ) -> Result<(broadcast::Sender<Bytes>, mpsc::Sender<()>), NodeError> {
         // Create a weak reference to pass to the publication
         let weak_node = self.downgrade();
+        let description = roslibrust_common::ros1_message_description::<T>();
         let mut node = self.node.lock().await;
         node.register_publisher(
             topic.to_owned(),
             T::ROS_TYPE_NAME,
             queue_size,
-            T::DEFINITION.to_owned(),
-            T::MD5SUM.to_owned(),
+            description.definition,
+            description.md5sum,
             latching,
             weak_node,
         )
@@ -245,11 +246,15 @@ impl NodeServerHandle {
         // Uses Bytes for efficient handling of incoming request data
         let server_typeless =
             move |message: Bytes| -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-                let request = roslibrust_serde_rosmsg::from_slice::<T::Request>(&message)
-                    .map_err(|err| Error::SerializationError(err.to_string()))?;
+                let request = roslibrust_common::with_ros1_wstring_compatibility(|| {
+                    roslibrust_serde_rosmsg::from_slice::<T::Request>(&message)
+                })
+                .map_err(|err| Error::SerializationError(err.to_string()))?;
                 let response = server(request)?;
-                Ok(roslibrust_serde_rosmsg::to_vec(&response)
-                    .map_err(|err| Error::SerializationError(err.to_string()))?)
+                Ok(roslibrust_common::with_ros1_wstring_compatibility(|| {
+                    roslibrust_serde_rosmsg::to_vec(&response)
+                })
+                .map_err(|err| Error::SerializationError(err.to_string()))?)
             };
         let server_typeless = Box::new(server_typeless);
 
@@ -281,13 +286,14 @@ impl NodeServerHandle {
         topic: &str,
         queue_size: usize,
     ) -> Result<broadcast::Receiver<Bytes>, NodeError> {
+        let description = roslibrust_common::ros1_message_description::<T>();
         let mut node = self.node.lock().await;
         node.register_subscriber(
             topic,
             T::ROS_TYPE_NAME,
             queue_size,
-            T::DEFINITION,
-            T::MD5SUM,
+            &description.definition,
+            &description.md5sum,
         )
         .await
         .map_err(|err| {

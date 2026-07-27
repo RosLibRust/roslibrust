@@ -7,8 +7,9 @@ use std::{borrow::Borrow, fmt, ops::Deref, str::FromStr};
 ///
 /// ROS 2 represents this type as a [`std::u16string`](https://en.cppreference.com/w/cpp/string/basic_string)
 /// in C++ and as a DDS `wstring` on the wire. Rust strings are UTF-8, so this
-/// wrapper converts to and from UTF-16 when used with a binary serializer such
-/// as CDR, while remaining a normal JSON string for human-readable serializers.
+/// wrapper converts to and from UTF-16 for ROS 2 CDR. Human-readable serializers
+/// use a normal JSON string, and ROS 1 backends enable a compatibility scope
+/// that represents the value as an ordinary UTF-8 ROS string.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct WString(String);
 
@@ -31,7 +32,8 @@ impl Serialize for WString {
     where
         S: Serializer,
     {
-        if serializer.is_human_readable() {
+        if serializer.is_human_readable() || roslibrust_common::ros1_wstring_compatibility_enabled()
+        {
             serializer.serialize_str(&self.0)
         } else {
             let code_units = self.0.encode_utf16();
@@ -49,7 +51,9 @@ impl<'de> Deserialize<'de> for WString {
     where
         D: Deserializer<'de>,
     {
-        if deserializer.is_human_readable() {
+        if deserializer.is_human_readable()
+            || roslibrust_common::ros1_wstring_compatibility_enabled()
+        {
             String::deserialize(deserializer).map(Self)
         } else {
             let code_units = Vec::<u16>::deserialize(deserializer)?;

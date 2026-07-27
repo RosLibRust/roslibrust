@@ -52,8 +52,10 @@ impl<T: RosServiceType> ServiceClient<T> {
     }
 
     pub async fn call(&self, request: &T::Request) -> std::result::Result<T::Response, Error> {
-        let request_payload = roslibrust_serde_rosmsg::to_vec(request)
-            .map_err(|err| Error::SerializationError(err.to_string()))?;
+        let request_payload = roslibrust_common::with_ros1_wstring_compatibility(|| {
+            roslibrust_serde_rosmsg::to_vec(request)
+        })
+        .map_err(|err| Error::SerializationError(err.to_string()))?;
         let (response_tx, response_rx) = oneshot::channel();
 
         self.sender
@@ -67,7 +69,10 @@ impl<T: RosServiceType> ServiceClient<T> {
                     self.service_name,
                     result_payload
                 );
-                let response: T::Response = roslibrust_serde_rosmsg::from_slice(&result_payload)
+                let response: T::Response =
+                    roslibrust_common::with_ros1_wstring_compatibility(|| {
+                        roslibrust_serde_rosmsg::from_slice(&result_payload)
+                    })
                     .map_err(|err| Error::SerializationError(err.to_string()))?;
                 Ok(response)
             }

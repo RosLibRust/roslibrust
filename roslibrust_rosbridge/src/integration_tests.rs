@@ -528,4 +528,67 @@ mod integration_tests {
 
         assert_eq!(received, msg, "Messages do not match");
     }
+
+    #[cfg(feature = "ros2_test")]
+    #[test_log::test(tokio::test)]
+    async fn test_wstring_roundtrip_through_rclpy_node() {
+        use std::process::{Child, Command, Stdio};
+        use test_msgs::WStrings;
+
+        struct ChildGuard(Child);
+        impl Drop for ChildGuard {
+            fn drop(&mut self) {
+                let _ = self.0.kill();
+                let _ = self.0.wait();
+            }
+        }
+
+        const INPUT_TOPIC: &str = "/roslibrust_rosbridge_wstring_input";
+        const OUTPUT_TOPIC: &str = "/roslibrust_rosbridge_wstring_output";
+
+        let client =
+            ClientHandle::new_with_options(ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT))
+                .await
+                .expect("Failed to construct client");
+        let publisher = client
+            .advertise::<WStrings>(INPUT_TOPIC)
+            .await
+            .expect("Failed to advertise");
+        let subscriber = client
+            .subscribe::<WStrings>(OUTPUT_TOPIC)
+            .await
+            .expect("Failed to subscribe");
+        let _relay = ChildGuard(
+            Command::new("python3")
+                .arg(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../roslibrust_test/tests/ros2_wstring_relay.py"
+                ))
+                .args([INPUT_TOPIC, OUTPUT_TOPIC])
+                .stdout(Stdio::null())
+                .stderr(Stdio::inherit())
+                .spawn()
+                .expect("Failed to start the rclpy wstring relay"),
+        );
+
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        let expected = WStrings {
+            wstring_value: "ハローワールド 🌍".into(),
+            wstring_value_default1: "Hello world!".into(),
+            wstring_value_default2: "Hellö wörld!".into(),
+            wstring_value_default3: "ハローワールド".into(),
+            array_of_wstrings: ["one".into(), "二".into(), "🌍".into()],
+            bounded_sequence_of_wstrings: vec!["bounded".into(), "文字列".into()],
+            unbounded_sequence_of_wstrings: vec!["".into(), "ascii".into(), "四".into()],
+        };
+        publisher
+            .publish(&expected)
+            .await
+            .expect("Failed to publish");
+
+        let received = timeout(Duration::from_secs(5), subscriber.next())
+            .await
+            .expect("Timed out waiting for the rclpy relay");
+        assert_eq!(received, expected);
+    }
 }

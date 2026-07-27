@@ -243,9 +243,10 @@ impl<T: RosMessageType> Publish<T> for ZenohPublisher<T> {
 
         let size_hint = self.capacity_hint.load(Ordering::Relaxed);
         let mut bytes = Vec::with_capacity(size_hint);
-        roslibrust_serde_rosmsg::to_writer_skip_length(&mut bytes, data).map_err(|e| {
-            Error::SerializationError(format!("Failed to serialize message: {e:?}"))
-        })?;
+        roslibrust_common::with_ros1_wstring_compatibility(|| {
+            roslibrust_serde_rosmsg::to_writer_skip_length(&mut bytes, data)
+        })
+        .map_err(|e| Error::SerializationError(format!("Failed to serialize message: {e:?}")))?;
 
         if bytes.len() > size_hint {
             self.capacity_hint.store(bytes.len(), Ordering::Relaxed);
@@ -296,8 +297,10 @@ impl<T: RosMessageType> Subscribe<T> for ZenohSubscriber<T> {
 fn deserialize_payload<T: RosMessageType>(payload: &ZBytes, context: &str) -> Result<T> {
     // Note: Zenoh decided to not make the 4 byte length header part of the payload.
     let mut reader = payload.reader();
-    roslibrust_serde_rosmsg::from_reader_known_length(&mut reader, payload.len() as u32)
-        .map_err(|e| Error::SerializationError(format!("Failed to deserialize {context}: {e:?}")))
+    roslibrust_common::with_ros1_wstring_compatibility(|| {
+        roslibrust_serde_rosmsg::from_reader_known_length(&mut reader, payload.len() as u32)
+    })
+    .map_err(|e| Error::SerializationError(format!("Failed to deserialize {context}: {e:?}")))
 }
 
 impl TopicProvider for ZenohClient {
@@ -310,7 +313,9 @@ impl TopicProvider for ZenohClient {
         topic: impl ToGlobalTopicName,
     ) -> Result<Self::Publisher<MsgType>> {
         let topic: GlobalTopicName = topic.to_global_name()?;
-        let mangled_topic = mangle_topic(topic.as_ref(), MsgType::ROS_TYPE_NAME, MsgType::MD5SUM);
+        let description = roslibrust_common::ros1_message_description::<MsgType>();
+        let mangled_topic =
+            mangle_topic(topic.as_ref(), MsgType::ROS_TYPE_NAME, &description.md5sum);
         let publisher = match self.session.declare_publisher(mangled_topic).await {
             Ok(publisher) => publisher,
             Err(e) => {
@@ -325,7 +330,7 @@ impl TopicProvider for ZenohClient {
             DiscoveryClass::Publisher,
             topic.as_ref(),
             MsgType::ROS_TYPE_NAME,
-            MsgType::MD5SUM,
+            &description.md5sum,
         )
         .await?;
 
@@ -342,7 +347,9 @@ impl TopicProvider for ZenohClient {
         topic: impl ToGlobalTopicName,
     ) -> Result<Self::Subscriber<MsgType>> {
         let topic: GlobalTopicName = topic.to_global_name()?;
-        let mangled_topic = mangle_topic(topic.as_ref(), MsgType::ROS_TYPE_NAME, MsgType::MD5SUM);
+        let description = roslibrust_common::ros1_message_description::<MsgType>();
+        let mangled_topic =
+            mangle_topic(topic.as_ref(), MsgType::ROS_TYPE_NAME, &description.md5sum);
         let sub = match self.session.declare_subscriber(mangled_topic).await {
             Ok(sub) => sub,
             Err(e) => {
@@ -357,7 +364,7 @@ impl TopicProvider for ZenohClient {
             DiscoveryClass::Subscriber,
             topic.as_ref(),
             MsgType::ROS_TYPE_NAME,
-            MsgType::MD5SUM,
+            &description.md5sum,
         )
         .await?;
         Ok(ZenohSubscriber {
@@ -485,9 +492,10 @@ pub struct ZenohServiceClient<T: RosServiceType> {
 impl<T: RosServiceType> Service<T> for ZenohServiceClient<T> {
     async fn call(&self, request: &T::Request) -> Result<T::Response> {
         // Note: Zenoh decided the 4 byte length header is not part of the payload
-        let request_bytes = roslibrust_serde_rosmsg::to_vec_skip_length(request).map_err(|e| {
-            Error::SerializationError(format!("Failed to serialize message: {e:?}"))
-        })?;
+        let request_bytes = roslibrust_common::with_ros1_wstring_compatibility(|| {
+            roslibrust_serde_rosmsg::to_vec_skip_length(request)
+        })
+        .map_err(|e| Error::SerializationError(format!("Failed to serialize message: {e:?}")))?;
 
         let query = match self
             .session
@@ -640,11 +648,12 @@ impl ServiceProvider for ZenohClient {
                     }
                 };
 
-                let Ok(response_bytes) = roslibrust_serde_rosmsg::to_vec_skip_length(&response)
-                    .map_err(|e| {
-                        error!("Failed to serialize response: {e:?}");
-                    })
-                else {
+                let Ok(response_bytes) = roslibrust_common::with_ros1_wstring_compatibility(|| {
+                    roslibrust_serde_rosmsg::to_vec_skip_length(&response)
+                })
+                .map_err(|e| {
+                    error!("Failed to serialize response: {e:?}");
+                }) else {
                     continue;
                 };
 
