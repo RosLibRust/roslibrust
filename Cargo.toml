@@ -18,7 +18,7 @@ members = [
     "roslibrust_zenoh",
     "roslibrust",
     "roslibrust_rosapi",
-    "roslibrust_ros2",
+    "roslibrust_hiroz",
 ]
 
 [workspace.dependencies]

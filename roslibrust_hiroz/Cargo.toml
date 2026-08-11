@@ -1,5 +1,5 @@
 [package]
-name = "roslibrust_ros2"
+name = "roslibrust_hiroz"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -12,12 +12,11 @@ env_logger = "0.11"
 cdr = "0.2"
 roslibrust_common = { path = "../roslibrust_common", version = "0.21" }
 anyhow = "1.0"
-# Main as of May 16th 2026
-ros-z = { git = "https://github.com/ZettaScaleLabs/ros-z.git", rev = "9bb6305" }
+hiroz = { version = "0.1.0", default-features = false, features = ["kilted", "rmw-zenoh"] }
 log = "0.4"
 # Used for cancellation token
 tokio-util = "0.7"
-# Needed for now because of ros-z type incompatibility
+# Needed for the serde wrapper around roslibrust message types.
 serde = { workspace = true }
 
 [dev-dependencies]
@@ -25,4 +24,4 @@ roslibrust_test = { path = "../roslibrust_test" }
 
 [features]
 # Used to enable tests that rely on a locally running ros2 rmw_zenohd
-ros2_zenoh_test = []
+hiroz_test = []

@@ -1,3 +1,3 @@
-# roslibrust_ros2
+# roslibrust_hiroz
 
 Experimental ROS2 backend for roslibrust via zenoh.

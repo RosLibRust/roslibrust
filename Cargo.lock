@@ -1543,6 +1543,85 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
+name = "hiroz"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fde4f6c23e467423403daaf19025fc8ecd5349d97940284ce05b2f257678399"
+dependencies = [
+ "byteorder",
+ "clap",
+ "csv",
+ "dashmap",
+ "event-listener",
+ "flume",
+ "hiroz-cdr",
+ "hiroz-derive",
+ "hiroz-protocol",
+ "hiroz-schema",
+ "json5",
+ "parking_lot",
+ "paste",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha2",
+ "slab",
+ "strum",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+ "zenoh",
+ "zenoh-buffers",
+ "zenoh-ext",
+]
+
+[[package]]
+name = "hiroz-cdr"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc63acccbb1978c3a4eab7ff6843e0490529c44e9d3b6846b482a5a3e59c990b"
+dependencies = [
+ "bytemuck",
+ "byteorder",
+ "serde",
+ "thiserror 1.0.69",
+ "zenoh-buffers",
+]
+
+[[package]]
+name = "hiroz-derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f0b01b0f498b4d550b282aa4120550452ff44ffc02d3bf7be76144995521a3b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
+]
+
+[[package]]
+name = "hiroz-protocol"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b6ac9f1ff0b1ffeb8ae8150b0395c9d3cf2f3225dc8764132a0bb7ecab1f384"
+dependencies = [
+ "zenoh",
+]
+
+[[package]]
+name = "hiroz-schema"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1caf5110f3ad485b0b320fbfc2610c5c51f54d6ee27a563fdff31ea556d7c18"
+dependencies = [
+ "hex",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "hmac"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3367,80 +3446,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ros-z"
-version = "0.1.0"
-source = "git+https://github.com/ZettaScaleLabs/ros-z.git?rev=9bb6305#9bb63050e74ff0a27559534255f0508a19491d08"
-dependencies = [
- "byteorder",
- "clap",
- "csv",
- "dashmap",
- "event-listener",
- "flume",
- "json5",
- "parking_lot",
- "paste",
- "ros-z-cdr",
- "ros-z-derive",
- "ros-z-protocol",
- "ros-z-schema",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha2",
- "slab",
- "strum",
- "tokio",
- "tokio-util",
- "tracing",
- "uuid",
- "zenoh",
- "zenoh-buffers",
- "zenoh-ext",
-]
-
-[[package]]
-name = "ros-z-cdr"
-version = "0.1.0"
-source = "git+https://github.com/ZettaScaleLabs/ros-z.git?rev=9bb6305#9bb63050e74ff0a27559534255f0508a19491d08"
-dependencies = [
- "bytemuck",
- "byteorder",
- "serde",
- "thiserror 1.0.69",
- "zenoh-buffers",
-]
-
-[[package]]
-name = "ros-z-derive"
-version = "0.1.0"
-source = "git+https://github.com/ZettaScaleLabs/ros-z.git?rev=9bb6305#9bb63050e74ff0a27559534255f0508a19491d08"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.114",
-]
-
-[[package]]
-name = "ros-z-protocol"
-version = "0.1.0"
-source = "git+https://github.com/ZettaScaleLabs/ros-z.git?rev=9bb6305#9bb63050e74ff0a27559534255f0508a19491d08"
-dependencies = [
- "zenoh",
-]
-
-[[package]]
-name = "ros-z-schema"
-version = "0.1.0"
-source = "git+https://github.com/ZettaScaleLabs/ros-z.git?rev=9bb6305#9bb63050e74ff0a27559534255f0508a19491d08"
-dependencies = [
- "hex",
- "serde",
- "serde_json",
- "sha2",
-]
-
-[[package]]
 name = "roslibrust"
 version = "0.21.0"
 dependencies = [
@@ -3451,6 +3456,7 @@ dependencies = [
  "roslibrust_codegen",
  "roslibrust_codegen_macro",
  "roslibrust_common",
+ "roslibrust_hiroz",
  "roslibrust_mock",
  "roslibrust_ros1",
  "roslibrust_rosbridge",
@@ -3532,6 +3538,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "roslibrust_hiroz"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cdr",
+ "env_logger 0.11.8",
+ "hiroz",
+ "log",
+ "roslibrust_common",
+ "roslibrust_test",
+ "serde",
+ "tokio",
+ "tokio-util",
+ "zenoh",
+ "zenoh-buffers",
+]
+
+[[package]]
 name = "roslibrust_mcap"
 version = "0.1.0"
 dependencies = [
@@ -3589,24 +3613,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "roslibrust_ros2"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cdr",
- "env_logger 0.11.8",
- "log",
- "ros-z",
- "roslibrust_common",
- "roslibrust_test",
- "serde",
- "tokio",
- "tokio-util",
- "zenoh",
- "zenoh-buffers",
-]
-
-[[package]]
 name = "roslibrust_rosapi"
 version = "0.1.0"
 dependencies = [
@@ -3656,12 +3662,12 @@ dependencies = [
  "diffy",
  "env_logger 0.10.2",
  "hex",
+ "hiroz",
  "lazy_static",
  "log",
  "pprof",
- "ros-z",
  "roslibrust",
- "roslibrust_ros2",
+ "roslibrust_hiroz",
  "roslibrust_rosbridge",
  "roslibrust_zenoh",
  "test-log",
@@ -5455,7 +5461,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

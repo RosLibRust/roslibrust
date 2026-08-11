@@ -2,7 +2,7 @@ use log::*;
 use roslibrust_common::*;
 use std::result::Result as StdResult;
 
-use ros_z::{
+use hiroz::{
     context::ZContext,
     entity::{TypeHash, TypeInfo},
     msg::{SerdeCdrSerdes, ZMessage, ZService},
@@ -11,12 +11,12 @@ use ros_z::{
     Builder,
 };
 
-/// re-export ros_z for consumers
-pub use ros_z;
+/// Re-export hiroz for consumers.
+pub use hiroz;
 
 /// A "newtype" wrapper around ZNode so we can implement roslibrust's traits for it.
 pub struct ZenohClient {
-    node: ros_z::node::ZNode,
+    node: hiroz::node::ZNode,
 }
 
 type RosZSerdes<T> = SerdeCdrSerdes<RosZMessage<T>>;
@@ -187,11 +187,11 @@ impl Drop for ZenohServiceServer {
 }
 
 pub struct ZenohServiceClient<T: RosServiceType> {
-    client: ros_z::service::ZClient<Fake<T>>,
+    client: hiroz::service::ZClient<Fake<T>>,
     _marker: std::marker::PhantomData<T>,
 }
 
-// Orphan-rule shim: ZService (ros_z) cannot be impl'd for T: RosServiceType (roslibrust_common)
+// Orphan-rule shim: ZService (hiroz) cannot be impl'd for T: RosServiceType (roslibrust_common)
 // in a downstream crate. This unit struct bridges the two.
 struct Fake<T>(std::marker::PhantomData<T>);
 
