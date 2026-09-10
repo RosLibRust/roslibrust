@@ -446,7 +446,7 @@ fn parse_ros_value(
         ArrayType::Unbounded | ArrayType::FixedLength(_) | ArrayType::Bounded(_)
     );
     match ros_type {
-        "bool" => generic_parse_value::<bool>(value, is_list),
+        "bool" => generic_parse_value::<bool>(&value.to_lowercase(), is_list),
         "float64" => generic_parse_value::<f64>(value, is_list),
         "float32" => generic_parse_value::<f32>(value, is_list),
         "uint8" | "char" | "byte" => generic_parse_value::<u8>(value, is_list),
