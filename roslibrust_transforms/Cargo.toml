@@ -13,13 +13,12 @@ keywords = ["ROS", "robotics", "tf2", "transforms", "coordinates"]
 roslibrust_common = { path = "../roslibrust_common", version = "0.21" }
 # roslibrust is needed because the macro-generated code references ::roslibrust::
 roslibrust = { path = "../roslibrust", version = "0.21", features = ["macro", "codegen"] }
-transforms = "1.2"
+transforms = "2.1"
 tokio = { workspace = true }
 log = { workspace = true }
 thiserror = "2.0"
 serde = { workspace = true }
 tokio-util = "0.7"
-chrono = "0.4"
 
 [dev-dependencies]
 env_logger = "0.11"

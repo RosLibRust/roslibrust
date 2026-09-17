@@ -9,11 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- roslibrust_transforms gained `latest_common_time()` for looking up the newest time a transform can be served, and `remove_frame()` for removing a frame from the local buffer (e.g. to allow re-parenting it).
+
 ### Fixed
 
 - @JesseGuillory-CM removed several panics and poor error handling from rosbridge client.
 
 ### Changed
+
+- Upgraded roslibrust_transforms to transforms v2.1. Static transforms are now represented by `Stamp::Static` instead of a zero timestamp, transforms are built with `Transform::new` / `Transform::static_between` instead of struct literals, and `add_transform()` publishes static transforms to /tf_static automatically, replacing `update_static_transform()`. Invalid or conflicting transforms received over the wire are now dropped with a warning instead of silently corrupting the buffer.
 
 ## 0.21.0 - May 19th, 2026
 

@@ -21,17 +21,17 @@ roslibrust_transforms = "0.1"
 ### Basic Example
 
 ```rust
-use roslibrust_transforms::{TransformManager, Ros1TFMessage};
+use roslibrust_transforms::{TransformManager, Ros1TFMessage, Timestamp};
 
 async fn example(ros: impl roslibrust_common::TopicProvider + Clone + Send + Sync + 'static) {
     // Create a TransformManager (subscribes to /tf and /tf_static automatically)
-    let manager = TransformManager::<Ros1TFMessage, _>::new(&ros).await.unwrap();
+    let manager = TransformManager::<Ros1TFMessage, _>::new(&ros, std::time::Duration::from_secs(10)).await.unwrap();
 
     // Look up a transform
-    let transform = manager.lookup_latest_transform("base_link", "camera_link").await.unwrap();
+    let transform = manager.get_transform("base_link", "camera_link", Timestamp::now()).await.unwrap();
 
-    println!("Translation: {:?}", transform.translation);
-    println!("Rotation: {:?}", transform.rotation);
+    println!("Translation: {:?}", transform.translation());
+    println!("Rotation: {:?}", transform.rotation());
 }
 ```
 
@@ -41,38 +41,37 @@ The only difference is the message type parameter:
 
 ```rust
 // ROS1
-let manager = TransformManager::<Ros1TFMessage, _>::new(&ros).await?;
+let manager = TransformManager::<Ros1TFMessage, _>::new(&ros, std::time::Duration::from_secs(10)).await?;
 
 // ROS2
-let manager = TransformManager::<Ros2TFMessage, _>::new(&ros).await?;
+let manager = TransformManager::<Ros2TFMessage, _>::new(&ros, std::time::Duration::from_secs(10)).await?;
 ```
 
 ### Publishing Transforms
 
 ```rust
-use roslibrust_transforms::{TransformManager, Ros1TFMessage, Transform, Timestamp};
+use roslibrust_transforms::{TransformManager, Ros1TFMessage, Stamp, Timestamp, Transform, Quaternion, Vector3};
 
 async fn broadcast_example(ros: impl roslibrust_common::TopicProvider + Clone + Send + Sync + 'static) {
-    let manager = TransformManager::<Ros1TFMessage, _>::new(&ros).await.unwrap();
+    let manager = TransformManager::<Ros1TFMessage, _>::new(&ros, std::time::Duration::from_secs(10)).await.unwrap();
 
-    // Create and publish a dynamic transform
-    let transform = Transform {
-        parent_frame: "world".to_string(),
-        child_frame: "robot".to_string(),
-        translation: Default::default(),
-        rotation: Default::default(),
-        timestamp: Timestamp::now(),
-    };
-    manager.update_transform(transform).await.unwrap();
+    // Create and publish a dynamic transform, published on /tf
+    let transform = Transform::new(
+        "world",
+        "robot",
+        Vector3::new(1.0, 0.0, 0.0),
+        Quaternion::identity(),
+        Stamp::At(Timestamp::now()),
+    ).unwrap();
+    manager.add_transform(transform).await.unwrap();
 
-    // Or publish a static transform
-    let static_tf = Transform {
-        parent_frame: "robot".to_string(),
-        child_frame: "sensor".to_string(),
-        translation: Default::default(),
-        rotation: Default::default(),
-        timestamp: Timestamp::now(), // Will be set to zero internally
-    };
-    manager.update_static_transform(static_tf).await.unwrap();
+    // Static transforms are valid for all time, and are published on /tf_static
+    let static_tf = Transform::static_between(
+        "robot",
+        "sensor",
+        Vector3::new(0.1, 0.0, 0.5),
+        Quaternion::identity(),
+    ).unwrap();
+    manager.add_transform(static_tf).await.unwrap();
 }
 ```

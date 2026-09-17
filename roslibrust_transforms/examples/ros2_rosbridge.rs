@@ -23,7 +23,7 @@
 use std::time::Duration;
 
 use roslibrust_rosbridge::ClientHandle;
-use roslibrust_transforms::{Ros2TFMessage, Timestamp, TransformManager};
+use roslibrust_transforms::{Ros2TFMessage, Stamp, Timestamp, TransformManager};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -55,11 +55,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Try to look up a transform from "world" to "base_link"
                 match manager.get_transform("world", "base_link", Timestamp::now()).await {
                     Ok(transform) => {
+                        let translation = transform.translation();
                         log::info!(
                             "Transform world -> base_link: translation=({:.3}, {:.3}, {:.3})",
-                            transform.translation.x,
-                            transform.translation.y,
-                            transform.translation.z
+                            translation.x,
+                            translation.y,
+                            translation.z
                         );
                     }
                     Err(e) => {
@@ -67,18 +68,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
 
-                // Also try looking up with a specific timestamp (for static transforms, use zero)
-                match manager.get_transform("world", "base_link", Timestamp::zero()).await {
-                    Ok(transform) => {
-                        log::info!(
-                            "Static transform world -> base_link: translation=({:.3}, {:.3}, {:.3})",
-                            transform.translation.x,
-                            transform.translation.y,
-                            transform.translation.z
-                        );
-                    }
-                    Err(_) => {
-                        // Static transform not available yet
+                // Also look up the newest transform the local buffer can serve
+                if let Ok(latest) = manager.latest_common_time("world", "base_link").await {
+                    let time = match latest {
+                        Stamp::At(time) => time,
+                        // Frames connected by static transforms only can be looked up at any time
+                        Stamp::Static => Timestamp::now(),
+                    };
+                    match manager.get_transform("world", "base_link", time).await {
+                        Ok(transform) => {
+                            let translation = transform.translation();
+                            log::info!(
+                                "Latest transform world -> base_link: translation=({:.3}, {:.3}, {:.3})",
+                                translation.x,
+                                translation.y,
+                                translation.z
+                            );
+                        }
+                        Err(e) => {
+                            log::warn!("Could not look up latest transform: {}", e);
+                        }
                     }
                 }
             }

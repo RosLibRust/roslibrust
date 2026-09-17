@@ -10,7 +10,7 @@ use log::*;
 // Example uses the mock backend for simplicity in running / testing, but any backend can be used
 use roslibrust::mock::MockRos;
 use roslibrust_transforms::{
-    Quaternion, Ros1TFMessage, Timestamp, Transform, TransformManager, Vector3,
+    Quaternion, Ros1TFMessage, Stamp, Timestamp, Transform, TransformManager, Vector3,
 };
 
 #[tokio::main]
@@ -34,16 +34,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             info!("Publishing transform...");
             // Because of internal mutability, add_transform() doesn't require `&mut self`
             // So you don't need to use Mutex<T> or RefCell<T> to share the manager
-            tf_mgr2
-                .add_transform(Transform {
-                    parent: "world".to_string(),
-                    child: "robot".to_string(),
-                    translation: Vector3::new(x, 0.0, 0.0),
-                    rotation: Quaternion::identity(),
-                    timestamp: Timestamp::now(),
-                })
-                .await
-                .unwrap();
+            let transform = Transform::new(
+                "world",
+                "robot",
+                Vector3::new(x, 0.0, 0.0),
+                Quaternion::identity(),
+                Stamp::At(Timestamp::now()),
+            )
+            .unwrap();
+            tf_mgr2.add_transform(transform).await.unwrap();
             x += 1.0;
         }
     });
@@ -65,10 +64,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             xform = tf_mgr.wait_for_transform("world", "robot", lookup, None) => {
                 match xform {
                     Ok(xform) => {
+                        let translation = xform.translation();
                         info!("Transform: translation=({:.3}, {:.3}, {:.3})",
-                            xform.translation.x,
-                            xform.translation.y,
-                            xform.translation.z
+                            translation.x,
+                            translation.y,
+                            translation.z
                         );
                     }
                     Err(e) => {

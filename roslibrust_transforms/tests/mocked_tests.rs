@@ -2,13 +2,13 @@
 
 use std::time::Duration;
 
-use roslibrust_common::{Publish, TopicProvider};
+use roslibrust_common::{Publish, Subscribe, TopicProvider};
 use roslibrust_mock::MockRos;
-use transforms::time::{TimeError, TimePoint};
 
 use roslibrust_transforms::messages::ros1::{geometry_msgs, std_msgs, TFMessage};
 use roslibrust_transforms::{
-    Quaternion, Ros1TFMessage, RosTimestamp, Timestamp, TransformManager, Vector3,
+    Quaternion, Ros1TFMessage, RosTimestamp, Stamp, TimeError, TimePoint, Timestamp, Transform,
+    TransformManager, Vector3,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -17,10 +17,6 @@ struct MockTimestamp {
 }
 
 impl TimePoint for MockTimestamp {
-    fn static_timestamp() -> Self {
-        Self { t: 0 }
-    }
-
     fn duration_since(self, earlier: Self) -> Result<Duration, TimeError> {
         if self.t < earlier.t {
             return Err(TimeError::DurationUnderflow);
@@ -36,14 +32,6 @@ impl TimePoint for MockTimestamp {
         Ok(Duration::new(secs as u64, nanos as u32))
     }
 
-    fn checked_add(self, rhs: Duration) -> Result<Self, TimeError> {
-        let rhs_nanos = rhs.as_nanos();
-        self.t
-            .checked_add(rhs_nanos)
-            .map(|t| Self { t })
-            .ok_or(TimeError::DurationOverflow)
-    }
-
     fn checked_sub(self, rhs: Duration) -> Result<Self, TimeError> {
         let rhs_nanos = rhs.as_nanos();
         self.t
@@ -52,8 +40,8 @@ impl TimePoint for MockTimestamp {
             .ok_or(TimeError::DurationUnderflow)
     }
 
-    fn as_seconds(self) -> Result<f64, TimeError> {
-        Ok(self.t as f64 / 1_000_000_000.0)
+    fn as_seconds_lossy(self) -> f64 {
+        self.t as f64 / 1_000_000_000.0
     }
 }
 
@@ -73,6 +61,16 @@ impl RosTimestamp for MockTimestamp {
 
         (secs as i32, nsecs as u32)
     }
+}
+
+#[test]
+fn test_from_ros_time_clamps_pre_epoch_times() {
+    // Timestamp cannot represent times before the unix epoch, they clamp to zero
+    assert_eq!(Timestamp::from_ros_time(-1, 500_000_000), Timestamp::zero());
+    assert_eq!(
+        Timestamp::from_ros_time(1, 500_000_000),
+        Timestamp::from_nanos(1_500_000_000)
+    );
 }
 
 /// Helper function to create a TFMessage with a single transform.
@@ -143,16 +141,17 @@ async fn test_transform_listener_with_custom_timestamp() {
         .get_transform("world", "custom_frame", lookup_time)
         .await
         .expect("Failed to look up transform with custom timestamp");
-    assert_eq!(transform.timestamp, lookup_time);
+    assert_eq!(transform.timestamp(), Stamp::At(lookup_time));
 
     // Add another transform through the manager and verify conversion from custom timestamp
-    let transform = transforms::Transform {
-        parent: "world".to_string(),
-        child: "custom_from_manager".to_string(),
-        translation: Vector3::new(4.0, 5.0, 6.0),
-        rotation: Quaternion::identity(),
-        timestamp: MockTimestamp { t: 4_000_000_000 },
-    };
+    let transform = Transform::new(
+        "world",
+        "custom_from_manager",
+        Vector3::new(4.0, 5.0, 6.0),
+        Quaternion::identity(),
+        Stamp::At(MockTimestamp { t: 4_000_000_000 }),
+    )
+    .expect("Failed to build transform with custom timestamp");
     manager
         .add_transform(transform)
         .await
@@ -166,9 +165,9 @@ async fn test_transform_listener_with_custom_timestamp() {
         )
         .await
         .expect("Failed to retrieve transform added with custom timestamp");
-    assert!((retrieved.translation.x - 4.0).abs() < 1e-6);
-    assert!((retrieved.translation.y - 5.0).abs() < 1e-6);
-    assert!((retrieved.translation.z - 6.0).abs() < 1e-6);
+    assert!((retrieved.translation().x - 4.0).abs() < 1e-6);
+    assert!((retrieved.translation().y - 5.0).abs() < 1e-6);
+    assert!((retrieved.translation().z - 6.0).abs() < 1e-6);
 }
 
 #[tokio::test]
@@ -201,10 +200,8 @@ async fn test_transform_listener_receives_tf_messages() {
     let nsecs = now.subsec_nanos() as i32;
     let tf_msg = create_tf_message("world", "base_link", 1.0, 2.0, 3.0, secs, nsecs);
 
-    // Calculate the exact timestamp for lookup (same as what convert_transform_stamped uses)
-    let lookup_timestamp = Timestamp {
-        t: (secs as u128) * 1_000_000_000 + (nsecs as u128),
-    };
+    // Calculate the exact timestamp for lookup (same as what from_ros_time uses)
+    let lookup_timestamp = Timestamp::from_nanos((secs as u64) * 1_000_000_000 + (nsecs as u64));
 
     tf_publisher
         .publish(&tf_msg)
@@ -244,7 +241,7 @@ async fn test_transform_listener_static_transforms() {
     // Give the listener time to subscribe
     tokio::time::sleep(Duration::from_millis(50)).await;
 
-    // Publish a static transform (timestamp doesn't matter for static transforms)
+    // Publish a static transform (its timestamp is ignored for static transforms)
     let tf_msg = create_tf_message("base_link", "camera_link", 0.5, 0.0, 0.3, 0, 0);
 
     tf_static_publisher
@@ -255,9 +252,9 @@ async fn test_transform_listener_static_transforms() {
     // Give the listener time to process the message
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    // Check that the transform is available
+    // Check that the transform is available, static transforms are valid at any lookup time
     let can_transform = manager
-        .get_transform("base_link", "camera_link", Timestamp::zero())
+        .get_transform("base_link", "camera_link", Timestamp::now())
         .await;
     assert!(
         can_transform.is_ok(),
@@ -297,49 +294,51 @@ async fn test_lookup_transform_values() {
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // Look up the transform and verify its values
-    // Static transforms use Timestamp::zero()
+    // Static transforms are valid at any lookup time
     let transform = manager
-        .get_transform("world", "sensor", Timestamp::zero())
+        .get_transform("world", "sensor", Timestamp::now())
         .await
         .expect("Failed to look up transform");
 
     // Verify translation values
+    let translation = transform.translation();
     assert!(
-        (transform.translation.x - 1.5).abs() < 1e-6,
+        (translation.x - 1.5).abs() < 1e-6,
         "Expected x=1.5, got {}",
-        transform.translation.x
+        translation.x
     );
     assert!(
-        (transform.translation.y - 2.5).abs() < 1e-6,
+        (translation.y - 2.5).abs() < 1e-6,
         "Expected y=2.5, got {}",
-        transform.translation.y
+        translation.y
     );
     assert!(
-        (transform.translation.z - 3.5).abs() < 1e-6,
+        (translation.z - 3.5).abs() < 1e-6,
         "Expected z=3.5, got {}",
-        transform.translation.z
+        translation.z
     );
 
     // Verify rotation is identity (w=1, x=y=z=0)
+    let rotation = transform.rotation();
     assert!(
-        (transform.rotation.w - 1.0).abs() < 1e-6,
+        (rotation.w - 1.0).abs() < 1e-6,
         "Expected rotation.w=1.0, got {}",
-        transform.rotation.w
+        rotation.w
     );
     assert!(
-        transform.rotation.x.abs() < 1e-6,
+        rotation.x.abs() < 1e-6,
         "Expected rotation.x=0.0, got {}",
-        transform.rotation.x
+        rotation.x
     );
     assert!(
-        transform.rotation.y.abs() < 1e-6,
+        rotation.y.abs() < 1e-6,
         "Expected rotation.y=0.0, got {}",
-        transform.rotation.y
+        rotation.y
     );
     assert!(
-        transform.rotation.z.abs() < 1e-6,
+        rotation.z.abs() < 1e-6,
         "Expected rotation.z=0.0, got {}",
-        transform.rotation.z
+        rotation.z
     );
 }
 
@@ -374,12 +373,13 @@ async fn test_wait_for_transform_success() {
     });
 
     // Wait for the transform - it should succeed after the delayed publish
+    // Static transforms are valid at any lookup time
     let start = tokio::time::Instant::now();
     let result = manager
         .wait_for_transform(
             "world",
             "delayed_frame",
-            Timestamp::zero(),
+            Timestamp::now(),
             Some(Duration::from_secs(2)),
         )
         .await;
@@ -397,10 +397,10 @@ async fn test_wait_for_transform_success() {
     );
 
     // Verify the transform values
-    let transform = result.unwrap();
-    assert!((transform.translation.x - 1.0).abs() < 1e-6);
-    assert!((transform.translation.y - 2.0).abs() < 1e-6);
-    assert!((transform.translation.z - 3.0).abs() < 1e-6);
+    let translation = result.unwrap().translation();
+    assert!((translation.x - 1.0).abs() < 1e-6);
+    assert!((translation.y - 2.0).abs() < 1e-6);
+    assert!((translation.z - 3.0).abs() < 1e-6);
 }
 
 #[tokio::test]
@@ -480,12 +480,13 @@ async fn test_wait_for_transform_immediate_success() {
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     // Wait for the transform - it should return immediately since it's already available
+    // Static transforms are valid at any lookup time
     let start = std::time::Instant::now();
     let result = manager
         .wait_for_transform(
             "world",
             "immediate_frame",
-            Timestamp::zero(),
+            Timestamp::now(),
             Some(Duration::from_secs(5)),
         )
         .await;
@@ -575,33 +576,255 @@ async fn test_get_transform_at_different_times() {
     // Give the listener time to process the messages
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let t1 = Timestamp { t: 1_000_000_000 };
-    let t2 = Timestamp { t: 2_000_000_000 };
+    let t1 = Timestamp::from_nanos(1_000_000_000);
+    let t2 = Timestamp::from_nanos(2_000_000_000);
 
     let transform = manager
         .get_transform_at("a", t2, "b", t1, "fixed")
         .await
         .expect("Failed to look up transform at different times");
 
-    assert_eq!(transform.parent, "a");
-    assert_eq!(transform.child, "b");
-    assert_eq!(transform.timestamp, t2);
+    assert_eq!(transform.parent(), "a");
+    assert_eq!(transform.child(), "b");
+    assert_eq!(transform.timestamp(), Stamp::At(t2));
 
     // b at t=1s in fixed is (1, 1, 0), while a at t=2s in fixed is (2, 0, 0)
     // so b at t=1s expressed in a at t=2s is (-1, 1, 0)
+    let translation = transform.translation();
     assert!(
-        (transform.translation.x + 1.0).abs() < 1e-6,
+        (translation.x + 1.0).abs() < 1e-6,
         "Expected x=-1.0, got {}",
-        transform.translation.x
+        translation.x
     );
     assert!(
-        (transform.translation.y - 1.0).abs() < 1e-6,
+        (translation.y - 1.0).abs() < 1e-6,
         "Expected y=1.0, got {}",
-        transform.translation.y
+        translation.y
     );
     assert!(
-        transform.translation.z.abs() < 1e-6,
+        translation.z.abs() < 1e-6,
         "Expected z=0.0, got {}",
-        transform.translation.z
+        translation.z
+    );
+}
+
+#[tokio::test]
+async fn test_invalid_transforms_are_dropped() {
+    tokio::time::pause();
+    let mock_ros = MockRos::new();
+
+    // Create a publisher for /tf topic
+    let tf_publisher = mock_ros
+        .advertise::<TFMessage>("/tf")
+        .await
+        .expect("Failed to create /tf publisher");
+
+    // Create the manager
+    let manager =
+        TransformManager::<Ros1TFMessage, _>::new(&mock_ros, std::time::Duration::from_secs(10))
+            .await
+            .expect("Failed to create TransformManager");
+
+    // Give the listener time to subscribe
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // Publish a transform with a denormalized rotation, which fails validation during conversion
+    // and is dropped by the listener
+    let mut bad_msg = create_tf_message("world", "bad_frame", 1.0, 0.0, 0.0, 1, 0);
+    bad_msg.transforms[0].transform.rotation.w = 2.0;
+    tf_publisher
+        .publish(&bad_msg)
+        .await
+        .expect("Failed to publish invalid transform");
+
+    // Publish a valid transform afterwards to verify the listener keeps processing
+    let good_msg = create_tf_message("world", "good_frame", 1.0, 0.0, 0.0, 1, 0);
+    tf_publisher
+        .publish(&good_msg)
+        .await
+        .expect("Failed to publish valid transform");
+
+    // Give the listener time to process the messages
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    let t1 = Timestamp::from_nanos(1_000_000_000);
+    let result = manager.get_transform("world", "bad_frame", t1).await;
+    assert!(
+        result.is_err(),
+        "Invalid transform should not have been added to the buffer"
+    );
+
+    let result = manager.get_transform("world", "good_frame", t1).await;
+    assert!(
+        result.is_ok(),
+        "Valid transform should still be processed after an invalid one"
+    );
+}
+
+#[tokio::test]
+async fn test_add_static_transform_publishes_to_tf_static() {
+    tokio::time::pause();
+    let mock_ros = MockRos::new();
+
+    // Create a subscriber on /tf_static to observe what the manager publishes
+    let mut tf_static_subscriber = mock_ros
+        .subscribe::<TFMessage>("/tf_static")
+        .await
+        .expect("Failed to create /tf_static subscriber");
+
+    // Create the manager
+    let manager =
+        TransformManager::<Ros1TFMessage, _>::new(&mock_ros, std::time::Duration::from_secs(10))
+            .await
+            .expect("Failed to create TransformManager");
+
+    // Give the listener time to subscribe
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // Static transforms are published to /tf_static instead of /tf
+    let transform = Transform::static_between(
+        "base_link",
+        "imu_link",
+        Vector3::new(0.1, 0.0, 0.2),
+        Quaternion::identity(),
+    )
+    .expect("Failed to build static transform");
+    manager
+        .add_transform(transform)
+        .await
+        .expect("Failed to add static transform");
+
+    let msg = tf_static_subscriber
+        .next()
+        .await
+        .expect("Failed to receive message on /tf_static");
+    assert_eq!(msg.transforms.len(), 1);
+    assert_eq!(msg.transforms[0].header.frame_id, "base_link");
+    assert_eq!(msg.transforms[0].child_frame_id, "imu_link");
+
+    // The static transform is also available in the local buffer at any lookup time
+    let transform = manager
+        .get_transform("base_link", "imu_link", Timestamp::now())
+        .await
+        .expect("Failed to look up static transform");
+    assert!((transform.translation().x - 0.1).abs() < 1e-6);
+    assert!((transform.translation().z - 0.2).abs() < 1e-6);
+}
+
+#[tokio::test]
+async fn test_latest_common_time() {
+    tokio::time::pause();
+    let mock_ros = MockRos::new();
+
+    // Create a publisher for /tf topic
+    let tf_publisher = mock_ros
+        .advertise::<TFMessage>("/tf")
+        .await
+        .expect("Failed to create /tf publisher");
+
+    // Create the manager
+    let manager =
+        TransformManager::<Ros1TFMessage, _>::new(&mock_ros, std::time::Duration::from_secs(10))
+            .await
+            .expect("Failed to create TransformManager");
+
+    // Give the listener time to subscribe
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // world -> a is available at t=1s and t=2s, but a -> b only at t=1s
+    let world_to_a_t1 = create_tf_message("world", "a", 1.0, 0.0, 0.0, 1, 0);
+    tf_publisher
+        .publish(&world_to_a_t1)
+        .await
+        .expect("Failed to publish world->a at t=1s");
+    let world_to_a_t2 = create_tf_message("world", "a", 2.0, 0.0, 0.0, 2, 0);
+    tf_publisher
+        .publish(&world_to_a_t2)
+        .await
+        .expect("Failed to publish world->a at t=2s");
+    let a_to_b_t1 = create_tf_message("a", "b", 0.0, 1.0, 0.0, 1, 0);
+    tf_publisher
+        .publish(&a_to_b_t1)
+        .await
+        .expect("Failed to publish a->b at t=1s");
+
+    // Give the listener time to process the messages
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    // The newest time the whole chain can serve is bounded by the lagging a -> b hop
+    let t1 = Timestamp::from_nanos(1_000_000_000);
+    let latest = manager
+        .latest_common_time("world", "b")
+        .await
+        .expect("Failed to get latest common time");
+    assert_eq!(latest, Stamp::At(t1));
+
+    // And the returned time is servable
+    let result = manager.get_transform("world", "b", t1).await;
+    assert!(
+        result.is_ok(),
+        "Transform should be available at the latest common time"
+    );
+}
+
+#[tokio::test]
+async fn test_reparenting_is_rejected_until_frame_removed() {
+    tokio::time::pause();
+    let mock_ros = MockRos::new();
+
+    // Create a publisher for /tf topic
+    let tf_publisher = mock_ros
+        .advertise::<TFMessage>("/tf")
+        .await
+        .expect("Failed to create /tf publisher");
+
+    // Create the manager
+    let manager =
+        TransformManager::<Ros1TFMessage, _>::new(&mock_ros, std::time::Duration::from_secs(10))
+            .await
+            .expect("Failed to create TransformManager");
+
+    // Give the listener time to subscribe
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // tool is first received as a child of world, pinning its parent
+    let world_to_tool = create_tf_message("world", "tool", 1.0, 0.0, 0.0, 1, 0);
+    tf_publisher
+        .publish(&world_to_tool)
+        .await
+        .expect("Failed to publish world->tool");
+
+    // A transform re-parenting tool under gripper is rejected and dropped with a warning
+    let gripper_to_tool = create_tf_message("gripper", "tool", 0.0, 1.0, 0.0, 2, 0);
+    tf_publisher
+        .publish(&gripper_to_tool)
+        .await
+        .expect("Failed to publish gripper->tool");
+
+    // Give the listener time to process the messages
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    let t1 = Timestamp::from_nanos(1_000_000_000);
+    let t2 = Timestamp::from_nanos(2_000_000_000);
+    assert!(
+        manager.get_transform("world", "tool", t1).await.is_ok(),
+        "Original parent should still serve"
+    );
+    assert!(
+        manager.get_transform("gripper", "tool", t2).await.is_err(),
+        "Re-parented transform should have been dropped"
+    );
+
+    // remove_frame() is the escape hatch that allows the frame to be re-added under a new parent
+    assert!(manager.remove_frame("tool").await);
+    tf_publisher
+        .publish(&gripper_to_tool)
+        .await
+        .expect("Failed to re-publish gripper->tool");
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    assert!(
+        manager.get_transform("gripper", "tool", t2).await.is_ok(),
+        "Frame should be re-added under its new parent after remove_frame"
     );
 }

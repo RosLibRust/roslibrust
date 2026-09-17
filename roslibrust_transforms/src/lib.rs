@@ -8,19 +8,19 @@
 //! - Generic over roslibrust backends (ros1, rosbridge, zenoh, mock)
 //! - Supports both ROS1 and ROS2 message formats
 //! - Automatic subscription to `/tf` and `/tf_static` topics
-//! - Ability to publish transforms via `update_transform()` and `update_static_transform()`
+//! - Ability to publish transforms via `add_transform()`
 //!
 //! # ROS1 vs ROS2
 //!
 //! The `TransformManager` is generic over the message type. Use the appropriate type alias
 //! for your ROS version:
 //!
-//! - ROS1: `TransformManager::<Ros1TFMessage, _>::new(&ros)`
-//! - ROS2: `TransformManager::<Ros2TFMessage, _>::new(&ros)`
+//! - ROS1: `TransformManager::<Ros1TFMessage, _>::new(&ros, buffer_duration)`
+//! - ROS2: `TransformManager::<Ros2TFMessage, _>::new(&ros, buffer_duration)`
 //!
 //! # Example
 //! ```no_run
-//! use roslibrust_transforms::{TransformManager, Ros1TFMessage, Timestamp};
+//! use roslibrust_transforms::{Quaternion, Ros1TFMessage, Stamp, Timestamp, Transform, TransformManager, Vector3};
 //! use roslibrust::traits::Ros;
 //!
 //! // Generic over any roslibrust backend
@@ -29,38 +29,47 @@
 //!     let manager = TransformManager::<Ros1TFMessage, _>::new(&ros, std::time::Duration::from_secs(10)).await.unwrap();
 //!
 //!     // Look up a transform
-//!     let mut transform = manager.get_transform("base_link", "camera_link", Timestamp::now()).await.unwrap();
+//!     let transform = manager.get_transform("base_link", "camera_link", Timestamp::now()).await.unwrap();
 //!
-//!     // Modify the transform
-//!     transform.translation.x += 1.0;
-//!     transform.timestamp = transforms::time::Timestamp::now();
+//!     // Build an updated transform from its components
+//!     let updated = Transform::new(
+//!         transform.parent(),
+//!         transform.child(),
+//!         transform.translation() + Vector3::new(1.0, 0.0, 0.0),
+//!         transform.rotation(),
+//!         Stamp::At(Timestamp::now()),
+//!     )
+//!     .unwrap();
 //!
 //!     // Update the value in the buffer, and publish it's update to other nodes
-//!     manager.add_transform(transform).await.unwrap();
+//!     manager.add_transform(updated).await.unwrap();
 //! }
 //! ```
 
 pub mod messages;
 
 // Re-export useful types from the transforms crate
-pub use transforms::geometry::{Quaternion, Transform, Vector3};
-pub use transforms::time::Timestamp;
-pub use transforms::Registry;
+pub use transforms::errors::TransformError;
+pub use transforms::geometry::{Quaternion, Vector3};
+pub use transforms::time::{Stamp, TimeError, TimePoint, Timestamp};
+pub use transforms::{Registry, Transform};
 
 use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::Duration;
 
 use roslibrust_common::{Publish, RosMessageType, Subscribe, TopicProvider};
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::{watch, RwLock};
 use tokio_util::sync::CancellationToken;
-use transforms::time::TimePoint;
 
 /// Error types for TransformManager operations.
 #[derive(thiserror::Error, Debug)]
 pub enum TransformManagerError {
     #[error("Transform lookup failed: {0}")]
     LookupError(String),
+
+    #[error("Transform rejected by the registry: {0}")]
+    RejectedTransform(String),
 
     #[error("ROS communication error: {0}")]
     RosError(#[from] roslibrust_common::Error),
@@ -80,14 +89,18 @@ pub trait RosTimestamp: TimePoint {
 
 impl RosTimestamp for Timestamp {
     fn from_ros_time(sec: i32, nsec: u32) -> Self {
-        Timestamp {
-            t: (sec as u128) * 1_000_000_000 + (nsec as u128),
+        // Timestamp stores u64 nanoseconds since the unix epoch, so times before the epoch
+        // have no representation, clamp them to zero
+        match u64::try_from(sec) {
+            Ok(sec) => Timestamp::from_nanos(sec * 1_000_000_000 + (nsec as u64)),
+            Err(_) => Timestamp::zero(),
         }
     }
 
     fn as_ros_time(self) -> (i32, u32) {
-        let secs = self.t / 1_000_000_000;
-        let nsecs = self.t % 1_000_000_000;
+        let nanos = self.as_nanos();
+        let secs = nanos / 1_000_000_000;
+        let nsecs = nanos % 1_000_000_000;
         (secs as i32, nsecs as u32)
     }
 }
@@ -122,8 +135,12 @@ where
 {
     /// Convert this message into a `transforms::Transform`.
     ///
-    /// If `is_static` is true, the timestamp should be set to the static timestamp value.
-    fn into_transform(self, is_static: bool) -> transforms::Transform<T>;
+    /// If `is_static` is true, the message's timestamp is ignored and the resulting transform
+    /// carries `Stamp::Static`, making it valid for all time.
+    ///
+    /// Returns an error if the message does not describe a valid transform, e.g. its rotation
+    /// is not a unit quaternion or one of its components is NaN or infinite.
+    fn into_transform(self, is_static: bool) -> Result<transforms::Transform<T>, TransformError>;
 }
 
 /// Trait for converting a `transforms::Transform` to a TransformStamped message.
@@ -134,6 +151,8 @@ where
     T: TimePoint,
 {
     /// Create a TransformStamped message from a `transforms::Transform`.
+    ///
+    /// Static transforms carry no instant and are stamped with time zero in the resulting message.
     fn from_transform(transform: &transforms::Transform<T>) -> Self;
 }
 
@@ -171,8 +190,8 @@ where
 {
     registry: Arc<RwLock<Registry<T>>>,
     buffer_duration: Duration,
-    /// Broadcast channel to notify waiters when transforms are added
-    transform_notify: broadcast::Sender<()>,
+    /// Watch channel to notify waiters when transforms are added
+    transform_notify: watch::Sender<()>,
     /// Cancellation token to shut down background tasks when dropped
     cancel_token: CancellationToken,
     tf_publisher: P,
@@ -208,11 +227,11 @@ where
         R::Subscriber<M>: Send + 'static,
         R::Publisher<M>: Send + Sync,
     {
-        let registry = Arc::new(RwLock::new(Registry::<T>::new(buffer_duration)));
+        let registry = Arc::new(RwLock::new(Registry::<T>::with_max_age(buffer_duration)));
 
-        // Create broadcast channel for notifying waiters when transforms are added
-        // Capacity of 16 should be plenty - receivers only care about the most recent notification
-        let (transform_notify, _) = broadcast::channel(16);
+        // Create watch channel for notifying waiters when transforms are added
+        // Notifications coalesce - receivers only care that something changed since they last checked
+        let (transform_notify, _) = watch::channel(());
 
         // Create cancellation token for shutting down background tasks
         let cancel_token = CancellationToken::new();
@@ -274,17 +293,15 @@ where
     async fn process_tf_messages<S: Subscribe<M>>(
         mut subscriber: S,
         registry: Arc<RwLock<Registry<T>>>,
-        notify: broadcast::Sender<()>,
+        notify: watch::Sender<()>,
         cancel_token: CancellationToken,
         is_static: bool,
     ) {
+        let topic = if is_static { "/tf_static" } else { "/tf" };
         loop {
             tokio::select! {
                 _ = cancel_token.cancelled() => {
-                    log::debug!(
-                        "Shutting down {} listener task",
-                        if is_static { "/tf_static" } else { "/tf" }
-                    );
+                    log::debug!("Shutting down {topic} listener task");
                     break;
                 }
                 result = subscriber.next() => {
@@ -293,22 +310,33 @@ where
                             let mut reg = registry.write().await;
                             for tf in <M as TFMessageType<T>>::transforms(msg) {
                                 let transform =
-                                    <M::TransformStamped as IntoTransform<T>>::into_transform(
-                                        tf,
-                                        is_static,
+                                    match <M::TransformStamped as IntoTransform<T>>::into_transform(
+                                        tf, is_static,
+                                    ) {
+                                        Ok(transform) => transform,
+                                        Err(e) => {
+                                            log::warn!(
+                                                "Dropping invalid transform received on {topic}: {e}"
+                                            );
+                                            continue;
+                                        }
+                                    };
+                                // Clone the frame names so the warning below can still name them
+                                // after the transform is moved into the registry
+                                let parent = transform.parent().to_owned();
+                                let child = transform.child().to_owned();
+                                if let Err(e) = reg.add_transform(transform) {
+                                    log::warn!(
+                                        "Dropping transform from '{parent}' to '{child}' rejected by the registry on {topic}: {e}"
                                     );
-                                reg.add_transform(transform);
+                                }
                             }
                             // Notify waiters that transforms have been added
                             // Ignore errors - they just mean no one is currently listening
                             let _ = notify.send(());
                         }
                         Err(e) => {
-                            log::warn!(
-                                "Error receiving {} message: {}",
-                                if is_static { "/tf_static" } else { "/tf" },
-                                e
-                            );
+                            log::warn!("Error receiving {topic} message: {e}");
                             // Continue trying to receive messages
                         }
                     }
@@ -324,7 +352,7 @@ where
     ///
     /// Example:
     /// ```
-    /// use roslibrust_transforms::{TransformManager, Ros1TFMessage};
+    /// use roslibrust_transforms::{Quaternion, Ros1TFMessage, Stamp, Timestamp, Transform, TransformManager, Vector3};
     /// use roslibrust::traits::Ros;
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -334,24 +362,24 @@ where
     ///
     ///     // Camera has moved between t=0 and t=5
     ///     // These updates would be automatically received over the /tf topic if something was publishing them
-    ///     let t0 = roslibrust_transforms::Timestamp::now();
-    ///     let x0 = transforms::Transform {
-    ///         parent: "base_link".to_string(),
-    ///         child: "camera_link".to_string(),
-    ///         translation: roslibrust_transforms::Vector3::new(0.0, 0.0, 0.0),
-    ///         rotation: roslibrust_transforms::Quaternion::identity(),
-    ///         timestamp: t0,
-    ///     };
+    ///     let t0 = Timestamp::now();
+    ///     let x0 = Transform::new(
+    ///         "base_link",
+    ///         "camera_link",
+    ///         Vector3::new(0.0, 0.0, 0.0),
+    ///         Quaternion::identity(),
+    ///         Stamp::At(t0),
+    ///     )?;
     ///     manager.add_transform(x0).await?;
     ///
     ///     let t5 = (t0 + std::time::Duration::from_secs(5)).unwrap();
-    ///     let x5 = transforms::Transform {
-    ///         parent: "base_link".to_string(),
-    ///         child: "camera_link".to_string(),
-    ///         translation: roslibrust_transforms::Vector3::new(1.0, 0.0, 0.0),
-    ///         rotation: roslibrust_transforms::Quaternion::identity(),
-    ///         timestamp: t5,
-    ///     };
+    ///     let x5 = Transform::new(
+    ///         "base_link",
+    ///         "camera_link",
+    ///         Vector3::new(1.0, 0.0, 0.0),
+    ///         Quaternion::identity(),
+    ///         Stamp::At(t5),
+    ///     )?;
     ///     manager.add_transform(x5).await?;
     ///
     ///     //  We care to know where the camera was at t=3
@@ -359,7 +387,7 @@ where
     ///     let transform = manager.get_transform("base_link", "camera_link", t3).await?;
     ///
     ///     // Linear interpolation was performed behind the scenes to get the transform at t=3
-    ///     assert_eq!(transform.translation.x, 0.6);
+    ///     assert_eq!(transform.translation().x, 0.6);
     ///     Ok(())
     /// }
     pub async fn get_transform(
@@ -368,21 +396,14 @@ where
         source_frame: &str,
         time: T,
     ) -> Result<transforms::Transform<T>, TransformManagerError> {
-        let mut registry = self.registry.write().await;
+        let registry = self.registry.read().await;
         registry
             .get_transform(target_frame, source_frame, time)
             .map_err(|e| TransformManagerError::LookupError(e.to_string()))
     }
 
     fn pretty_print_timestamp(time: T) -> String {
-        if time.is_static() {
-            return "static".to_string();
-        }
-
-        match time.as_seconds() {
-            Ok(secs) => format!("{secs:.3}s"),
-            Err(_) => "<unprintable time>".to_string(),
-        }
+        format!("{:.3}s", time.as_seconds_lossy())
     }
 
     /// Wait for a transform to become available between two frames at a specific time.
@@ -443,7 +464,7 @@ where
         loop {
             // Try to get the transform
             {
-                let mut registry = self.registry.write().await;
+                let registry = self.registry.read().await;
                 if let Ok(transform) = registry.get_transform(target_frame, source_frame, time) {
                     return Ok(transform);
                 }
@@ -463,7 +484,7 @@ where
             tokio::select! {
                 _ = tokio::time::sleep(remaining) => {
                     // Timeout expired - do one final check then return error
-                    let mut registry = self.registry.write().await;
+                    let registry = self.registry.read().await;
                     if let Ok(transform) = registry.get_transform(target_frame, source_frame, time) {
                         return Ok(transform);
                     }
@@ -473,30 +494,27 @@ where
                         Self::pretty_print_timestamp(time),
                     ));
                 }
-                result = receiver.recv() => {
+                result = receiver.changed() => {
                     // Got a notification - check for the transform on next loop iteration
-                    // Handle lagged receivers by just continuing - we'll check the registry anyway
-                    match result {
-                        Ok(()) | Err(broadcast::error::RecvError::Lagged(_)) => {
-                            // Continue to next iteration to check for transform
-                        }
-                        Err(broadcast::error::RecvError::Closed) => {
-                            // Channel closed, shouldn't happen but treat as timeout
-                            return Err(TransformManagerError::Timeout(
-                                target_frame.to_string(),
-                                source_frame.to_string(),
-                                Self::pretty_print_timestamp(time),
-                            ));
-                        }
+                    // Notifications coalesce, so a burst of transforms only triggers one check
+                    if result.is_err() {
+                        // Channel closed, shouldn't happen but treat as timeout
+                        return Err(TransformManagerError::Timeout(
+                            target_frame.to_string(),
+                            source_frame.to_string(),
+                            Self::pretty_print_timestamp(time),
+                        ));
                     }
                 }
             }
         }
     }
 
-    /// Update (publish and add to registry) a dynamic transform.
+    /// Update (publish and add to registry) a transform.
     ///
-    /// This publishes the transform to the /tf topic and adds it to the local registry.
+    /// The transform's stamp picks the topic: dynamic transforms (`Stamp::At`, built with
+    /// [Transform::new]) are published to the /tf topic, static transforms (`Stamp::Static`,
+    /// built with [Transform::static_between]) are published to the /tf_static topic.
     pub async fn add_transform(
         &self,
         transform: transforms::Transform<T>,
@@ -504,51 +522,26 @@ where
         let transform_stamped =
             <M::TransformStamped as FromTransform<T>>::from_transform(&transform);
         let msg = <M as TFMessageType<T>>::from_transforms(vec![transform_stamped]);
+        let is_static = transform.timestamp().is_static();
 
-        // Publish to /tf
-        self.tf_publisher.publish(&msg).await?;
-
-        // Update registry
+        // Update the registry first so that a transform it rejects (e.g. one that would
+        // re-parent a frame) is never published
         {
             let mut registry = self.registry.write().await;
-            registry.add_transform(transform);
+            registry
+                .add_transform(transform)
+                .map_err(|e| TransformManagerError::RejectedTransform(e.to_string()))?;
         }
 
-        // Notify waiters that a transform has been added
+        // Notify waiters that a transform has been added, even if the publish below fails
         let _ = self.transform_notify.send(());
 
-        Ok(())
-    }
-
-    /// Update (publish and add to registry) a static transform.
-    ///
-    /// This publishes the transform to the /tf_static topic and adds it to the local registry
-    /// with the static timestamp value.
-    /// If the timestamp is not static, it will be overwritten with the static value.
-    ///
-    /// This function is equivalent to calling [Self::update_transform] with a timestamp of zero, but
-    /// provided as an additional function for clarity.
-    pub async fn update_static_transform(
-        &self,
-        mut transform: transforms::Transform<T>,
-    ) -> Result<(), TransformManagerError> {
-        // Static transforms use timestamp zero
-        transform.timestamp = T::static_timestamp();
-
-        let transform_stamped =
-            <M::TransformStamped as FromTransform<T>>::from_transform(&transform);
-        let msg = <M as TFMessageType<T>>::from_transforms(vec![transform_stamped]);
-
-        // Publish to /tf_static
-        self.tf_static_publisher.publish(&msg).await?;
-
-        // Update registry
-        let mut registry = self.registry.write().await;
-        registry.add_transform(transform);
-        drop(registry);
-
-        // Notify waiters that a transform has been added
-        let _ = self.transform_notify.send(());
+        // Publish to the topic matching the transform's kind
+        if is_static {
+            self.tf_static_publisher.publish(&msg).await?;
+        } else {
+            self.tf_publisher.publish(&msg).await?;
+        }
 
         Ok(())
     }
@@ -567,7 +560,7 @@ where
         source_time: T,
         fixed_frame: &str,
     ) -> Result<transforms::Transform<T>, TransformManagerError> {
-        let mut registry = self.registry.write().await;
+        let registry = self.registry.read().await;
         registry
             .get_transform_at(
                 target_frame,
@@ -577,6 +570,76 @@ where
                 fixed_frame,
             )
             .map_err(|e| TransformManagerError::LookupError(e.to_string()))
+    }
+
+    /// Get the newest time at which a transform between two frames can be served.
+    ///
+    /// Returns `Stamp::At` with the newest time [Self::get_transform] can serve for the pair,
+    /// or `Stamp::Static` if the frames are connected entirely by static transforms, in which
+    /// case a transform is available at any time.
+    ///
+    /// Note: transforms keep arriving in the background, so the returned time is a snapshot.
+    /// It can be stale by the time a follow-up [Self::get_transform] runs, and if buffer cleanup
+    /// evicts it the follow-up lookup returns an error rather than a wrong transform.
+    ///
+    /// This is the equivalent of tf2's "latest available transform" lookup:
+    /// ```
+    /// use roslibrust_transforms::{Quaternion, Ros1TFMessage, Stamp, Timestamp, Transform, TransformManager, Vector3};
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// // Creating a fake ros instance for this example
+    /// let ros = roslibrust::mock::MockRos::new();
+    /// let manager = TransformManager::<Ros1TFMessage, _>::new(&ros, std::time::Duration::from_secs(10)).await?;
+    ///
+    /// let stamp = Timestamp::now();
+    /// let transform = Transform::new(
+    ///     "map",
+    ///     "robot",
+    ///     Vector3::new(1.0, 0.0, 0.0),
+    ///     Quaternion::identity(),
+    ///     Stamp::At(stamp),
+    /// )?;
+    /// manager.add_transform(transform).await?;
+    ///
+    /// // The newest time a lookup between the two frames can be served is the sample just added
+    /// let latest = manager.latest_common_time("map", "robot").await?;
+    /// assert_eq!(latest, Stamp::At(stamp));
+    ///
+    /// // Look up the transform at the newest available time
+    /// let time = match latest {
+    ///     Stamp::At(time) => time,
+    ///     // Frames connected by static transforms only can be looked up at any time
+    ///     Stamp::Static => Timestamp::now(),
+    /// };
+    /// let transform = manager.get_transform("map", "robot", time).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn latest_common_time(
+        &self,
+        target_frame: &str,
+        source_frame: &str,
+    ) -> Result<Stamp<T>, TransformManagerError> {
+        let registry = self.registry.read().await;
+        registry
+            .latest_common_time(target_frame, source_frame)
+            .map_err(|e| TransformManagerError::LookupError(e.to_string()))
+    }
+
+    /// Remove a frame and all of its transforms from the local buffer.
+    ///
+    /// The transforms crate does not support re-parenting: once a child frame is in the buffer,
+    /// transforms for the same child frame under a different parent are rejected (the subscriber
+    /// tasks log them as warnings). Removing the frame allows it to be re-added under its new
+    /// parent. Note that removing a frame in the middle of the tree strands its descendants
+    /// until the removed frame is received or added again.
+    ///
+    /// This only affects the local buffer, the tf buffers of other nodes are unaffected.
+    ///
+    /// Returns `true` if the frame existed.
+    pub async fn remove_frame(&self, frame: &str) -> bool {
+        let mut registry = self.registry.write().await;
+        registry.remove_frame(frame)
     }
 }
 
@@ -621,29 +684,32 @@ impl<T> IntoTransform<T> for Ros1TransformStamped
 where
     T: RosTimestamp,
 {
-    fn into_transform(self, is_static: bool) -> transforms::Transform<T> {
+    fn into_transform(self, is_static: bool) -> Result<transforms::Transform<T>, TransformError> {
         let timestamp = if is_static {
-            T::static_timestamp()
+            Stamp::Static
         } else {
-            T::from_ros_time(self.header.stamp.secs, self.header.stamp.nsecs as u32)
+            Stamp::At(T::from_ros_time(
+                self.header.stamp.secs,
+                self.header.stamp.nsecs as u32,
+            ))
         };
 
-        transforms::Transform {
-            translation: Vector3::new(
+        transforms::Transform::new(
+            &self.header.frame_id,
+            &self.child_frame_id,
+            Vector3::new(
                 self.transform.translation.x,
                 self.transform.translation.y,
                 self.transform.translation.z,
             ),
-            rotation: Quaternion {
+            Quaternion {
                 w: self.transform.rotation.w,
                 x: self.transform.rotation.x,
                 y: self.transform.rotation.y,
                 z: self.transform.rotation.z,
             },
             timestamp,
-            parent: self.header.frame_id,
-            child: self.child_frame_id,
-        }
+        )
     }
 }
 
@@ -654,31 +720,37 @@ where
     fn from_transform(transform: &transforms::Transform<T>) -> Self {
         use crate::messages::ros1::{geometry_msgs, std_msgs};
 
-        let (secs, nsecs) = transform.timestamp.as_ros_time();
+        // Static transforms carry no instant, stamp them with time zero on the wire
+        let (secs, nsecs) = match transform.timestamp() {
+            Stamp::At(time) => time.as_ros_time(),
+            Stamp::Static => (0, 0),
+        };
         if nsecs > i32::MAX as u32 {
             panic!("Timestamp overflow when converting to Ros1TransformStamped");
         }
 
         let nsecs = nsecs as i32;
+        let translation = transform.translation();
+        let rotation = transform.rotation();
 
         Ros1TransformStamped {
             header: std_msgs::Header {
                 seq: 0,
                 stamp: roslibrust::codegen::integral_types::Time { secs, nsecs },
-                frame_id: transform.parent.clone(),
+                frame_id: transform.parent().to_string(),
             },
-            child_frame_id: transform.child.clone(),
+            child_frame_id: transform.child().to_string(),
             transform: geometry_msgs::Transform {
                 translation: geometry_msgs::Vector3 {
-                    x: transform.translation.x,
-                    y: transform.translation.y,
-                    z: transform.translation.z,
+                    x: translation.x,
+                    y: translation.y,
+                    z: translation.z,
                 },
                 rotation: geometry_msgs::Quaternion {
-                    x: transform.rotation.x,
-                    y: transform.rotation.y,
-                    z: transform.rotation.z,
-                    w: transform.rotation.w,
+                    x: rotation.x,
+                    y: rotation.y,
+                    z: rotation.z,
+                    w: rotation.w,
                 },
             },
         }
@@ -714,29 +786,32 @@ impl<T> IntoTransform<T> for Ros2TransformStamped
 where
     T: RosTimestamp,
 {
-    fn into_transform(self, is_static: bool) -> transforms::Transform<T> {
+    fn into_transform(self, is_static: bool) -> Result<transforms::Transform<T>, TransformError> {
         let timestamp = if is_static {
-            T::static_timestamp()
+            Stamp::Static
         } else {
-            T::from_ros_time(self.header.stamp.sec, self.header.stamp.nanosec)
+            Stamp::At(T::from_ros_time(
+                self.header.stamp.sec,
+                self.header.stamp.nanosec,
+            ))
         };
 
-        transforms::Transform {
-            translation: Vector3::new(
+        transforms::Transform::new(
+            &self.header.frame_id,
+            &self.child_frame_id,
+            Vector3::new(
                 self.transform.translation.x,
                 self.transform.translation.y,
                 self.transform.translation.z,
             ),
-            rotation: Quaternion {
+            Quaternion {
                 w: self.transform.rotation.w,
                 x: self.transform.rotation.x,
                 y: self.transform.rotation.y,
                 z: self.transform.rotation.z,
             },
             timestamp,
-            parent: self.header.frame_id,
-            child: self.child_frame_id,
-        }
+        )
     }
 }
 
@@ -747,25 +822,32 @@ where
     fn from_transform(transform: &transforms::Transform<T>) -> Self {
         use crate::messages::ros2::{builtin_interfaces, geometry_msgs, std_msgs};
 
-        let (sec, nanosec) = transform.timestamp.as_ros_time();
+        // Static transforms carry no instant, stamp them with time zero on the wire
+        let (sec, nanosec) = match transform.timestamp() {
+            Stamp::At(time) => time.as_ros_time(),
+            Stamp::Static => (0, 0),
+        };
+
+        let translation = transform.translation();
+        let rotation = transform.rotation();
 
         Ros2TransformStamped {
             header: std_msgs::Header {
                 stamp: builtin_interfaces::Time { sec, nanosec },
-                frame_id: transform.parent.clone(),
+                frame_id: transform.parent().to_string(),
             },
-            child_frame_id: transform.child.clone(),
+            child_frame_id: transform.child().to_string(),
             transform: geometry_msgs::Transform {
                 translation: geometry_msgs::Vector3 {
-                    x: transform.translation.x,
-                    y: transform.translation.y,
-                    z: transform.translation.z,
+                    x: translation.x,
+                    y: translation.y,
+                    z: translation.z,
                 },
                 rotation: geometry_msgs::Quaternion {
-                    x: transform.rotation.x,
-                    y: transform.rotation.y,
-                    z: transform.rotation.z,
-                    w: transform.rotation.w,
+                    x: rotation.x,
+                    y: rotation.y,
+                    z: rotation.z,
+                    w: rotation.w,
                 },
             },
         }
