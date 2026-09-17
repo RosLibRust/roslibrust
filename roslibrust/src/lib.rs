@@ -20,10 +20,6 @@ pub use roslibrust_zenoh as zenoh;
 #[cfg(feature = "mock")]
 pub use roslibrust_mock as mock;
 
-// If the hiroz feature is enabled, export the native ROS 2 backend under hiroz.
-#[cfg(feature = "hiroz")]
-pub use roslibrust_hiroz as hiroz;
-
 // If the codegen feature is enabled, export the roslibrust_codegen crate under codegen
 #[cfg(feature = "codegen")]
 pub use roslibrust_codegen as codegen;

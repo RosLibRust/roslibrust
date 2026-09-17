@@ -5,6 +5,7 @@ set -e
 # Must publish in this order due to dependencies
 PACKAGES=(
     roslibrust_common
+    roslibrust_mcap
     roslibrust_codegen
     roslibrust_codegen_macro
     roslibrust_mock
@@ -13,9 +14,9 @@ PACKAGES=(
     roslibrust_zenoh
     roslibrust_genmsg
     roslibrust
+    roslibrust_transforms
 )
 
 for pkg in "${PACKAGES[@]}"; do
     cargo publish -p "$pkg"
 done
-
