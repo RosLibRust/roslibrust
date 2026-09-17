@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c347a9fd.js";
+            window.path_to_searchindex_js = "searchindex-9f649c7e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-21e1600e.js"></script>
@@ -879,7 +879,7 @@ there will be separate compilations of the node for each backend.</p>
 <li><a href="https://docs.rs/roslibrust_ros1/latest/roslibrust_ros1/">roslibrust_ros1</a> - Implements the TCPROS protocol that was the backbone of ROS1</li>
 <li><a href="https://docs.rs/roslibrust_zenoh/latest/roslibrust_zenoh/">roslibrust_zenoh</a> - Implements a variant of ROS1 communication used by <a href="https://github.com/eclipse-zenoh/zenoh-plugin-ros1">zenoh-ros1-bridge</a></li>
 <li><a href="https://docs.rs/roslibrust_rosbridge/latest/roslibrust_rosbridge/">roslibrust_rosbridge</a> - Implements the <a href="https://github.com/RobotWebTools/rosbridge_suite">rosbridge_suite</a> websocket protocol</li>
-<li>COMING SOON <a href="https://docs.rs/roslibrust_ros2/latest/roslibrust_ros2/">roslibrust_ros2</a> - Implements the Zenoh communication used by <a href="https://github.com/ros2/rmw_zenoh">rmw_zenoh</a> in ROS2 from Kilted onwards</li>
+<li>COMING SOON <code>roslibrust_hiroz</code> - Implements the Zenoh communication used by <a href="https://github.com/ros2/rmw_zenoh">rmw_zenoh</a> in ROS2 from Kilted onwards</li>
 <li><a href="https://docs.rs/roslibrust_mock/latest/roslibrust_mock/">roslibrust_mock</a> - Implements a mock ROS perfect for testing</li>
 </ul>
 <p>Typically we don’t depend on these crates directly, but instead use them by enabling their corresponding features on <code>roslibrust</code>.</p>
@@ -892,7 +892,7 @@ roslibrust = { version = "0.15", features = ["ros1"] }
 <li><code>zenoh</code> - Enables the <a href="https://docs.rs/roslibrust_zenoh/latest/roslibrust_zenoh/">roslibrust_zenoh</a> backend</li>
 <li><code>rosbridge</code> - Enables the <a href="https://docs.rs/roslibrust_rosbridge/latest/roslibrust_rosbridge/">roslibrust_rosbridge</a> backend</li>
 <li><code>mock</code> - Enables the <a href="https://docs.rs/roslibrust_mock/latest/roslibrust_mock/">roslibrust_mock</a> backend</li>
-<li><code>ros2</code> - COMING SOON Enables the <a href="https://docs.rs/roslibrust_ros2/latest/roslibrust_ros2/">roslibrust_ros2</a> backend</li>
+<li><code>hiroz</code> - COMING SOON Enables the <code>roslibrust_hiroz</code> backend</li>
 <li><code>codegen</code> - Provides access to the <a href="https://docs.rs/roslibrust_codegen/latest/roslibrust_codegen/">roslibrust_codegen</a> crate for generating ROS message types in build.rs.</li>
 <li><code>macro</code> - Provides access to the <a href="https://docs.rs/roslibrust_codegen_macro/latest/roslibrust_codegen_macro/">roslibrust_codegen_macro</a> crate for generating ROS message types using a proc-macro.</li>
 <li><code>all</code> - Enables all of the above features.</li>
