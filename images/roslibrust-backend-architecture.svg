@@ -1,0 +1,800 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="1680"
+   height="940"
+   viewBox="0 0 1680 940"
+   role="img"
+   aria-labelledby="title description"
+   version="1.1"
+   id="svg248"
+   sodipodi:docname="roslibrust-backend-architecture.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview250"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="0.55137493"
+     inkscape:cx="955.79246"
+     inkscape:cy="347.31358"
+     inkscape:window-width="2508"
+     inkscape:window-height="1371"
+     inkscape:window-x="52"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg248" />
+  <title
+     id="title">roslibrust backend architecture</title>
+  <desc
+     id="description">A Rust application connects through roslibrust to Native ROS 1, Zenoh, rosbridge, Hiroz, and Mock backends. Rosbridge connects to both ROS 1 and ROS 2 systems.</desc>
+  <defs
+     id="defs66">
+    <style
+       id="style4">
+      .label { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif; fill: #102a4c; }
+      .title { font-weight: 750; font-size: 36px; }
+      .subtitle { font-weight: 550; font-size: 22px; }
+      .small { font-weight: 700; font-size: 23px; }
+      .group-title { font-weight: 800; font-size: 27px; }
+      .card { stroke-width: 4; }
+      .connector { fill: none; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+      .robot-stroke { fill: #f5fbff; stroke: #102a4c; stroke-width: 6; stroke-linejoin: round; }
+    </style>
+    <marker
+       id="arrow-blue"
+       markerWidth="5"
+       markerHeight="5"
+       refX="8"
+       refY="5.5"
+       orient="auto"
+       viewBox="0 0 11 11"
+       preserveAspectRatio="xMidYMid">
+      <path
+         d="M 0,0 11,5.5 0,11 Z"
+         fill="#2189ee"
+         id="path6" />
+    </marker>
+    <marker
+       id="arrow-orange"
+       markerWidth="5"
+       markerHeight="5"
+       refX="8"
+       refY="5.5"
+       orient="auto"
+       viewBox="0 0 11 11"
+       preserveAspectRatio="xMidYMid">
+      <path
+         d="M 0,0 11,5.5 0,11 Z"
+         fill="#f59e0b"
+         id="path9" />
+    </marker>
+    <marker
+       id="arrow-teal"
+       markerWidth="5"
+       markerHeight="5"
+       refX="8"
+       refY="5.5"
+       orient="auto"
+       viewBox="0 0 11 11"
+       preserveAspectRatio="xMidYMid">
+      <path
+         d="M 0,0 11,5.5 0,11 Z"
+         fill="#12a9a8"
+         id="path12" />
+    </marker>
+    <marker
+       id="arrow-pink"
+       markerWidth="5"
+       markerHeight="5"
+       refX="8"
+       refY="5.5"
+       orient="auto"
+       viewBox="0 0 11 11"
+       preserveAspectRatio="xMidYMid">
+      <path
+         d="M 0,0 11,5.5 0,11 Z"
+         fill="#ed4b91"
+         id="path15" />
+    </marker>
+    <marker
+       id="arrow-purple"
+       markerWidth="5"
+       markerHeight="5"
+       refX="8"
+       refY="5.5"
+       orient="auto"
+       viewBox="0 0 11 11"
+       preserveAspectRatio="xMidYMid">
+      <path
+         d="M 0,0 11,5.5 0,11 Z"
+         fill="#8b5cf6"
+         id="path18" />
+    </marker>
+    <marker
+       id="arrow-navy"
+       markerWidth="5"
+       markerHeight="5"
+       refX="8"
+       refY="5.5"
+       orient="auto"
+       viewBox="0 0 11 11"
+       preserveAspectRatio="xMidYMid">
+      <path
+         d="M 0,0 11,5.5 0,11 Z"
+         fill="#334e68"
+         id="path21" />
+    </marker>
+    <g
+       id="rover">
+      <rect
+         class="robot-stroke"
+         x="18"
+         y="38"
+         width="112"
+         height="62"
+         rx="19"
+         id="rect24" />
+      <circle
+         class="robot-stroke"
+         cx="39"
+         cy="108"
+         r="18"
+         id="circle26" />
+      <circle
+         class="robot-stroke"
+         cx="109"
+         cy="108"
+         r="18"
+         id="circle28" />
+      <circle
+         cx="53"
+         cy="66"
+         r="7"
+         fill="#12a9a8"
+         id="circle30" />
+      <circle
+         cx="93"
+         cy="66"
+         r="7"
+         fill="#12a9a8"
+         id="circle32" />
+      <path
+         d="M74 38V18M61 16Q74 2 87 16M55 9Q74 -8 93 9"
+         fill="none"
+         stroke="#102a4c"
+         stroke-width="5"
+         stroke-linecap="round"
+         id="path34" />
+    </g>
+    <g
+       id="robot-arm">
+      <rect
+         class="robot-stroke"
+         x="6"
+         y="122"
+         width="126"
+         height="28"
+         rx="6"
+         id="rect37" />
+      <path
+         class="robot-stroke"
+         d="M45 122L60 82L98 52L113 69L79 96L70 128Z"
+         id="path39" />
+      <circle
+         class="robot-stroke"
+         cx="59"
+         cy="82"
+         r="14"
+         id="circle41" />
+      <circle
+         class="robot-stroke"
+         cx="100"
+         cy="53"
+         r="13"
+         id="circle43" />
+      <path
+         d="M113 69l21 17m-2-15 17 3m-15 12 15 8"
+         fill="none"
+         stroke="#102a4c"
+         stroke-width="7"
+         stroke-linecap="round"
+         id="path45" />
+    </g>
+    <g
+       id="fleet">
+      <g
+         transform="translate(0 0)"
+         id="g50">
+        <use
+           href="#rover"
+           transform="scale(.62)"
+           id="use48" />
+      </g>
+      <g
+         transform="translate(92 4)"
+         id="g54">
+        <use
+           href="#rover"
+           transform="scale(.58)"
+           id="use52" />
+      </g>
+      <g
+         transform="translate(176 9)"
+         id="g58">
+        <use
+           href="#rover"
+           transform="scale(.54)"
+           id="use56" />
+      </g>
+    </g>
+    <g
+       id="terminal-icon">
+      <rect
+         x="0"
+         y="0"
+         width="104"
+         height="76"
+         rx="10"
+         fill="#193451"
+         id="rect61" />
+      <path
+         d="M25 22l16 16-16 16M51 55h28"
+         fill="none"
+         stroke="#f7fbff"
+         stroke-width="7"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path63" />
+    </g>
+    <marker
+       id="arrow-teal-3"
+       markerWidth="5"
+       markerHeight="5"
+       refX="8"
+       refY="5.5"
+       orient="auto"
+       viewBox="0 0 11 11"
+       preserveAspectRatio="xMidYMid">
+      <path
+         d="M 0,0 11,5.5 0,11 Z"
+         fill="#12a9a8"
+         id="path12-6" />
+    </marker>
+    <marker
+       id="arrow-teal-5"
+       markerWidth="5"
+       markerHeight="5"
+       refX="8"
+       refY="5.5"
+       orient="auto"
+       viewBox="0 0 11 11"
+       preserveAspectRatio="xMidYMid">
+      <path
+         d="M 0,0 11,5.5 0,11 Z"
+         fill="#12a9a8"
+         id="path12-3" />
+    </marker>
+  </defs>
+  <path
+     class="connector"
+     d="m 1278.8115,168 h 83.8955"
+     stroke="#2189ee"
+     marker-end="url(#arrow-blue)"
+     id="path153" />
+  <path
+     class="connector"
+     d="m 1278.5475,308 h 81.5191"
+     stroke="#f59e0b"
+     marker-end="url(#arrow-orange)"
+     id="path170" />
+  <path
+     class="connector"
+     d="m 1280.2189,634.72197 h 83.1296"
+     stroke="#ed4b91"
+     marker-end="url(#arrow-pink)"
+     id="path204" />
+  <path
+     class="connector"
+     d="m 1283.1343,770.82115 h 163.7576"
+     stroke="#8b5cf6"
+     marker-end="url(#arrow-purple)"
+     id="path239" />
+  <g
+     inkscape:groupmode="layer"
+     id="layer1"
+     inkscape:label="Layer 1">
+    <path
+       class="connector"
+       d="m 829.71716,365.94249 h 40.16772 V 171.92431 h 88.36899"
+       stroke="#2189ee"
+       marker-end="url(#arrow-blue)"
+       id="path108"
+       style="marker-end:url(#arrow-blue)" />
+    <path
+       class="connector"
+       d="m 829.65119,419.93064 h 68.05958 V 309.43237 h 60.60231"
+       stroke="#f59e0b"
+       marker-end="url(#arrow-orange)"
+       id="path110"
+       sodipodi:nodetypes="cccc" />
+    <path
+       class="connector"
+       d="m 830,473 120.98263,-0.1721"
+       stroke="#12a9a8"
+       marker-end="url(#arrow-teal)"
+       id="path112"
+       sodipodi:nodetypes="cc" />
+    <path
+       class="connector"
+       d="m 829.51975,526.90392 h 65.71688 v 114.82071 h 58.10847"
+       stroke="#ed4b91"
+       marker-end="url(#arrow-pink)"
+       id="path114"
+       sodipodi:nodetypes="cccc" />
+    <path
+       class="connector"
+       d="m 828.77146,574.92662 h 43.50921 v 196.35513 h 80.25027"
+       stroke="#8b5cf6"
+       marker-end="url(#arrow-purple)"
+       id="path116" />
+    <path
+       style="fill:#f8fbff;fill-opacity:0;stroke:#12a9a8;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1;marker-end:url(#arrow-teal);stroke-dasharray:none"
+       d="m 1278.4395,475.40495 27.8274,0 v 59.9432 l 54.8732,0"
+       id="path9153"
+       sodipodi:nodetypes="cccc" />
+    <path
+       style="fill:#f8fbff;fill-opacity:0;stroke:#12a9a8;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#arrow-teal-5)"
+       d="m 1280.2792,476.17495 h 25.8764 V 349.4887 h 56.8242"
+       id="path9153-5"
+       sodipodi:nodetypes="cccc" />
+  </g>
+  <!-- The background is intentionally transparent. -->
+  <!-- System groups -->
+  <!-- Rust application -->
+  <g
+     id="rust-application">
+    <rect
+       class="card"
+       x="58"
+       y="336"
+       width="260"
+       height="255"
+       rx="24"
+       fill="#f8fbff"
+       stroke="#334e68"
+       id="rect78" />
+    <rect
+       x="136"
+       y="378"
+       width="104"
+       height="76"
+       rx="10"
+       fill="#193451"
+       id="rect80" />
+    <path
+       d="M161 400l16 16-16 16M187 433h28"
+       fill="none"
+       stroke="#f7fbff"
+       stroke-width="7"
+       stroke-linecap="round"
+       stroke-linejoin="round"
+       id="path82" />
+    <text
+       class="label title"
+       x="188"
+       y="509"
+       text-anchor="middle"
+       id="text84">Rust</text>
+    <text
+       class="label title"
+       x="188"
+       y="552"
+       text-anchor="middle"
+       id="text86"
+       style="-inkscape-font-specification:'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif, Normal';font-family:Inter, ui-sans-serif, system-ui, '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:36px;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-anchor:middle;fill:#102a4c"><tspan
+         sodipodi:role="line"
+         id="tspan7049">Application</tspan></text>
+  </g>
+  <!-- roslibrust API -->
+  <g
+     id="roslibrust-api">
+    <rect
+       class="card"
+       x="410"
+       y="315"
+       width="420"
+       height="285"
+       rx="26"
+       fill="#fff7f1"
+       stroke="#e75a14"
+       id="rect89" />
+    <text
+       x="620"
+       y="425"
+       text-anchor="middle"
+       style="font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:63px;font-weight:800;fill:#cc4408"
+       id="text91">roslibrust</text>
+    <text
+       class="label subtitle"
+       x="620"
+       y="470"
+       text-anchor="middle"
+       style="font-size:29px"
+       id="text93">One trait-based API</text>
+    <g
+       id="topic-chip">
+      <rect
+         x="456"
+         y="507"
+         width="145"
+         height="60"
+         rx="16"
+         fill="#fff1e6"
+         stroke="#ffad7f"
+         stroke-width="3"
+         id="rect95" />
+      <text
+         class="label small"
+         x="528"
+         y="546"
+         text-anchor="middle"
+         id="text97">Topics</text>
+    </g>
+    <g
+       id="service-chip">
+      <rect
+         x="638"
+         y="507"
+         width="145"
+         height="60"
+         rx="16"
+         fill="#fff1e6"
+         stroke="#ffad7f"
+         stroke-width="3"
+         id="rect100" />
+      <text
+         class="label small"
+         x="710"
+         y="546"
+         text-anchor="middle"
+         id="text102">Services</text>
+    </g>
+  </g>
+  <!-- Input connection -->
+  <path
+     class="connector"
+     d="M318 464H400"
+     stroke="#334e68"
+     marker-end="url(#arrow-navy)"
+     id="path106"
+     style="marker-end:url(#arrow-navy)" />
+  <!-- Backend connections from roslibrust -->
+  <!-- ROS 1 backend cards -->
+  <g
+     id="native-ros1-backend">
+    <rect
+       class="card"
+       x="965"
+       y="112"
+       width="315"
+       height="112"
+       rx="18"
+       fill="#f3f9ff"
+       stroke="#2189ee"
+       id="rect118" />
+    <text
+       class="label title"
+       x="1122"
+       y="164"
+       text-anchor="middle"
+       id="text120">Native ROS 1</text>
+    <text
+       class="label subtitle"
+       x="1122"
+       y="202"
+       text-anchor="middle"
+       id="text122">TCPROS</text>
+  </g>
+  <g
+     id="zenoh-backend">
+    <rect
+       class="card"
+       x="965"
+       y="252"
+       width="315"
+       height="112"
+       rx="18"
+       fill="#fff9eb"
+       stroke="#f59e0b"
+       id="rect125" />
+    <text
+       class="label title"
+       x="1122"
+       y="305"
+       text-anchor="middle"
+       id="text127">Zenoh</text>
+    <text
+       class="label subtitle"
+       x="1122"
+       y="342"
+       text-anchor="middle"
+       id="text129"
+       style="-inkscape-font-specification:'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif, Normal';font-family:Inter, ui-sans-serif, system-ui, '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:22px;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-anchor:middle;fill:#102a4c"><tspan
+         sodipodi:role="line"
+         id="tspan7055">ROS1 Zenoh Plugin</tspan></text>
+  </g>
+  <!-- ROS 2 backend cards -->
+  <g
+     id="rosbridge-backend"
+     transform="translate(-0.94398557,-70.287513)">
+    <rect
+       class="card"
+       x="965"
+       y="487"
+       width="315"
+       height="112"
+       rx="18"
+       fill="#eafffb"
+       stroke="#12a9a8"
+       id="rect132"
+       ry="18" />
+    <text
+       class="label title"
+       x="1122"
+       y="539"
+       text-anchor="middle"
+       id="text134">rosbridge</text>
+    <text
+       class="label subtitle"
+       x="1122"
+       y="577"
+       text-anchor="middle"
+       id="text136">WebSocket</text>
+  </g>
+  <g
+     id="hiroz-backend"
+     transform="translate(0,-37.071245)">
+    <rect
+       class="card"
+       x="965"
+       y="617"
+       width="315"
+       height="112"
+       rx="18"
+       fill="#fff0f6"
+       stroke="#ed4b91"
+       id="rect139"
+       ry="18" />
+    <text
+       class="label title"
+       x="1122"
+       y="669"
+       text-anchor="middle"
+       id="text141">Hiroz</text>
+    <text
+       class="label subtitle"
+       x="1122"
+       y="707"
+       text-anchor="middle"
+       id="text143"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22px;font-family:Inter, ui-sans-serif, system-ui, '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;-inkscape-font-specification:'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-anchor:middle;fill:#102a4c"><tspan
+         sodipodi:role="line"
+         id="tspan7057"
+         x="1122"
+         y="707">ROS2 - rmw_zenoh</tspan></text>
+  </g>
+  <!-- Mock backend -->
+  <g
+     id="mock-backend"
+     transform="translate(0,-67.385643)">
+    <rect
+       class="card"
+       x="965"
+       y="784"
+       width="315"
+       height="106"
+       rx="18"
+       fill="#f5efff"
+       stroke="#8b5cf6"
+       id="rect146"
+       ry="18" />
+    <text
+       class="label title"
+       x="1122"
+       y="832"
+       text-anchor="middle"
+       id="text148">Mock</text>
+    <text
+       class="label subtitle"
+       x="1122"
+       y="869"
+       text-anchor="middle"
+       id="text150"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:22px;font-family:Inter, ui-sans-serif, system-ui, '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;-inkscape-font-specification:'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-anchor:middle;fill:#102a4c"><tspan
+         sodipodi:role="line"
+         id="tspan7053"
+         x="1122"
+         y="869">In Memory</tspan></text>
+  </g>
+  <!-- Native ROS 1 and Zenoh endpoints -->
+  <g
+     id="g7841"
+     transform="translate(55.099796,-16.279688)">
+    <g
+       id="g7889"
+       transform="translate(-50.419944,-9.8970547)">
+      <g
+         id="ros1-systems">
+        <rect
+           x="1368.5511"
+           y="162.70737"
+           width="241.79504"
+           height="247.87746"
+           rx="26"
+           fill="#eff8ff"
+           fill-opacity="0.82"
+           stroke="#2189ee"
+           stroke-width="3.30759"
+           id="rect68"
+           ry="25.999998" />
+        <text
+           class="label group-title"
+           x="1485.382"
+           y="204.95776"
+           text-anchor="middle"
+           id="text70">ROS 1 Systems</text>
+      </g>
+      <g
+         id="native-ros1-robot"
+         transform="translate(1414.1583,240.59267)">
+        <rect
+           class="robot-stroke"
+           x="18"
+           y="38"
+           width="112"
+           height="62"
+           rx="19"
+           id="rect155"
+           ry="19" />
+        <circle
+           class="robot-stroke"
+           cx="39"
+           cy="108"
+           r="18"
+           id="circle157" />
+        <circle
+           class="robot-stroke"
+           cx="109"
+           cy="108"
+           r="18"
+           id="circle159" />
+        <circle
+           cx="53"
+           cy="66"
+           r="7"
+           fill="#12a9a8"
+           id="circle161" />
+        <circle
+           cx="93"
+           cy="66"
+           r="7"
+           fill="#12a9a8"
+           id="circle163" />
+        <path
+           d="M 74,38 V 18 M 61,16 Q 74,2 87,16 M 55,9 Q 74,-8 93,9"
+           fill="none"
+           stroke="#102a4c"
+           stroke-width="5"
+           stroke-linecap="round"
+           id="path165" />
+      </g>
+    </g>
+  </g>
+  <!-- rosbridge reaches both ROS 1 and ROS 2 -->
+  <g
+     id="g7793"
+     transform="translate(4.6411792,-64.237123)">
+    <g
+       id="ros2-systems">
+      <rect
+         x="1369.1483"
+         y="498.7269"
+         width="241.93353"
+         height="260.35495"
+         rx="26"
+         fill="#ecfeff"
+         fill-opacity="0.82"
+         stroke="#12a9a8"
+         stroke-width="3.48272"
+         id="rect73"
+         ry="26" />
+      <text
+         class="label group-title"
+         x="1490.1765"
+         y="542.96533"
+         text-anchor="middle"
+         id="text75">ROS 2 Systems</text>
+    </g>
+    <g
+       id="rosbridge-ros2-robot"
+       transform="translate(1412.2491,600.80063)">
+      <rect
+         class="robot-stroke"
+         x="18"
+         y="38"
+         width="112"
+         height="62"
+         rx="19"
+         id="rect189"
+         ry="19" />
+      <circle
+         class="robot-stroke"
+         cx="39"
+         cy="108"
+         r="18"
+         id="circle191" />
+      <circle
+         class="robot-stroke"
+         cx="109"
+         cy="108"
+         r="18"
+         id="circle193" />
+      <circle
+         cx="53"
+         cy="66"
+         r="7"
+         fill="#12a9a8"
+         id="circle195" />
+      <circle
+         cx="93"
+         cy="66"
+         r="7"
+         fill="#12a9a8"
+         id="circle197" />
+      <path
+         d="M 74,38 V 18 M 61,16 Q 74,2 87,16 M 55,9 Q 74,-8 93,9"
+         fill="none"
+         stroke="#102a4c"
+         stroke-width="5"
+         stroke-linecap="round"
+         id="path199" />
+    </g>
+  </g>
+  <!-- Mock endpoint -->
+  <g
+     id="test-flask"
+     transform="translate(1447.4421,727.51249)">
+    <path
+       d="M 14,44.284095 H 68 V 59.479342 C 68,83.116392 56,100 41,100 26,100 14,83.116392 14,59.479342 Z"
+       fill="#a78bfa"
+       id="path243"
+       style="stroke-width:1.29937" />
+    <path
+       d="M 38,0 H 78 V 14 L 68,31 V 74 C 68,89 56,100 41,100 26,100 14,89 14,74 V 31 L 4,14 V 0 h 34"
+       fill="#f8fbff"
+       stroke="#102a4c"
+       stroke-width="6"
+       stroke-linejoin="round"
+       id="path241"
+       style="fill:#f8fbff;fill-opacity:0" />
+  </g>
+  <text
+     class="label small"
+     x="1488.4421"
+     y="854.51245"
+     text-anchor="middle"
+     id="text246"><tspan
+       sodipodi:role="line"
+       id="tspan8053"
+       x="1488.4421"
+       y="854.51245">Tests</tspan></text>
+</svg>

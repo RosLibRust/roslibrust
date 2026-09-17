@@ -9,6 +9,8 @@ extended guides can be found on [roslibrust.github.io](https://roslibrust.github
 
 An async rust library for interfacing with ROS1 and ROS2, built on Tokio.
 
+![roslibrust backend architecture](images/roslibrust-backend-architecture.svg)
+
 - One Trait Based API - Write your behavior once and use it with any backend! Select the backend you want to use at compile time.
 - Pure Rust - No ROS1 or ROS2 dependencies or installation required! Compile time message generation from .msg/.srv files.
 
