@@ -33,8 +33,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Relay messages over a native ROS 2 Kilted-or-newer connection using rmw_zenoh.
     #[cfg(feature = "hiroz")]
     {
-        use roslibrust::hiroz::hiroz::Builder;
-        let ctx = roslibrust::hiroz::hiroz::context::ZContextBuilder::default()
+        use roslibrust::hiroz::Builder;
+        let ctx = roslibrust::hiroz::context::ZContextBuilder::default()
             .with_domain_id(0)
             .with_connect_endpoints(["tcp/127.0.0.1:7447"])
             .build()?;

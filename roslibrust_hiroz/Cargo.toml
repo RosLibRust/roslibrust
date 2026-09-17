@@ -2,7 +2,7 @@
 name = "roslibrust_hiroz"
 version = "0.23.0"
 edition = "2021"
-authors = ["carter <carterjschultz@gmail.com>", "ssnover <ssnover95@gmail.com>"]
+authors = ["carter <carterjschultz@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 description = "A native ROS 2 backend for roslibrust built on hiroz and rmw_zenoh."

@@ -1,18 +1,16 @@
 use log::*;
+use roslibrust_common::Result;
 use roslibrust_common::*;
 use std::result::Result as StdResult;
 
 use hiroz::{
     context::ZContext,
-    entity::{TypeHash, TypeInfo},
     msg::{SerdeCdrSerdes, ZMessage, ZService},
     pubsub::{ZPub, ZSub},
-    ros_msg::ServiceTypeInfo,
-    Builder,
 };
 
-/// Re-export hiroz for consumers.
-pub use hiroz;
+/// Re-export hiroz's public API for configuring and extending native ROS 2 clients.
+pub use hiroz::*;
 
 /// A "newtype" wrapper around ZNode so we can implement roslibrust's traits for it.
 pub struct ZenohClient {
