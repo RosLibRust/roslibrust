@@ -91,14 +91,14 @@ RosLibRust provides several implementations of the `Ros` trait:
 - [roslibrust_ros1](https://docs.rs/roslibrust_ros1/latest/roslibrust_ros1/) - Implements the TCPROS protocol that was the backbone of ROS1
 - [roslibrust_zenoh](https://docs.rs/roslibrust_zenoh/latest/roslibrust_zenoh/) - Implements a variant of ROS1 communication used by [zenoh-ros1-bridge](https://github.com/eclipse-zenoh/zenoh-plugin-ros1)
 - [roslibrust_rosbridge](https://docs.rs/roslibrust_rosbridge/latest/roslibrust_rosbridge/) - Implements the [rosbridge_suite](https://github.com/RobotWebTools/rosbridge_suite) websocket protocol
-- COMING SOON `roslibrust_hiroz` - Implements the Zenoh communication used by [rmw_zenoh](https://github.com/ros2/rmw_zenoh) in ROS2 from Kilted onwards
+- [roslibrust_hiroz](https://docs.rs/roslibrust_hiroz/latest/roslibrust_hiroz/) - Implements the Zenoh communication used by [rmw_zenoh](https://github.com/ros2/rmw_zenoh) in ROS 2 Kilted and newer
 - [roslibrust_mock](https://docs.rs/roslibrust_mock/latest/roslibrust_mock/) - Implements a mock ROS perfect for testing
 
 Typically we don't depend on these crates directly, but instead use them by enabling their corresponding features on `roslibrust`.
 
 ```toml
 [dependencies]
-roslibrust = { version = "0.15", features = ["ros1"] }
+roslibrust = { version = "0.23", features = ["ros1"] }
 ```
 
 The full list of features is:
@@ -107,7 +107,7 @@ The full list of features is:
 - `zenoh` - Enables the [roslibrust_zenoh](https://docs.rs/roslibrust_zenoh/latest/roslibrust_zenoh/) backend
 - `rosbridge` - Enables the [roslibrust_rosbridge](https://docs.rs/roslibrust_rosbridge/latest/roslibrust_rosbridge/) backend
 - `mock` - Enables the [roslibrust_mock](https://docs.rs/roslibrust_mock/latest/roslibrust_mock/) backend
-- `hiroz` - COMING SOON Enables the `roslibrust_hiroz` backend
+- `hiroz` - Enables the native ROS 2 `roslibrust_hiroz` backend via `rmw_zenoh`
 - `codegen` - Provides access to the [roslibrust_codegen](https://docs.rs/roslibrust_codegen/latest/roslibrust_codegen/) crate for generating ROS message types in build.rs.
 - `macro` - Provides access to the [roslibrust_codegen_macro](https://docs.rs/roslibrust_codegen_macro/latest/roslibrust_codegen_macro/) crate for generating ROS message types using a proc-macro.
 - `all` - Enables all of the above features.

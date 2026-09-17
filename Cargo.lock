@@ -3458,7 +3458,7 @@ dependencies = [
 
 [[package]]
 name = "roslibrust"
-version = "0.22.0"
+version = "0.23.0"
 dependencies = [
  "abort-on-drop",
  "env_logger 0.11.8",
@@ -3467,6 +3467,7 @@ dependencies = [
  "roslibrust_codegen",
  "roslibrust_codegen_macro",
  "roslibrust_common",
+ "roslibrust_hiroz",
  "roslibrust_mock",
  "roslibrust_ros1",
  "roslibrust_rosbridge",
@@ -3549,7 +3550,7 @@ dependencies = [
 
 [[package]]
 name = "roslibrust_hiroz"
-version = "0.1.0"
+version = "0.23.0"
 dependencies = [
  "anyhow",
  "cdr",
