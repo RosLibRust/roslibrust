@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-9f649c7e.js";
+            window.path_to_searchindex_js = "searchindex-53c28328.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-21e1600e.js"></script>
@@ -229,9 +229,9 @@ edition = "2021"
 
 # What crates your code needs when built regularly (e.g. `cargo build` or `cargo run`)
 [dependencies]
-# You will need to specify at least one backend to use with roslibrust, available options are [ros1, rosbridge, zenoh, mock] (ros2 is coming soon)
+# You will need to specify at least one backend to use with roslibrust. Available options are [ros1, rosbridge, zenoh, hiroz, mock].
 # You will also need to specify the "codegen" feature, as the generated ROS types rely on features from this module
-roslibrust = { version = "0.15", features = ["rosbridge", "codegen"] }
+roslibrust = { version = "0.23", features = ["rosbridge", "codegen"] }
 # RosLibRust is built on tokio, and requires a multi-threaded tokio runtime.
 # You don't need the "full" tokio feature set, but it is a good starting place
 tokio = { version = "1", features = ["full"] }
@@ -239,13 +239,13 @@ tokio = { version = "1", features = ["full"] }
 # What crates your code needs for testing and examples
 [dev-dependencies]
 # For testing you'll want to use the "mock" backend if you specify it here, it won't affect your production builds
-roslibrust = { version = "0.15", features = ["mock"] }
+roslibrust = { version = "0.23", features = ["mock"] }
 tokio = { version = "1", features = ["test-util"] }
 
 # What crates your code needs to run it's build.rs file
 [build-dependencies]
 # In build.rs we'll use roslibrust's codegen features to generate Rust types from ROS .msg/.srv files
-roslibrust = { version = "0.15", features = ["codegen"] }
+roslibrust = { version = "0.23", features = ["codegen"] }
 </code></pre>
 <p>Once we’ve modified <code>Cargo.toml</code> in this way we can run <code>cargo build</code>,
 and we should see Cargo automatically download and compile all the dependencies we’ve specified.</p>
