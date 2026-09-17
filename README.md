@@ -9,13 +9,15 @@ extended guides can be found on [roslibrust.github.io](https://roslibrust.github
 
 An async rust library for interfacing with ROS1 and ROS2, built on Tokio.
 
+<img src="images/roslibrust-backend-architecture.svg" alt="roslibrust backend architecture" width="840" />
+
 - One Trait Based API - Write your behavior once and use it with any backend! Select the backend you want to use at compile time.
 - Pure Rust - No ROS1 or ROS2 dependencies or installation required! Compile time message generation from .msg/.srv files.
 
 This allows writing generic behaviors like:
 
 ```rust ,no_run
-# use roslibrust_test::ros1::*;
+use roslibrust_test::ros1::*; // Provides std_msgs::String
 use roslibrust::{TopicProvider, Publish, Subscribe};
 
 async fn relay<T: TopicProvider>(ros: T) -> roslibrust::Result<()> {
@@ -29,14 +31,18 @@ async fn relay<T: TopicProvider>(ros: T) -> roslibrust::Result<()> {
 }
 
 #[tokio::main]
-async fn main() -> roslibrust::Result<()> {
-    // Experimental support in roslibrust_hiroz, not yet released on crates.io
-    // Relay messages over a native ROS2 connection using Zenoh
-    // #[cfg(feature = "ros2")]
-    // {
-    // let ros = roslibrust::ros2::NodeHandle::new("http://localhost:11311", "relay").await?;
-    // relay(ros).await?;
-    // }
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // Relay messages over a native ROS 2 Kilted-or-newer connection using rmw_zenoh.
+    #[cfg(feature = "hiroz")]
+    {
+        use roslibrust::hiroz::Builder;
+        let ctx = roslibrust::hiroz::context::ZContextBuilder::default()
+            .with_domain_id(0)
+            .with_connect_endpoints(["tcp/127.0.0.1:7447"])
+            .build()?;
+        let ros = roslibrust::hiroz::ZenohClient::new(&ctx, "relay").await?;
+        relay(ros).await?;
+    }
 
     // Relay messages over a native ROS1 connection via TCPROS
     #[cfg(feature = "ros1")]

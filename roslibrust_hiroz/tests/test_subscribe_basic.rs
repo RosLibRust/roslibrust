@@ -18,6 +18,8 @@ async fn test_subscribe_basic() {
 
     #[allow(clippy::zombie_processes)]
     let mut pub_cmd = std::process::Command::new("ros2")
+        // Do not inherit CI's debug logging into the rmw_zenoh-backed ros2 CLI.
+        .env("RUST_LOG", "warn")
         .arg("topic")
         .arg("pub")
         .arg("-t")

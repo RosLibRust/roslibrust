@@ -13,6 +13,7 @@ PACKAGES=(
     roslibrust_rosbridge
     roslibrust_zenoh
     roslibrust_genmsg
+    roslibrust_hiroz
     roslibrust
     roslibrust_transforms
 )

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- `roslibrust_hiroz` provides native ROS 2 communication through `hiroz` and `rmw_zenoh` on ROS 2 Kilted and newer. Enable it through roslibrust's `hiroz` feature.
+
 ## 0.22.0 - September 17th, 2026
 
 ### Added

@@ -32,6 +32,9 @@ async fn test_service_server_callable() {
 
     #[allow(clippy::zombie_processes)]
     let mut srv_call_cmd = std::process::Command::new("ros2")
+        // The workflow enables debug logging for Rust tests. Do not pass that setting
+        // to the ros2 CLI: its rmw_zenoh client otherwise emits its full routing state.
+        .env("RUST_LOG", "warn")
         .arg("service")
         .arg("call")
         .arg("/test_service_server_callable_node/set_bool")

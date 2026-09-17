@@ -1,18 +1,16 @@
 use log::*;
+use roslibrust_common::Result;
 use roslibrust_common::*;
 use std::result::Result as StdResult;
 
 use hiroz::{
     context::ZContext,
-    entity::{TypeHash, TypeInfo},
     msg::{SerdeCdrSerdes, ZMessage, ZService},
     pubsub::{ZPub, ZSub},
-    ros_msg::ServiceTypeInfo,
-    Builder,
 };
 
-/// Re-export hiroz for consumers.
-pub use hiroz;
+/// Re-export hiroz's public API for configuring and extending native ROS 2 clients.
+pub use hiroz::*;
 
 /// A "newtype" wrapper around ZNode so we can implement roslibrust's traits for it.
 pub struct ZenohClient {
@@ -70,11 +68,12 @@ impl<T: RosMessageType> Subscribe<T> for ZenohSubscriber<T> {
 }
 
 impl ZenohClient {
-    pub async fn new(
-        ctx: &ZContext,
-        name: impl AsRef<str>,
-    ) -> StdResult<Self, Box<dyn std::error::Error + Send + Sync + 'static>> {
-        let node = ctx.create_node(name.as_ref()).build()?;
+    /// Create a native ROS 2 client in the supplied hiroz context.
+    pub async fn new(ctx: &ZContext, name: impl AsRef<str>) -> Result<Self> {
+        let node = ctx
+            .create_node(name.as_ref())
+            .build()
+            .map_err(|error| Error::Unexpected(anyhow::Error::msg(error.to_string())))?;
         Ok(Self { node })
     }
 }

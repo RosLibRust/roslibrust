@@ -1,8 +1,14 @@
 [package]
 name = "roslibrust_hiroz"
-version = "0.1.0"
+version = "0.23.0"
 edition = "2021"
-publish = false
+authors = ["carter <carterjschultz@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+description = "A native ROS 2 backend for roslibrust built on hiroz and rmw_zenoh."
+repository = "https://github.com/roslibrust/roslibrust"
+keywords = ["ROS", "ROS2", "robotics", "zenoh"]
+categories = ["science::robotics"]
 
 [dependencies]
 zenoh = "1.7"
