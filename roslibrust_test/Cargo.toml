@@ -19,9 +19,9 @@ pprof = { version = "0.15", features = ["flamegraph", "criterion"] }
 test-log = { workspace = true }
 hex = "0.4"
 roslibrust_zenoh = { path = "../roslibrust_zenoh" }
-roslibrust_ros2 = { path = "../roslibrust_ros2" }
+roslibrust_hiroz = { path = "../roslibrust_hiroz" }
 roslibrust_rosbridge = { path = "../roslibrust_rosbridge" }
-ros-z = { git = "https://github.com/ZettaScaleLabs/ros-z.git", rev = "9bb6305" }
+hiroz = { version = "0.1.0", default-features = false, features = ["kilted", "rmw-zenoh"] }
 
 [[bin]]
 path = "src/performance_ramp.rs"
@@ -33,6 +33,6 @@ harness = false
 
 [features]
 ros1_test = []
-ros2_zenoh_test = []
+hiroz_test = []
 rosbridge_ros1_test = []
 rosbridge_ros2_test = []

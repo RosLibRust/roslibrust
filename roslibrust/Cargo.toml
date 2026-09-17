@@ -16,6 +16,7 @@ roslibrust_ros1 = { path = "../roslibrust_ros1", version = "0.21", optional = tr
 roslibrust_rosbridge = { path = "../roslibrust_rosbridge", version = "0.21", optional = true }
 roslibrust_zenoh = { path = "../roslibrust_zenoh", version = "0.21", optional = true }
 roslibrust_mock = { path = "../roslibrust_mock", version = "0.21", optional = true }
+roslibrust_hiroz = { path = "../roslibrust_hiroz", optional = true }
 roslibrust_codegen = { path = "../roslibrust_codegen", version = "0.21", optional = true }
 roslibrust_codegen_macro = { path = "../roslibrust_codegen_macro", version = "0.21", optional = true }
 
@@ -42,7 +43,7 @@ ntest = "0.9"
 # default feature is pure traits only with no implementations
 default = []
 # `all` enables all "useful" features to end users, other features are for testing purposes
-all = ["codegen", "macro", "ros1", "rosbridge", "zenoh", "mock"]
+all = ["codegen", "macro", "ros1", "rosbridge", "zenoh", "mock", "hiroz"]
 # Provides a ros1 xmlrpc / TCPROS client
 ros1 = ["roslibrust_ros1"]
 # Provides a backend using the rosbridge websocket protocol
@@ -51,6 +52,8 @@ rosbridge = ["roslibrust_rosbridge"]
 zenoh = ["roslibrust_zenoh"]
 # Provides a mock backend useful for writing tests around nodes
 mock = ["roslibrust_mock"]
+# Provides a native ROS 2 backend built on hiroz and rmw_zenoh.
+hiroz = ["roslibrust_hiroz"]
 # Provides a macro for generating types from ROS messages
 codegen = ["roslibrust_codegen"]
 # Provides macros for generating types from ROS messages

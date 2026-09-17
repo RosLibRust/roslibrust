@@ -35,11 +35,11 @@ jobs:
             zenoh: false
           - distro: kilted
             container: carter12s/roslibrust-ci-kilted:rust_1_94
-            features: ros2_zenoh_test,rosbridge_ros2_test,ros2_test
+            features: hiroz_test,rosbridge_ros2_test,ros2_test
             zenoh: true
           - distro: rolling
             container: carter12s/roslibrust-ci-rolling:rust_1_94
-            features: ros2_zenoh_test,rosbridge_ros2_test,ros2_test
+            features: rosbridge_ros2_test,ros2_test
             zenoh: true
 
     name: ${{ matrix.distro }}

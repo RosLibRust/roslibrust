@@ -10,5 +10,5 @@ services:
     volumes:
       # Mounting in the repo for internal development, and devcontainer access
       - ../:/roslibrust
-      # Mount in sibling ros-z repo so we can also test it within the docker image
-      - ../../ros-z:/ros-z
+      # Mount a sibling hiroz repo so it can also be tested within the docker image
+      - ../../hiroz:/hiroz

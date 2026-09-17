@@ -6,7 +6,7 @@
 //! Run tests for specific backends:
 //! - Mock: cargo test --test graph_provider_tests (no feature needed)
 //! - ROS1: cargo test --test graph_provider_tests --features ros1_test
-//! - ROS2 Zenoh: cargo test --test graph_provider_tests --features ros2_zenoh_test
+//! - Hiroz: cargo test --test graph_provider_tests --features hiroz_test
 //! - Rosbridge ROS1: cargo test --test graph_provider_tests --features rosbridge_ros1_test
 //! - Rosbridge ROS2: cargo test --test graph_provider_tests --features rosbridge_ros2_test
 
@@ -168,17 +168,17 @@ mod ros1_tests {
 }
 
 // ============================================================================
-// ROS2 Zenoh Backend Tests
+// Hiroz Backend Tests
 // ============================================================================
 
-#[cfg(feature = "ros2_zenoh_test")]
-mod ros2_zenoh_tests {
+#[cfg(feature = "hiroz_test")]
+mod hiroz_tests {
     use super::*;
-    use ros_z::context::ZContextBuilder;
-    use ros_z::Builder;
-    use roslibrust_ros2::ZenohClient;
+    use hiroz::context::ZContextBuilder;
+    use hiroz::Builder;
+    use roslibrust_hiroz::ZenohClient;
 
-    fn make_test_context() -> ros_z::context::ZContext {
+    fn make_test_context() -> hiroz::context::ZContext {
         ZContextBuilder::default()
             .with_domain_id(0)
             .with_connect_endpoints(["tcp/[::]:7447"])
@@ -187,7 +187,7 @@ mod ros2_zenoh_tests {
     }
 
     #[test_log::test(tokio::test(flavor = "multi_thread", worker_threads = 1))]
-    async fn test_ros2_zenoh_graph_provider_topics() {
+    async fn test_hiroz_graph_provider_topics() {
         let ctx = make_test_context();
         let ros = ZenohClient::new(&ctx, "test_graph_provider_topics")
             .await
@@ -196,7 +196,7 @@ mod ros2_zenoh_tests {
     }
 
     #[test_log::test(tokio::test(flavor = "multi_thread", worker_threads = 1))]
-    async fn test_ros2_zenoh_graph_provider_services() {
+    async fn test_hiroz_graph_provider_services() {
         let ctx = make_test_context();
         let ros = ZenohClient::new(&ctx, "test_graph_provider_services")
             .await

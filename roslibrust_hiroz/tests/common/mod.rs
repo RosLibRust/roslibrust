@@ -1,6 +1,6 @@
-use ros_z::context::ZContext;
-use ros_z::context::ZContextBuilder;
-use ros_z::Builder;
+use hiroz::context::ZContext;
+use hiroz::context::ZContextBuilder;
+use hiroz::Builder;
 
 pub fn make_test_context() -> ZContext {
     ZContextBuilder::default()

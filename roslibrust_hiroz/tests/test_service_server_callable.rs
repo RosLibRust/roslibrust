@@ -1,9 +1,9 @@
-#![cfg(feature = "ros2_zenoh_test")]
+#![cfg(feature = "hiroz_test")]
 
 mod common;
 
 use roslibrust_common::traits::*;
-use roslibrust_ros2::ZenohClient;
+use roslibrust_hiroz::ZenohClient;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_service_server_callable() {
