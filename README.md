@@ -17,7 +17,7 @@ An async rust library for interfacing with ROS1 and ROS2, built on Tokio.
 This allows writing generic behaviors like:
 
 ```rust ,no_run
-# use roslibrust_test::ros1::*;
+use roslibrust_test::ros1::*; // Provides std_msgs::String
 use roslibrust::{TopicProvider, Publish, Subscribe};
 
 async fn relay<T: TopicProvider>(ros: T) -> roslibrust::Result<()> {
