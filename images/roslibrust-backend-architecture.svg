@@ -23,15 +23,15 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
-     inkscape:zoom="0.55137493"
-     inkscape:cx="955.79246"
-     inkscape:cy="347.31358"
+     inkscape:zoom="0.7797619"
+     inkscape:cx="1008"
+     inkscape:cy="472.58015"
      inkscape:window-width="2508"
      inkscape:window-height="1371"
      inkscape:window-x="52"
      inkscape:window-y="32"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg248" />
+     inkscape:current-layer="layer1" />
   <title
      id="title">roslibrust backend architecture</title>
   <desc
@@ -286,25 +286,25 @@
   </defs>
   <path
      class="connector"
-     d="m 1278.8115,168 h 83.8955"
+     d="m 1278.5665,168.20818 h 83.7939"
      stroke="#2189ee"
      marker-end="url(#arrow-blue)"
      id="path153" />
   <path
      class="connector"
-     d="m 1278.5475,308 h 81.5191"
+     d="m 1278.4394,273.79183 h 84.8896"
      stroke="#f59e0b"
      marker-end="url(#arrow-orange)"
      id="path170" />
   <path
      class="connector"
-     d="m 1280.2189,634.72197 h 83.1296"
+     d="m 1280.2189,582.72197 h 83.1296"
      stroke="#ed4b91"
      marker-end="url(#arrow-pink)"
      id="path204" />
   <path
      class="connector"
-     d="m 1283.1343,770.82115 h 163.7576"
+     d="m 1281.1765,756.82115 h 83.6055"
      stroke="#8b5cf6"
      marker-end="url(#arrow-purple)"
      id="path239" />
@@ -314,14 +314,14 @@
      inkscape:label="Layer 1">
     <path
        class="connector"
-       d="m 829.71716,365.94249 h 40.16772 V 171.92431 h 88.36899"
+       d="m 829.93529,365.94249 h 38.56237 V 171.92431 h 84.83721"
        stroke="#2189ee"
        marker-end="url(#arrow-blue)"
        id="path108"
        style="marker-end:url(#arrow-blue)" />
     <path
        class="connector"
-       d="m 829.65119,419.93064 h 68.05958 V 309.43237 h 60.60231"
+       d="m 829.89074,419.93064 h 65.07248 V 309.43237 h 57.9425"
        stroke="#f59e0b"
        marker-end="url(#arrow-orange)"
        id="path110"
@@ -335,25 +335,25 @@
        sodipodi:nodetypes="cc" />
     <path
        class="connector"
-       d="m 829.51975,526.90392 h 65.71688 v 114.82071 h 58.10847"
+       d="m 829.51975,527.75788 h 65.71688 v 96.85599 h 58.10847"
        stroke="#ed4b91"
        marker-end="url(#arrow-pink)"
        id="path114"
        sodipodi:nodetypes="cccc" />
     <path
        class="connector"
-       d="m 828.77146,574.92662 h 43.50921 v 196.35513 h 80.25027"
+       d="m 828.77146,575.30265 h 43.50921 v 182.82728 h 80.25027"
        stroke="#8b5cf6"
        marker-end="url(#arrow-purple)"
        id="path116" />
     <path
-       style="fill:#f8fbff;fill-opacity:0;stroke:#12a9a8;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1;marker-end:url(#arrow-teal);stroke-dasharray:none"
-       d="m 1278.4395,475.40495 27.8274,0 v 59.9432 l 54.8732,0"
+       style="fill:#f8fbff;fill-opacity:0;stroke:#12a9a8;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#arrow-teal)"
+       d="m 1278.1663,476.92284 h 29.2206 v 43.27292 h 57.6206"
        id="path9153"
        sodipodi:nodetypes="cccc" />
     <path
        style="fill:#f8fbff;fill-opacity:0;stroke:#12a9a8;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#arrow-teal-5)"
-       d="m 1280.2792,476.17495 h 25.8764 V 349.4887 h 56.8242"
+       d="m 1280.2792,477.33487 h 25.8764 V 327.75275 h 56.8242"
        id="path9153-5"
        sodipodi:nodetypes="cccc" />
   </g>
@@ -536,17 +536,11 @@
   <g
      id="rosbridge-backend"
      transform="translate(-0.94398557,-70.287513)">
-    <rect
-       class="card"
-       x="965"
-       y="487"
-       width="315"
-       height="112"
-       rx="18"
-       fill="#eafffb"
-       stroke="#12a9a8"
+    <path
        id="rect132"
-       ry="18" />
+       class="card"
+       style="fill:#eafffb;stroke:#12a9a8;stroke-width:4"
+       d="m 983,487 h 279 c 9.972,0 18,8.028 18,18 v 76 c 0,9.972 -8.028,18 -18,18 H 983 c -9.972,0 -18,-8.028 -18,-18 v -76 c 0,-9.972 8.028,-18 18,-18 z" />
     <text
        class="label title"
        x="1122"
@@ -562,7 +556,7 @@
   </g>
   <g
      id="hiroz-backend"
-     transform="translate(0,-37.071245)">
+     transform="translate(0,-53.071245)">
     <rect
        class="card"
        x="965"
@@ -595,7 +589,7 @@
   <!-- Mock backend -->
   <g
      id="mock-backend"
-     transform="translate(0,-67.385643)">
+     transform="translate(0,-81.385643)">
     <rect
        class="card"
        x="965"
@@ -627,106 +621,33 @@
   </g>
   <!-- Native ROS 1 and Zenoh endpoints -->
   <g
-     id="g7841"
-     transform="translate(55.099796,-16.279688)">
+     id="g2781"
+     transform="translate(0,50)">
     <g
-       id="g7889"
-       transform="translate(-50.419944,-9.8970547)">
-      <g
-         id="ros1-systems">
-        <rect
-           x="1368.5511"
-           y="162.70737"
-           width="241.79504"
-           height="247.87746"
-           rx="26"
-           fill="#eff8ff"
-           fill-opacity="0.82"
-           stroke="#2189ee"
-           stroke-width="3.30759"
-           id="rect68"
-           ry="25.999998" />
-        <text
-           class="label group-title"
-           x="1485.382"
-           y="204.95776"
-           text-anchor="middle"
-           id="text70">ROS 1 Systems</text>
-      </g>
-      <g
-         id="native-ros1-robot"
-         transform="translate(1414.1583,240.59267)">
-        <rect
-           class="robot-stroke"
-           x="18"
-           y="38"
-           width="112"
-           height="62"
-           rx="19"
-           id="rect155"
-           ry="19" />
-        <circle
-           class="robot-stroke"
-           cx="39"
-           cy="108"
-           r="18"
-           id="circle157" />
-        <circle
-           class="robot-stroke"
-           cx="109"
-           cy="108"
-           r="18"
-           id="circle159" />
-        <circle
-           cx="53"
-           cy="66"
-           r="7"
-           fill="#12a9a8"
-           id="circle161" />
-        <circle
-           cx="93"
-           cy="66"
-           r="7"
-           fill="#12a9a8"
-           id="circle163" />
-        <path
-           d="M 74,38 V 18 M 61,16 Q 74,2 87,16 M 55,9 Q 74,-8 93,9"
-           fill="none"
-           stroke="#102a4c"
-           stroke-width="5"
-           stroke-linecap="round"
-           id="path165" />
-      </g>
-    </g>
-  </g>
-  <!-- rosbridge reaches both ROS 1 and ROS 2 -->
-  <g
-     id="g7793"
-     transform="translate(4.6411792,-64.237123)">
-    <g
-       id="ros2-systems">
+       id="ros1-systems"
+       transform="matrix(1.0004164,0,0,0.93743646,3.1829535,-66.44248)">
       <rect
-         x="1369.1483"
-         y="498.7269"
-         width="241.93353"
-         height="260.35495"
-         rx="26"
-         fill="#ecfeff"
+         x="1368.4921"
+         y="162.64824"
+         width="241.9133"
+         height="230.35677"
+         rx="25.989178"
+         fill="#eff8ff"
          fill-opacity="0.82"
-         stroke="#12a9a8"
-         stroke-width="3.48272"
-         id="rect73"
-         ry="26" />
+         stroke="#2189ee"
+         stroke-width="3.18933"
+         id="rect68"
+         ry="27.73521" />
       <text
          class="label group-title"
-         x="1490.1765"
-         y="542.96533"
+         x="1485.382"
+         y="204.95776"
          text-anchor="middle"
-         id="text75">ROS 2 Systems</text>
+         id="text70">ROS 1 Systems</text>
     </g>
     <g
-       id="rosbridge-ros2-robot"
-       transform="translate(1412.2491,600.80063)">
+       id="native-ros1-robot"
+       transform="translate(1417.9615,149.45016)">
       <rect
          class="robot-stroke"
          x="18"
@@ -734,67 +655,161 @@
          width="112"
          height="62"
          rx="19"
-         id="rect189"
+         id="rect155"
          ry="19" />
       <circle
          class="robot-stroke"
          cx="39"
          cy="108"
          r="18"
-         id="circle191" />
+         id="circle157" />
       <circle
          class="robot-stroke"
          cx="109"
          cy="108"
          r="18"
-         id="circle193" />
+         id="circle159" />
       <circle
          cx="53"
          cy="66"
          r="7"
          fill="#12a9a8"
-         id="circle195" />
+         id="circle161" />
       <circle
          cx="93"
          cy="66"
          r="7"
          fill="#12a9a8"
-         id="circle197" />
+         id="circle163" />
       <path
          d="M 74,38 V 18 M 61,16 Q 74,2 87,16 M 55,9 Q 74,-8 93,9"
          fill="none"
          stroke="#102a4c"
          stroke-width="5"
          stroke-linecap="round"
-         id="path199" />
+         id="path165" />
     </g>
   </g>
+  <!-- rosbridge reaches both ROS 1 and ROS 2 -->
   <!-- Mock endpoint -->
   <g
-     id="test-flask"
-     transform="translate(1447.4421,727.51249)">
-    <path
-       d="M 14,44.284095 H 68 V 59.479342 C 68,83.116392 56,100 41,100 26,100 14,83.116392 14,59.479342 Z"
-       fill="#a78bfa"
-       id="path243"
-       style="stroke-width:1.29937" />
-    <path
-       d="M 38,0 H 78 V 14 L 68,31 V 74 C 68,89 56,100 41,100 26,100 14,89 14,74 V 31 L 4,14 V 0 h 34"
-       fill="#f8fbff"
-       stroke="#102a4c"
-       stroke-width="6"
-       stroke-linejoin="round"
-       id="path241"
-       style="fill:#f8fbff;fill-opacity:0" />
+     id="g2373"
+     transform="translate(-0.87666985,-52.391218)">
+    <g
+       id="ros2-systems-6"
+       transform="matrix(1.002141,0,0,0.73217676,1.0904812,337.59212)">
+      <rect
+         x="1369.1483"
+         y="498.7269"
+         width="241.93353"
+         height="260.35495"
+         rx="25.944454"
+         fill="#ecfeff"
+         fill-opacity="0.82"
+         stroke="#12a9a8"
+         stroke-width="3.48272"
+         id="rect73-7"
+         ry="35.510548"
+         style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:#f5efff;fill-opacity:1;stroke:#8b5cf6;stroke-width:4.57742;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;-inkscape-stroke:none;stop-color:#000000;stop-opacity:1" />
+    </g>
+    <g
+       id="test-flask"
+       transform="translate(1450.7671,768.66471)">
+      <path
+         d="M 14,44.284095 H 68 V 59.479342 C 68,83.116392 56,100 41,100 26,100 14,83.116392 14,59.479342 Z"
+         fill="#a78bfa"
+         id="path243"
+         style="stroke-width:1.29937" />
+      <path
+         d="M 38,0 H 78 V 14 L 68,31 V 74 C 68,89 56,100 41,100 26,100 14,89 14,74 V 31 L 4,14 V 0 h 34"
+         fill="#f8fbff"
+         stroke="#102a4c"
+         stroke-width="6"
+         stroke-linejoin="round"
+         id="path241"
+         style="fill:#f8fbff;fill-opacity:0" />
+    </g>
+    <text
+       class="label group-title"
+       x="1491.239"
+       y="741.52075"
+       text-anchor="middle"
+       id="text75-7"
+       style="font-weight:800;font-size:27px;font-family:Inter, ui-sans-serif, system-ui, '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;fill:#102a4c">Tests</text>
   </g>
-  <text
-     class="label small"
-     x="1488.4421"
-     y="854.51245"
-     text-anchor="middle"
-     id="text246"><tspan
-       sodipodi:role="line"
-       id="tspan8053"
-       x="1488.4421"
-       y="854.51245">Tests</tspan></text>
+  <g
+     id="g2781-8"
+     transform="translate(0.81909121,319.59526)">
+    <g
+       id="ros1-systems-7"
+       transform="matrix(1.0004164,0,0,0.93743646,3.1829535,-66.44248)">
+      <rect
+         x="1368.4921"
+         y="162.64824"
+         width="241.9133"
+         height="230.35677"
+         rx="25.989178"
+         fill="#eff8ff"
+         fill-opacity="0.82"
+         stroke="#2189ee"
+         stroke-width="3.18933"
+         id="rect68-9"
+         ry="27.73521"
+         style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:#eafffb;fill-opacity:1;stroke:#12a9a8;stroke-width:4.13046;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;-inkscape-stroke:none;stop-color:#000000;stop-opacity:1" />
+      <text
+         class="label group-title"
+         x="1485.382"
+         y="204.95776"
+         text-anchor="middle"
+         id="text70-2"
+         style="font-weight:800;font-size:27px;font-family:Inter, ui-sans-serif, system-ui, '-apple-system', BlinkMacSystemFont, 'Segoe UI', sans-serif;fill:#102a4c">ROS 2 Systems</text>
+    </g>
+    <g
+       id="native-ros1-robot-0"
+       transform="translate(1417.9615,149.45016)">
+      <rect
+         class="robot-stroke"
+         x="18"
+         y="38"
+         width="112"
+         height="62"
+         rx="19"
+         id="rect155-2"
+         ry="19"
+         style="fill:#f5fbff;stroke:#102a4c;stroke-width:6;stroke-linejoin:round" />
+      <circle
+         class="robot-stroke"
+         cx="39"
+         cy="108"
+         r="18"
+         id="circle157-3"
+         style="fill:#f5fbff;stroke:#102a4c;stroke-width:6;stroke-linejoin:round" />
+      <circle
+         class="robot-stroke"
+         cx="109"
+         cy="108"
+         r="18"
+         id="circle159-7"
+         style="fill:#f5fbff;stroke:#102a4c;stroke-width:6;stroke-linejoin:round" />
+      <circle
+         cx="53"
+         cy="66"
+         r="7"
+         fill="#12a9a8"
+         id="circle161-5" />
+      <circle
+         cx="93"
+         cy="66"
+         r="7"
+         fill="#12a9a8"
+         id="circle163-9" />
+      <path
+         d="M 74,38 V 18 M 61,16 Q 74,2 87,16 M 55,9 Q 74,-8 93,9"
+         fill="none"
+         stroke="#102a4c"
+         stroke-width="5"
+         stroke-linecap="round"
+         id="path165-2" />
+    </g>
+  </g>
 </svg>
