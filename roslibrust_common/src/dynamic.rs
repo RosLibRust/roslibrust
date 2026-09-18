@@ -339,6 +339,7 @@ pub enum DynamicMessageError {
 pub type DynamicMessageResult<T> = std::result::Result<T, DynamicMessageError>;
 
 type NormalizeFn = fn(&DynamicValue) -> DynamicMessageResult<DynamicValue>;
+type DefaultFn = fn() -> DynamicMessageResult<DynamicValue>;
 type SerializeFn = fn(&DynamicValue, &mut dyn erased_serde::Serializer) -> DynamicMessageResult<()>;
 type DeserializeFn =
     for<'de> fn(&mut dyn erased_serde::Deserializer<'de>) -> DynamicMessageResult<DynamicValue>;
@@ -347,6 +348,7 @@ type DeserializeFn =
 #[derive(Clone, Copy)]
 pub(crate) struct MessageOperations {
     normalize: NormalizeFn,
+    default: DefaultFn,
     serialize: SerializeFn,
     deserialize: DeserializeFn,
 }
@@ -354,11 +356,13 @@ pub(crate) struct MessageOperations {
 impl MessageOperations {
     pub(crate) const fn new(
         normalize: NormalizeFn,
+        default: DefaultFn,
         serialize: SerializeFn,
         deserialize: DeserializeFn,
     ) -> Self {
         Self {
             normalize,
+            default,
             serialize,
             deserialize,
         }
@@ -410,6 +414,7 @@ impl MessageDescriptor {
             ros2_hash,
             operations: MessageOperations::new(
                 support::normalize::<T>,
+                support::default::<T>,
                 support::serialize::<T>,
                 support::deserialize::<T>,
             ),
@@ -427,6 +432,18 @@ impl MessageDescriptor {
     /// order, exact scalar widths, and homogeneous sequence element representations.
     pub fn message(&'static self, value: DynamicValue) -> DynamicMessageResult<DynamicMessage> {
         let value = (self.operations.normalize)(&value)?;
+        Ok(DynamicMessage {
+            descriptor: self,
+            value,
+        })
+    }
+
+    /// Construct this generated message type using its [`Default`] implementation.
+    ///
+    /// This preserves defaults declared by the message definition, rather than merely filling its
+    /// fields with zero values.
+    pub fn default_message(&'static self) -> DynamicMessageResult<DynamicMessage> {
+        let value = (self.operations.default)()?;
         Ok(DynamicMessage {
             descriptor: self,
             value,
@@ -682,6 +699,10 @@ pub(crate) mod support {
         value: &DynamicValue,
     ) -> DynamicMessageResult<DynamicValue> {
         from_value::<T>(value.clone()).and_then(to_value)
+    }
+
+    pub fn default<T: RosMessageType>() -> DynamicMessageResult<DynamicValue> {
+        to_value(T::default())
     }
 
     pub fn serialize<T: RosMessageType>(

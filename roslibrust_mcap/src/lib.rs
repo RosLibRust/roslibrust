@@ -50,7 +50,7 @@
 //! use std::fs::File;
 //! # use roslibrust_mcap::Result;
 //! # use roslibrust_common::RosMessageType;
-//! # #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+//! # #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 //! # struct String { data: std::string::String }
 //! # impl RosMessageType for String {
 //! #     const DESCRIPTION: roslibrust_common::MessageDescriptor =
@@ -124,7 +124,7 @@ mod tests {
         use roslibrust_common::RosMessageType;
         use serde::{Deserialize, Serialize};
 
-        #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+        #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
         struct TestMessage {
             data: String,
             value: i32,
