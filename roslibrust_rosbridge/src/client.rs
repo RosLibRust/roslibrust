@@ -1,6 +1,9 @@
 use crate::comm::Ops;
 use crate::comm::RosBridgeComm;
-use crate::{Publisher, ServiceHandle, Subscriber};
+use crate::{
+    deserialize_dynamic_message, serialize_dynamic_message, DynamicPublisher, DynamicSubscriber,
+    Publisher, ServiceHandle, Subscriber,
+};
 use anyhow::anyhow;
 use dashmap::DashMap;
 use futures::StreamExt;
@@ -129,13 +132,15 @@ impl ClientHandle {
             .entry(topic_name.to_string())
             .or_insert(Subscription {
                 handles: HashMap::new(),
-                topic_type: Msg::ROS_TYPE_NAME.to_string(),
+                topic_type: Msg::DESCRIPTION.ros_type_name.to_string(),
             });
 
         // TODO Possible bug here? We send a subscribe message each time even if already subscribed
         // Send subscribe message to rosbridge to initiate it sending us messages
         let mut stream = client.writer.write().await;
-        stream.subscribe(topic_name, Msg::ROS_TYPE_NAME).await?;
+        stream
+            .subscribe(topic_name, Msg::DESCRIPTION.ros_type_name)
+            .await?;
 
         // Create a new watch channel for this topic
         let queue = Arc::new(MessageQueue::new(QUEUE_SIZE));
@@ -250,6 +255,57 @@ impl ClientHandle {
         .await
     }
 
+    pub(crate) async fn _dynamic_subscribe(
+        &self,
+        topic_name: &str,
+        descriptor: &'static MessageDescriptor,
+    ) -> Result<DynamicSubscriber> {
+        self.check_for_disconnect()?;
+        let client = self.inner.read().await;
+        let mut callbacks =
+            client
+                .subscriptions
+                .entry(topic_name.to_owned())
+                .or_insert(Subscription {
+                    handles: HashMap::new(),
+                    topic_type: descriptor.ros_type_name.to_owned(),
+                });
+        if callbacks.topic_type != descriptor.ros_type_name {
+            return Err(Error::SerializationError(format!(
+                "topic {topic_name} is already subscribed as {}, not {}",
+                callbacks.topic_type, descriptor.ros_type_name
+            )));
+        }
+
+        client
+            .writer
+            .write()
+            .await
+            .subscribe(topic_name, descriptor.ros_type_name)
+            .await?;
+
+        let queue = Arc::new(MessageQueue::new(QUEUE_SIZE));
+        let queue_copy = queue.clone();
+        let topic_name_copy = topic_name.to_owned();
+        let callback = Arc::new(move |data: &str| {
+            let message = deserialize_dynamic_message(descriptor, data.as_bytes())
+                .map_err(|error| Error::SerializationError(error.to_string()));
+            if let Err(message) = queue_copy.try_push(message) {
+                info!(
+                    "Queue on dynamic topic {} is full; dropping oldest message",
+                    topic_name_copy
+                );
+                let _ = queue_copy.try_pop();
+                if queue_copy.try_push(message).is_err() {
+                    error!("Dynamic message was dropped because its queue remained full");
+                }
+            }
+        });
+        let subscriber = DynamicSubscriber::new(self.clone(), queue, topic_name.to_owned());
+        callbacks.handles.insert(*subscriber.get_id(), callback);
+        Ok(subscriber)
+    }
+
     // Publishes a message
     // Fails immediately(ish) if disconnected
     // Returns success when message is put on websocket (no confirmation of receipt)
@@ -263,6 +319,34 @@ impl ClientHandle {
         debug!("Publish got write lock on comm");
         stream.publish(topic, msg).await?;
         Ok(())
+    }
+
+    pub(crate) async fn publish_dynamic(
+        &self,
+        topic: &str,
+        descriptor: &'static MessageDescriptor,
+        message: &DynamicMessage,
+    ) -> Result<()> {
+        if message.descriptor().ros_type_name != descriptor.ros_type_name {
+            return Err(Error::SerializationError(format!(
+                "publisher expects {}, but message is {}",
+                descriptor.ros_type_name,
+                message.descriptor().ros_type_name
+            )));
+        }
+        self.check_for_disconnect()?;
+        let bytes = serialize_dynamic_message(message)
+            .map_err(|error| Error::SerializationError(error.to_string()))?;
+        let value = serde_json::from_slice(&bytes)
+            .map_err(|error| Error::SerializationError(error.to_string()))?;
+        let client = self.inner.read().await;
+        let result = client
+            .writer
+            .write()
+            .await
+            .publish_value(topic, descriptor.ros_type_name, value)
+            .await;
+        result
     }
 
     /// Advertises a topic to be published to and returns a type specific publisher to use.
@@ -305,7 +389,7 @@ impl ClientHandle {
             client.publishers.insert(
                 topic.to_string(),
                 PublisherHandle {
-                    topic_type: T::ROS_TYPE_NAME.to_string(),
+                    topic_type: T::DESCRIPTION.ros_type_name.to_string(),
                 },
             );
         }
@@ -316,6 +400,41 @@ impl ClientHandle {
             stream.advertise::<T>(topic).await?;
         }
         Ok(Publisher::new(topic.to_string(), self.clone()))
+    }
+
+    pub(crate) async fn _dynamic_advertise(
+        &self,
+        topic: &str,
+        descriptor: &'static MessageDescriptor,
+    ) -> Result<DynamicPublisher> {
+        self.check_for_disconnect()?;
+        let client = self.inner.read().await;
+        if client.publishers.contains_key(topic) {
+            return Err(Error::Unexpected(anyhow!(
+                "Attempted to create two publishers for the same topic; this is not supported"
+            )));
+        }
+        client.publishers.insert(
+            topic.to_owned(),
+            PublisherHandle {
+                topic_type: descriptor.ros_type_name.to_owned(),
+            },
+        );
+        if let Err(error) = client
+            .writer
+            .write()
+            .await
+            .advertise_str(topic, descriptor.ros_type_name)
+            .await
+        {
+            client.publishers.remove(topic);
+            return Err(error);
+        }
+        Ok(DynamicPublisher::new(
+            topic.to_owned(),
+            self.clone(),
+            descriptor,
+        ))
     }
 
     /// Calls a ros service and returns the response

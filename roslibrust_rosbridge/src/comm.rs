@@ -92,6 +92,12 @@ pub(crate) trait RosBridgeComm {
     async fn subscribe(&mut self, topic: &str, msg_type: &str) -> Result<()>;
     async fn unsubscribe(&mut self, topic: &str) -> Result<()>;
     async fn publish<T: RosMessageType>(&mut self, topic: &str, msg: &T) -> Result<()>;
+    async fn publish_value(
+        &mut self,
+        topic: &str,
+        msg_type: &str,
+        msg: serde_json::Value,
+    ) -> Result<()>;
     async fn advertise<T: RosMessageType>(&mut self, topic: &str) -> Result<()>;
     async fn advertise_str(&mut self, topic: &str, msg_type: &str) -> Result<()>;
     async fn call_service<Req: RosMessageType>(
@@ -145,7 +151,7 @@ impl RosBridgeComm for Writer {
             {
                 "op": Ops::Publish.to_string(),
                 "topic": topic,
-                "type": T::ROS_TYPE_NAME,
+                "type": T::DESCRIPTION.ros_type_name,
                 "msg": &msg,
             }
         );
@@ -155,8 +161,27 @@ impl RosBridgeComm for Writer {
         Ok(())
     }
 
+    async fn publish_value(
+        &mut self,
+        topic: &str,
+        msg_type: &str,
+        msg: serde_json::Value,
+    ) -> Result<()> {
+        let message = json!({
+            "op": Ops::Publish.to_string(),
+            "topic": topic,
+            "type": msg_type,
+            "msg": msg,
+        });
+        let message = Message::Text(message.to_string());
+        debug!("Sending dynamic publish: {:?}", &message);
+        self.send(message).await.map_to_roslibrust()?;
+        Ok(())
+    }
+
     async fn advertise<T: RosMessageType>(&mut self, topic: &str) -> Result<()> {
-        self.advertise_str(topic, T::ROS_TYPE_NAME).await
+        self.advertise_str(topic, T::DESCRIPTION.ros_type_name)
+            .await
     }
 
     // Identical to advertise, but allows providing a string argument for the topic type

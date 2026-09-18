@@ -82,4 +82,64 @@ mod test {
         let msg = subscriber.next().await.unwrap();
         assert_eq!(msg.data, 1);
     }
+
+    #[test]
+    fn generated_registry_round_trips_backend_selected_json() {
+        assert!(MESSAGE_REGISTRY
+            .descriptors()
+            .windows(2)
+            .all(|pair| pair[0].ros_type_name < pair[1].ros_type_name));
+
+        let descriptor = MESSAGE_REGISTRY
+            .get("std_msgs/msg/Int16")
+            .expect("generated registry should accept ROS2 type spelling");
+        assert_eq!(descriptor.ros_type_name, "std_msgs/Int16");
+
+        let message = MESSAGE_REGISTRY
+            .message_from("std_msgs/Int16", &serde_json::json!({ "data": 42 }))
+            .expect("valid dynamic message");
+        let json = roslibrust::rosbridge::serialize_dynamic_message(&message)
+            .expect("rosbridge JSON encoding");
+        assert_eq!(json, br#"{"data":42}"#);
+        let decoded_json = roslibrust::rosbridge::deserialize_dynamic_message(
+            MESSAGE_REGISTRY
+                .get("std_msgs::msg::dds_::Int16_")
+                .expect("generated registry should accept DDS type spelling"),
+            &json,
+        )
+        .expect("rosbridge JSON decoding");
+        assert_eq!(decoded_json.value(), message.value());
+
+        let malformed =
+            roslibrust::rosbridge::deserialize_dynamic_message(descriptor, b"{").unwrap_err();
+        assert!(matches!(
+            malformed,
+            roslibrust::DynamicMessageError::Deserialize { .. }
+        ));
+    }
+
+    #[test]
+    fn generated_registry_reports_lookup_and_validation_errors() {
+        let unknown = MESSAGE_REGISTRY
+            .from_value("not_a_package/Unknown", roslibrust::DynamicValue::Unit)
+            .unwrap_err();
+        assert!(matches!(
+            unknown,
+            roslibrust::DynamicMessageError::UnknownType(_)
+        ));
+
+        let invalid = MESSAGE_REGISTRY
+            .from_value(
+                "std_msgs/Int16",
+                roslibrust::DynamicValue::Message(vec![roslibrust::DynamicField {
+                    name: "data".to_owned(),
+                    value: roslibrust::DynamicValue::String("not an integer".to_owned()),
+                }]),
+            )
+            .unwrap_err();
+        assert!(matches!(
+            invalid,
+            roslibrust::DynamicMessageError::InvalidValue { .. }
+        ));
+    }
 }

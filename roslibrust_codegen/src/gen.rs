@@ -50,11 +50,13 @@ fn derive_attrs(options: &CodegenOptions, _has_large_array: bool) -> Vec<syn::At
             parse_quote! { #[derive(::roslibrust::codegen::SmartDefault)] },
         );
         attrs.push(parse_quote! { #[serde(crate = "::roslibrust::codegen::serde")] });
+        attrs.push(parse_quote! { #[serde(deny_unknown_fields)] });
     } else {
         // Use standard Rust serde with SmartDefault (SmartDefault works with any serde)
         attrs.insert(0, parse_quote! { #[derive(serde::Deserialize)] });
         attrs.insert(1, parse_quote! { #[derive(serde::Serialize)] });
         attrs.insert(2, parse_quote! { #[derive(smart_default::SmartDefault)] });
+        attrs.push(parse_quote! { #[serde(deny_unknown_fields)] });
     }
 
     attrs
@@ -152,30 +154,21 @@ pub fn generate_struct(
     let definition = msg.definition;
     let ros2_hash = msg.ros2_hash;
 
-    // Generate the trait impl conditionally based on options
-    let trait_impl = if options.generate_definition {
-        // Include DEFINITION field
+    let raw_message_definition = if options.generate_definition {
         let raw_message_definition = generate_raw_string_literal(&definition);
-        quote! {
-            impl ::roslibrust::RosMessageType for #struct_name {
-                const ROS_TYPE_NAME: &'static str = #ros_type_name;
-                const MD5SUM: &'static str = #md5sum;
-                const DEFINITION: &'static str = #raw_message_definition;
-                const ROS2_HASH: &'static [u8; 32] = &#ros2_hash;
-                const ROS2_TYPE_NAME: &'static str = #ros2_type_name;
-            }
-        }
+        quote! { #raw_message_definition }
     } else {
-        // Omit DEFINITION field
-        quote! {
-            impl ::roslibrust::RosMessageType for #struct_name {
-                const ROS_TYPE_NAME: &'static str = #ros_type_name;
-                const MD5SUM: &'static str = #md5sum;
-                const DEFINITION: &'static str = "";
-                const ROS2_HASH: &'static [u8; 32] = &#ros2_hash;
-                const ROS2_TYPE_NAME: &'static str = #ros2_type_name;
-            }
-        }
+        quote! { "" }
+    };
+    let trait_impl = quote! {
+        ::roslibrust::impl_ros_message_type!(
+            #struct_name,
+            #ros_type_name,
+            #md5sum,
+            #raw_message_definition,
+            #ros2_type_name,
+            &#ros2_hash,
+        );
     };
 
     let mut base = quote! {

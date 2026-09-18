@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added runtime-selected ROS message support. Code generation now emits a `MESSAGE_REGISTRY` of
+  `MessageDescriptor`s, and generated message types expose their descriptor as
+  `RosMessageType::DESCRIPTION`.
+- Added `DynamicValue` and schema-validated `DynamicMessage`, including Serde conversion,
+  ROS-width-preserving scalar representations, and `serde_json::Value`-style inspection methods.
+- Added `DynamicTopicProvider`, `DynamicPublish`, and `DynamicSubscribe`, with implementations for
+  native ROS 1, rosbridge, the Zenoh ROS 1 bridge backend, native ROS 2 through Hiroz, and
+  `MockRos`. Each backend continues to select its own wire serializer.
+- Added documentation and generic integration tests covering dynamic message lookup, validation,
+  publishing, and subscription.
+
+### Changed
+
+- **Breaking:** `RosMessageType` now has one required `DESCRIPTION` associated constant containing
+  all message metadata and dynamic operations. The separate `ROS_TYPE_NAME`, `MD5SUM`,
+  `DEFINITION`, `ROS2_TYPE_NAME`, and `ROS2_HASH` message constants have been removed. Read the
+  equivalent fields from `T::DESCRIPTION` instead. `RosServiceType` metadata constants are
+  unchanged.
+- Generated message deserialization now rejects unknown fields so dynamic messages cannot bypass
+  their ROS schema.
+
 ## 0.23.0 - September 17th, 2026
 
 ### Added

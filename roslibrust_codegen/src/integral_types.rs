@@ -72,10 +72,15 @@ impl TryFrom<Time> for std::time::SystemTime {
 }
 
 impl RosMessageType for Time {
-    const ROS_TYPE_NAME: &'static str = "builtin_interfaces/Time";
     // TODO: ROS2 support
-    const MD5SUM: &'static str = "";
-    const DEFINITION: &'static str = "";
+    const DESCRIPTION: roslibrust_common::MessageDescriptor =
+        roslibrust_common::MessageDescriptor::new::<Self>(
+            "builtin_interfaces/Time",
+            "",
+            "",
+            "",
+            &[0; 32],
+        );
 }
 
 /// Matches the integral ros1 duration type, with extensions for ease of use

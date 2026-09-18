@@ -11,9 +11,12 @@ fn test_associated_constants() {
 
 #[test]
 fn test_md5sum_generation() {
-    assert_eq!(std_msgs::Header::MD5SUM, "2176decaecbce78abc3b96ef049fabed");
     assert_eq!(
-        geometry_msgs::TransformStamped::MD5SUM,
+        std_msgs::Header::DESCRIPTION.md5sum,
+        "2176decaecbce78abc3b96ef049fabed"
+    );
+    assert_eq!(
+        geometry_msgs::TransformStamped::DESCRIPTION.md5sum,
         "b5764a33bfeb3588febc2682852579b0"
     );
     assert_eq!(
@@ -21,7 +24,7 @@ fn test_md5sum_generation() {
         "09fb03525b03e7ea1fd3992bafd87e16"
     );
     assert_eq!(
-        sensor_msgs::Image::MD5SUM,
+        sensor_msgs::Image::DESCRIPTION.md5sum,
         "060021388200f6f0f447d0fcd9c64743"
     );
 }
@@ -45,6 +48,10 @@ fn test_gendeps_in_message_definition() {
     // definitions of all referenced sub-messages.
     // See https://wiki.ros.org/roslib/gentools for example of expected format
     // Confirm here that sub messages are included in the message definition for geometry_msgs::PointStamped
-    assert!(geometry_msgs::PointStamped::DEFINITION.contains("MSG: geometry_msgs/Point"));
-    assert!(geometry_msgs::PointStamped::DEFINITION.contains("MSG: std_msgs/Header"));
+    assert!(geometry_msgs::PointStamped::DESCRIPTION
+        .definition
+        .contains("MSG: geometry_msgs/Point"));
+    assert!(geometry_msgs::PointStamped::DESCRIPTION
+        .definition
+        .contains("MSG: std_msgs/Header"));
 }

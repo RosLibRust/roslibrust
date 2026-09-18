@@ -14,6 +14,7 @@ thiserror = "2.0"
 anyhow = "1.0"
 # Used as basis for serialization
 serde = { workspace = true }
+erased-serde = "0.4"
 # Used for md5sum calculation
 md5 = "0.7"
 # Required for subscribers to implement into_stream
@@ -22,3 +23,6 @@ futures-core = "0.3"
 async-stream = "0.3"
 # Used for validation of topic names
 regex = "1.12"
+
+[dev-dependencies]
+serde_bytes = "0.11"

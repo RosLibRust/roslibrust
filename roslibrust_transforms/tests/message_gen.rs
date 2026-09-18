@@ -114,15 +114,18 @@ pub mod ros1 {{
     }}
 
     impl ::roslibrust_common::RosMessageType for TFMessage {{
-        const ROS_TYPE_NAME: &'static str = "tf2_msgs/TFMessage";
-        const MD5SUM: &'static str = "94810edda583a504dfda3829e70d7eec";
-        const DEFINITION: &'static str = "geometry_msgs/TransformStamped[] transforms";
-        const ROS2_HASH: &'static [u8; 32] = &[
-            0x84, 0x64, 0x1e, 0xf6, 0x1a, 0x5a, 0xa7, 0xf4, 0x9e, 0x8f, 0xc3, 0xca, 0x2f, 0x3c,
-            0xf7, 0x3e, 0x24, 0x3a, 0x50, 0x7c, 0xc6, 0x5a, 0x6b, 0x93, 0xe4, 0x1a, 0xa3, 0x57,
-            0x83, 0xd1, 0x94, 0x71,
-        ];
-        const ROS2_TYPE_NAME: &'static str = "tf2_msgs::msg::dds_::TFMessage_";
+        const DESCRIPTION: ::roslibrust_common::MessageDescriptor =
+            ::roslibrust_common::MessageDescriptor::new::<Self>(
+                "tf2_msgs/TFMessage",
+                "94810edda583a504dfda3829e70d7eec",
+                "geometry_msgs/TransformStamped[] transforms",
+                "tf2_msgs::msg::dds_::TFMessage_",
+                &[
+                    0x84, 0x64, 0x1e, 0xf6, 0x1a, 0x5a, 0xa7, 0xf4, 0x9e, 0x8f, 0xc3, 0xca,
+                    0x2f, 0x3c, 0xf7, 0x3e, 0x24, 0x3a, 0x50, 0x7c, 0xc6, 0x5a, 0x6b, 0x93,
+                    0xe4, 0x1a, 0xa3, 0x57, 0x83, 0xd1, 0x94, 0x71,
+                ],
+            );
     }}
 }}
 
@@ -147,15 +150,18 @@ pub mod ros2 {{
     }}
 
     impl ::roslibrust_common::RosMessageType for TFMessage {{
-        const ROS_TYPE_NAME: &'static str = "tf2_msgs/TFMessage";
-        const MD5SUM: &'static str = "94810edda583a504dfda3829e70d7eec";
-        const DEFINITION: &'static str = "geometry_msgs/TransformStamped[] transforms";
-        const ROS2_HASH: &'static [u8; 32] = &[
-            0x84, 0x64, 0x1e, 0xf6, 0x1a, 0x5a, 0xa7, 0xf4, 0x9e, 0x8f, 0xc3, 0xca, 0x2f, 0x3c,
-            0xf7, 0x3e, 0x24, 0x3a, 0x50, 0x7c, 0xc6, 0x5a, 0x6b, 0x93, 0xe4, 0x1a, 0xa3, 0x57,
-            0x83, 0xd1, 0x94, 0x71,
-        ];
-        const ROS2_TYPE_NAME: &'static str = "tf2_msgs::msg::dds_::TFMessage_";
+        const DESCRIPTION: ::roslibrust_common::MessageDescriptor =
+            ::roslibrust_common::MessageDescriptor::new::<Self>(
+                "tf2_msgs/TFMessage",
+                "94810edda583a504dfda3829e70d7eec",
+                "geometry_msgs/TransformStamped[] transforms",
+                "tf2_msgs::msg::dds_::TFMessage_",
+                &[
+                    0x84, 0x64, 0x1e, 0xf6, 0x1a, 0x5a, 0xa7, 0xf4, 0x9e, 0x8f, 0xc3, 0xca,
+                    0x2f, 0x3c, 0xf7, 0x3e, 0x24, 0x3a, 0x50, 0x7c, 0xc6, 0x5a, 0x6b, 0x93,
+                    0xe4, 0x1a, 0xa3, 0x57, 0x83, 0xd1, 0x94, 0x71,
+                ],
+            );
     }}
 }}
 "#

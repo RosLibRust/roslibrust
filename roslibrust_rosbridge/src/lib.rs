@@ -35,6 +35,23 @@
 use roslibrust_common::topic_name::{GlobalTopicName, ToGlobalTopicName};
 use roslibrust_common::*;
 
+/// Serialize a runtime-selected message as the JSON object used by rosbridge.
+pub fn serialize_dynamic_message(message: &DynamicMessage) -> DynamicMessageResult<Vec<u8>> {
+    let mut bytes = Vec::new();
+    let mut serializer = serde_json::Serializer::new(&mut bytes);
+    message.serialize_with(&mut serializer)?;
+    Ok(bytes)
+}
+
+/// Deserialize a rosbridge JSON message using a runtime-selected descriptor.
+pub fn deserialize_dynamic_message<'de>(
+    descriptor: &'static MessageDescriptor,
+    bytes: &'de [u8],
+) -> DynamicMessageResult<DynamicMessage> {
+    let mut deserializer = serde_json::Deserializer::from_slice(bytes);
+    descriptor.deserialize_with(&mut deserializer)
+}
+
 // Subscriber is a transparent module, we directly expose internal types
 // Module exists only to organize source code.
 mod subscriber;
@@ -57,6 +74,33 @@ mod integration_tests;
 #[cfg(test)]
 #[allow(dead_code)]
 type TestResult = std::result::Result<(), anyhow::Error>;
+
+#[cfg(test)]
+mod dynamic_message_tests {
+    use super::*;
+
+    #[test]
+    fn json_codec_round_trips_runtime_selected_message() {
+        let descriptor = roslibrust_test::ros1::MESSAGE_REGISTRY
+            .get("std_msgs/Int16")
+            .unwrap();
+        let message = descriptor
+            .message(DynamicValue::Message(vec![DynamicField {
+                name: "data".to_owned(),
+                value: DynamicValue::I16(42),
+            }]))
+            .unwrap();
+
+        let bytes = serialize_dynamic_message(&message).unwrap();
+        assert_eq!(bytes, br#"{"data":42}"#);
+        assert_eq!(
+            deserialize_dynamic_message(descriptor, &bytes)
+                .unwrap()
+                .value(),
+            message.value()
+        );
+    }
+}
 
 /// Communication primitives for the rosbridge_suite protocol
 mod comm;
@@ -160,23 +204,7 @@ pub(crate) struct PublisherHandle {
 }
 
 fn normalize_graph_type(type_name: String) -> String {
-    if let Some((package, rest)) = type_name.split_once("::") {
-        if let Some(type_name) = rest
-            .strip_prefix("msg::dds_::")
-            .or_else(|| rest.strip_prefix("srv::dds_::"))
-            .and_then(|name| name.strip_suffix('_'))
-        {
-            return format!("{package}/{type_name}");
-        }
-    }
-
-    let mut parts = type_name.split('/');
-    match (parts.next(), parts.next(), parts.next(), parts.next()) {
-        (Some(package), Some("msg" | "srv"), Some(type_name), None) => {
-            format!("{package}/{type_name}")
-        }
-        _ => type_name,
-    }
+    roslibrust_common::normalize_ros_type_name(&type_name).into_owned()
 }
 
 // Implement the generic Service trait for our ServiceClient
@@ -336,6 +364,45 @@ impl TopicProvider for crate::ClientHandle {
     ) -> Result<Self::Subscriber<MsgType>> {
         let topic: GlobalTopicName = topic.to_global_name()?;
         ClientHandle::subscribe(self, topic.as_ref()).await
+    }
+}
+
+impl DynamicPublish for crate::DynamicPublisher {
+    fn descriptor(&self) -> &'static MessageDescriptor {
+        self.descriptor
+    }
+
+    async fn publish(&self, data: &DynamicMessage) -> Result<()> {
+        self.publish_dynamic(data).await
+    }
+}
+
+impl DynamicSubscribe for crate::DynamicSubscriber {
+    async fn next(&mut self) -> Result<DynamicMessage> {
+        self.next_dynamic().await
+    }
+}
+
+impl DynamicTopicProvider for crate::ClientHandle {
+    type DynamicPublisher = crate::DynamicPublisher;
+    type DynamicSubscriber = crate::DynamicSubscriber;
+
+    async fn dynamic_advertise(
+        &self,
+        topic: impl ToGlobalTopicName,
+        descriptor: &'static MessageDescriptor,
+    ) -> Result<Self::DynamicPublisher> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        ClientHandle::_dynamic_advertise(self, topic.as_ref(), descriptor).await
+    }
+
+    async fn dynamic_subscribe(
+        &self,
+        topic: impl ToGlobalTopicName,
+        descriptor: &'static MessageDescriptor,
+    ) -> Result<Self::DynamicSubscriber> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        ClientHandle::_dynamic_subscribe(self, topic.as_ref(), descriptor).await
     }
 }
 

@@ -1109,6 +1109,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
+name = "erased-serde"
+version = "0.4.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2add8a07dd6a8d93ff627029c51de145e12686fbc36ecb298ac22e74cf02dec"
+dependencies = [
+ "serde",
+ "serde_core",
+ "typeid",
+]
+
+[[package]]
 name = "errno"
 version = "0.3.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1145,6 +1156,7 @@ version = "0.1.0"
 dependencies = [
  "env_logger 0.11.8",
  "roslibrust",
+ "serde_json",
  "tokio",
 ]
 
@@ -3525,10 +3537,12 @@ version = "0.22.0"
 dependencies = [
  "anyhow",
  "async-stream",
+ "erased-serde",
  "futures-core",
  "md5",
  "regex",
  "serde",
+ "serde_bytes",
  "thiserror 2.0.18",
 ]
 
@@ -3556,6 +3570,7 @@ dependencies = [
  "cdr",
  "env_logger 0.11.8",
  "hiroz",
+ "hiroz-cdr",
  "log",
  "roslibrust_common",
  "roslibrust_test",
@@ -3681,6 +3696,7 @@ dependencies = [
  "roslibrust_hiroz",
  "roslibrust_rosbridge",
  "roslibrust_zenoh",
+ "serde_json",
  "test-log",
  "tokio",
  "zenoh",

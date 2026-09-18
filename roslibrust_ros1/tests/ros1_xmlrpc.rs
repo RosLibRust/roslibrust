@@ -81,7 +81,7 @@ mod tests {
         assert_eq!(publications.len(), 1);
         let (topic, topic_type) = publications.first().unwrap();
         assert_eq!(topic, "/test_topic");
-        assert_eq!(topic_type, std_msgs::String::ROS_TYPE_NAME);
+        assert_eq!(topic_type, std_msgs::String::DESCRIPTION.ros_type_name);
         Ok(())
     }
 
