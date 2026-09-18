@@ -43,6 +43,8 @@ where
     });
     let received = timeout(Duration::from_secs(10), subscriber.next()).await;
     publish_task.abort();
+    // Wait for cancellation so the retry loop cannot publish again while the next phase starts.
+    let _ = publish_task.await;
     let received = received.expect("timed out waiting for first dynamic message")?;
     assert_eq!(received.descriptor().ros_type_name, "std_msgs/String");
     assert_eq!(
@@ -50,16 +52,22 @@ where
         serde_json::to_value(first.value()).unwrap()
     );
 
-    publisher
-        .publish_serializable(&json!({"data": "serialized directly"}))
-        .await?;
-    let received = timeout(Duration::from_secs(2), subscriber.next())
-        .await
-        .expect("timed out waiting for second dynamic message")?;
-    assert_eq!(
-        serde_json::to_value(received.value()).unwrap(),
-        json!({"data": "serialized directly"})
-    );
+    let expected = json!({"data": "serialized directly"});
+    publisher.publish_serializable(&expected).await?;
+    // The discovery retry above may already have put more than one copy of the first message on
+    // the wire. Ignore those stale copies instead of assuming the very next queued message belongs
+    // to this publication.
+    let received = timeout(Duration::from_secs(10), async {
+        loop {
+            let received = subscriber.next().await?;
+            if serde_json::to_value(received.value()).unwrap() == expected {
+                break roslibrust::Result::Ok(received);
+            }
+        }
+    })
+    .await
+    .expect("timed out waiting for second dynamic message")?;
+    assert_eq!(serde_json::to_value(received.value()).unwrap(), expected);
 
     Ok(())
 }

@@ -10925,6 +10925,7 @@ pub mod service_msgs {
     pub struct ServiceEventInfo {
         pub r#event_type: u8,
         pub r#stamp: builtin_interfaces::Time,
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
         pub r#client_gid: [u8; 16],
         pub r#sequence_number: i64,
     }
@@ -13164,6 +13165,43 @@ string frame_id"####,
         pub const r#FLAG_BARO_VALID: u16 = 256u16;
         pub const r#FLAG_SOURCE_UAT: u16 = 32768u16;
     }
+    #[allow(non_snake_case)]
+    #[allow(dead_code)]
+    #[derive(
+        :: roslibrust :: codegen :: Deserialize,
+        :: roslibrust :: codegen :: Serialize,
+        :: roslibrust :: codegen :: SmartDefault,
+        Debug,
+        Clone,
+        PartialEq,
+    )]
+    #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
+    pub struct ByteArrays {
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
+        pub r#dynamic_uint8: ::std::vec::Vec<u8>,
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
+        pub r#dynamic_char: ::std::vec::Vec<u8>,
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
+        pub r#fixed_uint8: [u8; 4],
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
+        pub r#fixed_char: [u8; 4],
+    }
+    ::roslibrust::impl_ros_message_type!(
+        ByteArrays,
+        "test_msgs/ByteArrays",
+        "72025d44f3736b53cfdcaacc6e70171b",
+        r####"uint8[] dynamic_uint8
+char[] dynamic_char
+uint8[4] fixed_uint8
+char[4] fixed_char"####,
+        "test_msgs::msg::dds_::ByteArrays_",
+        &[
+            0xa5, 0x45, 0x22, 0xcc, 0x1a, 0xee, 0xd9, 0xbc, 0xf3, 0x9b, 0xe8, 0xa2, 0x6b, 0x79,
+            0x10, 0x90, 0x57, 0xd2, 0x6c, 0x78, 0xfe, 0x58, 0xdd, 0x72, 0x0f, 0x92, 0x34, 0xf6,
+            0xf8, 0xe8, 0x21, 0x48,
+        ],
+    );
     #[allow(non_snake_case)]
     #[allow(dead_code)]
     #[derive(
@@ -17913,6 +17951,7 @@ pub static MESSAGE_REGISTRY: ::roslibrust::MessageRegistry = ::roslibrust::Messa
     std_msgs::UInt8MultiArray::DESCRIPTION,
     stereo_msgs::DisparityImage::DESCRIPTION,
     test_msgs::ADSBVehicle::DESCRIPTION,
+    test_msgs::ByteArrays::DESCRIPTION,
     test_msgs::Constants::DESCRIPTION,
     test_msgs::Float64Stamped::DESCRIPTION,
     test_msgs::LoggerLevel::DESCRIPTION,

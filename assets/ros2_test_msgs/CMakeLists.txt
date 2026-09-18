@@ -13,6 +13,7 @@ set(msg_files
   "msg/BoundedInt.msg"
   "msg/BoundedReferenced.msg"
   "msg/BoundedString.msg"
+  "msg/ByteArrays.msg"
   "msg/Defaults.msg"
   "msg/Stamped.msg"
   "msg/Char.msg"

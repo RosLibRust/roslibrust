@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Generated message deserialization now rejects unknown fields so dynamic messages cannot bypass
   their ROS schema.
 
+### Fixed
+
+- @althea28 Rosbridge serialization now handles variable- and fixed-length `uint8`, `byte`, and `char`
+  arrays uniformly as base64 without changing their native ROS wire framing.
+
 ## 0.23.0 - September 17th, 2026
 
 ### Added

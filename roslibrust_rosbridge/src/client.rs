@@ -1019,7 +1019,10 @@ async fn connect(url: &str) -> Result<Socket> {
 mod tests {
     use super::*;
     use futures::SinkExt;
-    use roslibrust_test::ros1::std_srvs::{SetBool, SetBoolRequest};
+    use roslibrust_test::ros1::{
+        std_srvs::{SetBool, SetBoolRequest},
+        test_msgs::ByteArrays,
+    };
     use tokio::net::TcpListener;
     use tokio_tungstenite::WebSocketStream;
 

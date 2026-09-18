@@ -12,6 +12,7 @@ pub mod actionlib_msgs {
     use super::std_srvs;
     use super::stereo_msgs;
     use super::trajectory_msgs;
+    use super::unique_identifier_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
@@ -332,6 +333,7 @@ pub mod builtin_interfaces {
     use super::std_srvs;
     use super::stereo_msgs;
     use super::trajectory_msgs;
+    use super::unique_identifier_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
@@ -425,6 +427,7 @@ pub mod diagnostic_msgs {
     use super::std_srvs;
     use super::stereo_msgs;
     use super::trajectory_msgs;
+    use super::unique_identifier_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
@@ -826,6 +829,7 @@ pub mod geometry_msgs {
     use super::std_srvs;
     use super::stereo_msgs;
     use super::trajectory_msgs;
+    use super::unique_identifier_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
@@ -3024,6 +3028,7 @@ pub mod nav_msgs {
     use super::std_srvs;
     use super::stereo_msgs;
     use super::trajectory_msgs;
+    use super::unique_identifier_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
@@ -5605,6 +5610,7 @@ pub mod ros2_test_msgs {
     use super::std_srvs;
     use super::stereo_msgs;
     use super::trajectory_msgs;
+    use super::unique_identifier_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
@@ -5738,9 +5744,48 @@ string<=5[<=3] data_matrix"####,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
     #[serde(deny_unknown_fields)]
+    pub struct ByteArrays {
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
+        pub r#dynamic_uint8: ::std::vec::Vec<u8>,
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
+        pub r#dynamic_char: ::std::vec::Vec<u8>,
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
+        pub r#fixed_uint8: [u8; 4],
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
+        pub r#fixed_char: [u8; 4],
+    }
+    ::roslibrust::impl_ros_message_type!(
+        ByteArrays,
+        "ros2_test_msgs/ByteArrays",
+        "72025d44f3736b53cfdcaacc6e70171b",
+        r####"uint8[] dynamic_uint8
+char[] dynamic_char
+uint8[4] fixed_uint8
+char[4] fixed_char"####,
+        "ros2_test_msgs::msg::dds_::ByteArrays_",
+        &[
+            0x55, 0xd5, 0xb0, 0xa9, 0x4e, 0xd8, 0x07, 0xad, 0x17, 0x39, 0xec, 0x65, 0xc8, 0xc9,
+            0xc7, 0xff, 0x49, 0xa9, 0xe3, 0xfc, 0x91, 0x86, 0x43, 0x3a, 0x73, 0xd2, 0x46, 0x38,
+            0x7d, 0xcb, 0xbb, 0x55,
+        ],
+    );
+    #[allow(non_snake_case)]
+    #[allow(dead_code)]
+    #[derive(
+        :: roslibrust :: codegen :: Deserialize,
+        :: roslibrust :: codegen :: Serialize,
+        :: roslibrust :: codegen :: SmartDefault,
+        Debug,
+        Clone,
+        PartialEq,
+    )]
+    #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Char {
         pub r#data: u8,
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
         pub r#data_array: ::std::vec::Vec<u8>,
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
         pub r#data_bounded_array: ::std::vec::Vec<u8>,
     }
     ::roslibrust::impl_ros_message_type!(
@@ -5953,6 +5998,7 @@ pub mod sensor_msgs {
     use super::std_srvs;
     use super::stereo_msgs;
     use super::trajectory_msgs;
+    use super::unique_identifier_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
@@ -8828,6 +8874,7 @@ pub mod service_msgs {
     use super::std_srvs;
     use super::stereo_msgs;
     use super::trajectory_msgs;
+    use super::unique_identifier_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
@@ -8844,6 +8891,7 @@ pub mod service_msgs {
     pub struct ServiceEventInfo {
         pub r#event_type: u8,
         pub r#stamp: builtin_interfaces::Time,
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
         pub r#client_gid: [u8; 16],
         pub r#sequence_number: i64,
     }
@@ -8914,6 +8962,7 @@ pub mod shape_msgs {
     use super::std_srvs;
     use super::stereo_msgs;
     use super::trajectory_msgs;
+    use super::unique_identifier_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
@@ -9163,6 +9212,7 @@ pub mod std_msgs {
     use super::std_srvs;
     use super::stereo_msgs;
     use super::trajectory_msgs;
+    use super::unique_identifier_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
@@ -10830,6 +10880,7 @@ pub mod std_srvs {
     use super::std_msgs;
     use super::stereo_msgs;
     use super::trajectory_msgs;
+    use super::unique_identifier_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
@@ -11048,6 +11099,7 @@ pub mod stereo_msgs {
     use super::std_msgs;
     use super::std_srvs;
     use super::trajectory_msgs;
+    use super::unique_identifier_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
@@ -11249,6 +11301,7 @@ pub mod trajectory_msgs {
     use super::std_msgs;
     use super::std_srvs;
     use super::stereo_msgs;
+    use super::unique_identifier_msgs;
     use super::visualization_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
@@ -11807,6 +11860,56 @@ float64 z"####,
     );
 }
 #[allow(unused_imports)]
+pub mod unique_identifier_msgs {
+    use super::actionlib_msgs;
+    use super::builtin_interfaces;
+    use super::diagnostic_msgs;
+    use super::geometry_msgs;
+    use super::nav_msgs;
+    use super::ros2_test_msgs;
+    use super::sensor_msgs;
+    use super::service_msgs;
+    use super::shape_msgs;
+    use super::std_msgs;
+    use super::std_srvs;
+    use super::stereo_msgs;
+    use super::trajectory_msgs;
+    use super::visualization_msgs;
+    #[allow(non_snake_case)]
+    #[allow(dead_code)]
+    #[derive(
+        :: roslibrust :: codegen :: Deserialize,
+        :: roslibrust :: codegen :: Serialize,
+        :: roslibrust :: codegen :: SmartDefault,
+        Debug,
+        Clone,
+        PartialEq,
+    )]
+    #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
+    pub struct UUID {
+        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
+        pub r#uuid: [u8; 16],
+    }
+    ::roslibrust::impl_ros_message_type!(
+        UUID,
+        "unique_identifier_msgs/UUID",
+        "fec2a93b6f5367ee8112c9c0b41ff310",
+        r####"# A universally unique identifier (UUID).
+#
+#  http://en.wikipedia.org/wiki/Universally_unique_identifier
+#  http://tools.ietf.org/html/rfc4122.html
+
+uint8[16] uuid"####,
+        "unique_identifier_msgs::msg::dds_::UUID_",
+        &[
+            0x1b, 0x8e, 0x8a, 0xca, 0x95, 0x8c, 0xbe, 0xa2, 0x8f, 0xe6, 0xef, 0x60, 0xbf, 0x6c,
+            0x19, 0xb6, 0x83, 0xc9, 0x7a, 0x9e, 0xf6, 0x0b, 0xb3, 0x47, 0x52, 0x06, 0x7d, 0x0f,
+            0x2f, 0x7a, 0xb4, 0x37,
+        ],
+    );
+}
+#[allow(unused_imports)]
 pub mod visualization_msgs {
     use super::actionlib_msgs;
     use super::builtin_interfaces;
@@ -11821,6 +11924,7 @@ pub mod visualization_msgs {
     use super::std_srvs;
     use super::stereo_msgs;
     use super::trajectory_msgs;
+    use super::unique_identifier_msgs;
     #[allow(non_snake_case)]
     #[allow(dead_code)]
     #[derive(
@@ -21044,6 +21148,7 @@ pub static MESSAGE_REGISTRY: ::roslibrust::MessageRegistry = ::roslibrust::Messa
     ros2_test_msgs::BoundedInt::DESCRIPTION,
     ros2_test_msgs::BoundedReferenced::DESCRIPTION,
     ros2_test_msgs::BoundedString::DESCRIPTION,
+    ros2_test_msgs::ByteArrays::DESCRIPTION,
     ros2_test_msgs::Char::DESCRIPTION,
     ros2_test_msgs::Defaults::DESCRIPTION,
     ros2_test_msgs::Stamped::DESCRIPTION,
@@ -21114,6 +21219,7 @@ pub static MESSAGE_REGISTRY: ::roslibrust::MessageRegistry = ::roslibrust::Messa
     trajectory_msgs::JointTrajectoryPoint::DESCRIPTION,
     trajectory_msgs::MultiDOFJointTrajectory::DESCRIPTION,
     trajectory_msgs::MultiDOFJointTrajectoryPoint::DESCRIPTION,
+    unique_identifier_msgs::UUID::DESCRIPTION,
     visualization_msgs::ImageMarker::DESCRIPTION,
     visualization_msgs::InteractiveMarker::DESCRIPTION,
     visualization_msgs::InteractiveMarkerControl::DESCRIPTION,
