@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added `MessageDescriptor::default_message()` for constructing a runtime-selected message using
+  its generated `Default` implementation, including defaults declared in ROS 2 message files.
+
+### Changed
+
+- `RosMessageType` now requires `Default` so every descriptor can construct an initial message.
+
 ## 0.24.0 - September 18th, 2026
 
 ### Added

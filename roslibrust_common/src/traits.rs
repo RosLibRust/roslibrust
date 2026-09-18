@@ -21,10 +21,19 @@ pub struct ServiceInfo {
     pub type_name: String,
 }
 
-/// Fundamental traits for message types this crate works with
+/// Fundamental traits for message types this crate works with.
+///
+/// `Default` supplies the initial value used by [`MessageDescriptor::default_message`].
 /// This trait will be satisfied for any types generated with this crate's message_gen functionality
 pub trait RosMessageType:
-    'static + serde::de::DeserializeOwned + Send + serde::Serialize + Sync + Clone + std::fmt::Debug
+    'static
+    + serde::de::DeserializeOwned
+    + Send
+    + serde::Serialize
+    + Sync
+    + Clone
+    + Default
+    + std::fmt::Debug
 {
     /// Runtime metadata and format-independent operations for this message type.
     ///
