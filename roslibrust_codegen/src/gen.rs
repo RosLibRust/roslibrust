@@ -290,15 +290,31 @@ fn generate_field_definition(
                 quote! {}
             }
         }
-        // Fixed-length arrays larger than 32 need BigArray for trait implementations
         ArrayType::FixedLength(len) if *len > MAX_FIXED_ARRAY_LEN => {
-            quote! { #[serde(with = "::roslibrust::codegen::BigArray")] }
+            if is_uint8_field && options.roslibrust_serde {
+                quote! {
+                    #[serde(
+                        serialize_with = "::roslibrust::codegen::serde_rosmsg_bytes::fixed_serialize",
+                        deserialize_with = "::roslibrust::codegen::serde_rosmsg_bytes::fixed_deserialize"
+                    )]
+                }
+            } else {
+                quote! { #[serde(with = "::roslibrust::codegen::BigArray")] }
+            }
         }
-        // Fixed-length arrays <= 32 have automatic trait implementations
         ArrayType::FixedLength(_) => {
-            if is_uint8_field && !options.roslibrust_serde {
-                // Use serde_bytes for efficient serialization of byte arrays
-                quote! { #[serde(with = "serde_bytes")] }
+            if is_uint8_field {
+                if options.roslibrust_serde {
+                    quote! {
+                        #[serde(
+                            serialize_with = "::roslibrust::codegen::serde_rosmsg_bytes::fixed_serialize",
+                            deserialize_with = "::roslibrust::codegen::serde_rosmsg_bytes::fixed_deserialize"
+                        )]
+                    }
+                } else {
+                    // Use serde_bytes for efficient serialization of byte arrays
+                    quote! { #[serde(with = "serde_bytes")] }
+                }
             } else {
                 quote! {}
             }
