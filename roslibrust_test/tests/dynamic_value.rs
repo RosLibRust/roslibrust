@@ -14,10 +14,6 @@ fn generated_types_expose_their_own_description() {
 
     assert_eq!(descriptor.ros_type_name, "std_msgs/String");
     assert_eq!(
-        roslibrust_test::ros1::std_msgs::String::ROS_TYPE_NAME,
-        descriptor.ros_type_name
-    );
-    assert_eq!(
         MESSAGE_REGISTRY.get("std_msgs/String").unwrap().md5sum,
         descriptor.md5sum
     );

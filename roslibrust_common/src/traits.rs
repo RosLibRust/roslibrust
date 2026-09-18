@@ -32,17 +32,6 @@ pub trait RosMessageType:
     /// the runtime-selected message API. Implementations should construct it with
     /// [`MessageDescriptor::new`], which derives the format-independent operations from `Self`.
     const DESCRIPTION: MessageDescriptor;
-
-    /// ROS 1 type name, projected from [`Self::DESCRIPTION`] for compatibility.
-    const ROS_TYPE_NAME: &'static str = Self::DESCRIPTION.ros_type_name;
-    /// ROS 1 message hash, projected from [`Self::DESCRIPTION`] for compatibility.
-    const MD5SUM: &'static str = Self::DESCRIPTION.md5sum;
-    /// ROS 1 message definition, projected from [`Self::DESCRIPTION`] for compatibility.
-    const DEFINITION: &'static str = Self::DESCRIPTION.definition;
-    /// ROS 2 DDS type name, projected from [`Self::DESCRIPTION`] for compatibility.
-    const ROS2_TYPE_NAME: &'static str = Self::DESCRIPTION.ros2_type_name;
-    /// ROS 2 type hash, projected from [`Self::DESCRIPTION`] for compatibility.
-    const ROS2_HASH: &'static [u8; 32] = Self::DESCRIPTION.ros2_hash;
 }
 
 // This special impl allows for services with no args / returns
