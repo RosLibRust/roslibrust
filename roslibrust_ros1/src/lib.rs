@@ -48,6 +48,19 @@ pub fn serialize_dynamic_message(message: &DynamicMessage) -> DynamicMessageResu
     Ok(bytes)
 }
 
+/// Serialize a runtime-selected message with its four-byte TCPROS frame length.
+fn serialize_framed_dynamic_message(message: &DynamicMessage) -> DynamicMessageResult<Vec<u8>> {
+    let body = serialize_dynamic_message(message)?;
+    let length = u32::try_from(body.len()).map_err(|_| DynamicMessageError::Serialize {
+        type_name: message.descriptor().ros_type_name,
+        message: "message body exceeds the ROS1 u32 length limit".to_owned(),
+    })?;
+    let mut framed = Vec::with_capacity(body.len() + 4);
+    framed.extend_from_slice(&length.to_le_bytes());
+    framed.extend_from_slice(&body);
+    Ok(framed)
+}
+
 /// Deserialize a ROS1 message body using a runtime-selected message descriptor.
 pub fn deserialize_dynamic_message(
     descriptor: &'static MessageDescriptor,
@@ -173,14 +186,8 @@ impl DynamicPublish for DynamicPublisher {
             )));
         }
 
-        let body = serialize_dynamic_message(data)
+        let framed = serialize_framed_dynamic_message(data)
             .map_err(|error| Error::SerializationError(error.to_string()))?;
-        let length = u32::try_from(body.len()).map_err(|_| {
-            Error::SerializationError("message body exceeds the ROS1 u32 length limit".to_owned())
-        })?;
-        let mut framed = Vec::with_capacity(body.len() + 4);
-        framed.extend_from_slice(&length.to_le_bytes());
-        framed.extend_from_slice(&body);
         self.publisher
             .publish(framed)
             .await
@@ -392,9 +399,7 @@ mod dynamic_message_tests {
                 value: DynamicValue::String("constructed message".to_owned()),
             }]))
             .unwrap();
-        let body = serialize_dynamic_message(&message).unwrap();
-        let mut frame = Vec::from((body.len() as u32).to_le_bytes());
-        frame.extend_from_slice(&body);
+        let frame = serialize_framed_dynamic_message(&message).unwrap();
 
         assert_eq!(
             deserialize_framed_dynamic_message(descriptor, &frame)

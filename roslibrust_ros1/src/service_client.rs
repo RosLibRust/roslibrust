@@ -117,14 +117,14 @@ impl DynamicService for DynamicServiceClient {
                 request.descriptor().ros_type_name
             )));
         }
-        let request_payload = crate::serialize_dynamic_message(request)
+        let request_payload = crate::serialize_framed_dynamic_message(request)
             .map_err(|error| Error::SerializationError(error.to_string()))?;
         let (response_tx, response_rx) = oneshot::channel();
         self.sender
             .send((request_payload, response_tx))
             .map_err(|_| Error::Disconnected)?;
         let response = response_rx.await.map_err(|_| Error::Disconnected)??;
-        crate::deserialize_dynamic_message(self.descriptor.response, &response)
+        crate::deserialize_framed_dynamic_message(self.descriptor.response, &response)
             .map_err(|error| Error::SerializationError(error.to_string()))
     }
 }
