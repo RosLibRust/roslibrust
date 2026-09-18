@@ -15,7 +15,33 @@ mod integration_tests {
     // On my laptop test was ~90% reliable at 10ms
     // Had 1 spurious github failure at 100
     const TIMEOUT: Duration = Duration::from_millis(500);
+    const CONNECTION_ATTEMPTS: usize = 5;
     const LOCAL_WS: &str = "ws://localhost:9090";
+
+    /// Establish a test connection without making every subsequent client operation wait longer.
+    ///
+    /// rosbridge can briefly stop accepting websocket connections while the ROS graph settles,
+    /// particularly with rmw_zenoh. Keep the short operation timeout, but tolerate that transient
+    /// unavailability during test setup.
+    async fn connect() -> Result<ClientHandle, Error> {
+        for attempt in 1..=CONNECTION_ATTEMPTS {
+            match ClientHandle::new_with_options(
+                ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT),
+            )
+            .await
+            {
+                Ok(client) => return Ok(client),
+                Err(error) if attempt < CONNECTION_ATTEMPTS => {
+                    log::warn!(
+                        "Failed to connect to rosbridge on attempt {attempt}/{CONNECTION_ATTEMPTS}: {error}"
+                    );
+                }
+                Err(error) => return Err(error),
+            }
+        }
+
+        unreachable!("connection attempt loop always runs at least once")
+    }
 
     #[cfg(feature = "ros1_test")]
     use roslibrust_test::ros1::*;
@@ -40,11 +66,7 @@ mod integration_tests {
     #[test_log::test(tokio::test)]
     async fn self_publish() {
         const TOPIC: &str = "self_publish";
-        // 100ms allowance for connecting so tests still fails
-        let client = timeout(TIMEOUT, ClientHandle::new(LOCAL_WS))
-            .await
-            .expect("Failed to create client in time")
-            .unwrap();
+        let client = connect().await.expect("Failed to create client in time");
 
         timeout(TIMEOUT, client.advertise::<Header>(TOPIC))
             .await
@@ -89,9 +111,7 @@ mod integration_tests {
     // TODO this test is good, but actually shows how bad the ergonomics are and how we want to improve them!
     // We want a failed message parse / type mismatch to come through to the subscriber
     async fn bad_message_recv() -> TestResult {
-        let client =
-            ClientHandle::new_with_options(ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT))
-                .await?;
+        let client = connect().await?;
 
         let publisher = client.advertise::<Time>("/bad_message_recv/topic").await?;
 
@@ -132,18 +152,16 @@ mod integration_tests {
         // assert!(ClientHandle::new_with_options(opts).await.is_err());
 
         // Doesn't timeout if given enough time
-        let opts = ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT);
-        assert!(ClientHandle::new_with_options(opts).await.is_ok());
+        assert!(connect().await.is_ok());
     }
 
     /// This test doesn't actually do much, but instead confirms the internal structure of the lib is multi-threaded correctly
     /// The whole goal here is to catch send / sync complier errors
     #[test_log::test(tokio::test)]
     async fn parallel_construction() {
-        let client = timeout(TIMEOUT, ClientHandle::new(LOCAL_WS))
+        let client = connect()
             .await
-            .expect("Timeout constructing client")
-            .expect("Failed to construct client");
+            .expect("Failed to construct client after retries");
 
         let client_1 = client.clone();
         tokio::task::spawn(async move {
@@ -175,9 +193,7 @@ mod integration_tests {
         const TOPIC: &str = "/unadvertise";
         debug!("Start unadvertise test");
 
-        let opt = ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT);
-
-        let client = ClientHandle::new_with_options(opt).await?;
+        let client = connect().await?;
         let publisher = client.advertise(TOPIC).await?;
         debug!("Got publisher");
 
@@ -219,8 +235,7 @@ mod integration_tests {
     #[cfg(feature = "ros1_test")]
     #[test_log::test(tokio::test)]
     async fn self_service_call() -> TestResult {
-        let opt = ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT);
-        let client = ClientHandle::new_with_options(opt).await?;
+        let client = connect().await?;
 
         let cb = |_req: SetBoolRequest| {
             Ok(SetBoolResponse {
@@ -262,8 +277,7 @@ mod integration_tests {
 
     #[test_log::test(tokio::test)]
     async fn test_strong_and_weak_client_counts() -> TestResult {
-        let opt = ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT);
-        let client = ClientHandle::new_with_options(opt).await?;
+        let client = connect().await?;
         // Can't be certain what state the spin loop is in (it could be upgraded from WeakPtr) so we sum the two
         assert_eq!(
             Arc::strong_count(&client.inner) + Arc::weak_count(&client.inner),
@@ -292,9 +306,7 @@ mod integration_tests {
 
     #[test_log::test(tokio::test)]
     async fn test_disconnect_returns_error() -> TestResult {
-        let client =
-            ClientHandle::new_with_options(ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT))
-                .await?;
+        let client = connect().await?;
         client
             .is_disconnected
             .store(true, std::sync::atomic::Ordering::Relaxed);
@@ -307,9 +319,7 @@ mod integration_tests {
 
     #[test_log::test(tokio::test)]
     async fn working_with_char() -> TestResult {
-        let client =
-            ClientHandle::new_with_options(ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT))
-                .await?;
+        let client = connect().await?;
 
         // Thing for us to figure out, and don't ask me why, but this test is WAY more reliable if you advertise first then subscribe
         // Unclear if this is our fault or rosbridge's
@@ -341,9 +351,7 @@ mod integration_tests {
         // When roslibrust experiences a server side error, it returns a string instead of our message
         // We are trying to force that here, and ensure we correctly report the error
 
-        let client =
-            ClientHandle::new_with_options(ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT))
-                .await?;
+        let client = connect().await?;
 
         match client
             .call_service::<std_srvs::Trigger>("/not_real", std_srvs::TriggerRequest {})
@@ -481,10 +489,7 @@ mod integration_tests {
     // Test image roundtrip, had reported issues with images over rosbridge
     #[test_log::test(tokio::test)]
     async fn test_image_roundtrip() {
-        let client =
-            ClientHandle::new_with_options(ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT))
-                .await
-                .expect("Failed to construct client");
+        let client = connect().await.expect("Failed to construct client");
 
         let publisher = client
             .advertise("/test_message_roundtrip")
@@ -534,10 +539,7 @@ mod integration_tests {
     #[cfg(feature = "ros2_test")]
     #[test_log::test(tokio::test)]
     async fn test_fixed_byte_array_roundtrip() {
-        let client =
-            ClientHandle::new_with_options(ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT))
-                .await
-                .expect("Failed to construct client");
+        let client = connect().await.expect("Failed to construct client");
 
         let publisher = client
             .advertise("/test_fixed_byte_array_roundtrip")
