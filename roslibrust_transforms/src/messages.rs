@@ -3442,7 +3442,7 @@ uint32 stride  # stride of given dimension"####,
             ],
         );
     }
-    use ::roslibrust::RosMessageType as _;
+    use ::roslibrust::{RosMessageType as _, RosServiceType as _};
     #[doc = r" Runtime lookup and codecs for all generated ROS message types."]
     #[allow(dead_code)]
     pub static MESSAGE_REGISTRY: ::roslibrust::MessageRegistry =
@@ -3512,6 +3512,10 @@ uint32 stride  # stride of given dimension"####,
             std_msgs::UInt8::DESCRIPTION,
             std_msgs::UInt8MultiArray::DESCRIPTION,
         ]);
+    #[doc = r" Runtime lookup and codecs for all generated ROS service types."]
+    #[allow(dead_code)]
+    pub static SERVICE_REGISTRY: ::roslibrust::ServiceRegistry =
+        ::roslibrust::ServiceRegistry::new(&[]);
 
     /// TFMessage is the message type published on /tf and /tf_static topics.
     /// It contains an array of geometry_msgs/TransformStamped messages.
@@ -7552,7 +7556,7 @@ uint32 stride  # stride of given dimension"####,
             ],
         );
     }
-    use ::roslibrust::RosMessageType as _;
+    use ::roslibrust::{RosMessageType as _, RosServiceType as _};
     #[doc = r" Runtime lookup and codecs for all generated ROS message types."]
     #[allow(dead_code)]
     pub static MESSAGE_REGISTRY: ::roslibrust::MessageRegistry =
@@ -7620,6 +7624,10 @@ uint32 stride  # stride of given dimension"####,
             std_msgs::UInt8::DESCRIPTION,
             std_msgs::UInt8MultiArray::DESCRIPTION,
         ]);
+    #[doc = r" Runtime lookup and codecs for all generated ROS service types."]
+    #[allow(dead_code)]
+    pub static SERVICE_REGISTRY: ::roslibrust::ServiceRegistry =
+        ::roslibrust::ServiceRegistry::new(&[]);
 
     /// TFMessage is the message type published on /tf and /tf_static topics.
     /// It contains an array of geometry_msgs/TransformStamped messages.
