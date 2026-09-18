@@ -39,6 +39,237 @@ pub enum DynamicValue {
     Message(Vec<DynamicField>),
 }
 
+/// An index that can access a member of a [`DynamicValue`].
+///
+/// String indices address fields of [`DynamicValue::Message`], while `usize` indices address
+/// elements of [`DynamicValue::Sequence`]. Other value/index combinations return `None`.
+pub trait DynamicValueIndex {
+    fn get(self, value: &DynamicValue) -> Option<&DynamicValue>;
+    fn get_mut(self, value: &mut DynamicValue) -> Option<&mut DynamicValue>;
+}
+
+impl DynamicValueIndex for usize {
+    fn get(self, value: &DynamicValue) -> Option<&DynamicValue> {
+        value.as_sequence()?.get(self)
+    }
+
+    fn get_mut(self, value: &mut DynamicValue) -> Option<&mut DynamicValue> {
+        value.as_sequence_mut()?.get_mut(self)
+    }
+}
+
+impl DynamicValueIndex for &str {
+    fn get(self, value: &DynamicValue) -> Option<&DynamicValue> {
+        value
+            .as_message()?
+            .iter()
+            .find(|field| field.name == self)
+            .map(|field| &field.value)
+    }
+
+    fn get_mut(self, value: &mut DynamicValue) -> Option<&mut DynamicValue> {
+        value
+            .as_message_mut()?
+            .iter_mut()
+            .find(|field| field.name == self)
+            .map(|field| &mut field.value)
+    }
+}
+
+impl DynamicValueIndex for &String {
+    fn get(self, value: &DynamicValue) -> Option<&DynamicValue> {
+        DynamicValueIndex::get(self.as_str(), value)
+    }
+
+    fn get_mut(self, value: &mut DynamicValue) -> Option<&mut DynamicValue> {
+        DynamicValueIndex::get_mut(self.as_str(), value)
+    }
+}
+
+impl DynamicValueIndex for String {
+    fn get(self, value: &DynamicValue) -> Option<&DynamicValue> {
+        DynamicValueIndex::get(self.as_str(), value)
+    }
+
+    fn get_mut(self, value: &mut DynamicValue) -> Option<&mut DynamicValue> {
+        DynamicValueIndex::get_mut(self.as_str(), value)
+    }
+}
+
+macro_rules! scalar_accessors {
+    ($(($is:ident, $as:ident, $variant:ident, $type:ty)),+ $(,)?) => {
+        impl DynamicValue {
+            $(
+                pub fn $is(&self) -> bool {
+                    matches!(self, Self::$variant(_))
+                }
+
+                pub fn $as(&self) -> Option<$type> {
+                    match self {
+                        Self::$variant(value) => Some(*value),
+                        _ => None,
+                    }
+                }
+            )+
+        }
+    };
+}
+
+scalar_accessors! {
+    (is_bool, as_bool, Bool, bool),
+    (is_i8, as_i8, I8, i8),
+    (is_i16, as_i16, I16, i16),
+    (is_i32, as_i32, I32, i32),
+    (is_i64, as_i64, I64, i64),
+    (is_u8, as_u8, U8, u8),
+    (is_u16, as_u16, U16, u16),
+    (is_u32, as_u32, U32, u32),
+    (is_u64, as_u64, U64, u64),
+    (is_f32, as_f32, F32, f32),
+    (is_f64, as_f64, F64, f64),
+    (is_char, as_char, Char, char),
+}
+
+impl DynamicValue {
+    /// Return a member by message field name or sequence index.
+    pub fn get<I: DynamicValueIndex>(&self, index: I) -> Option<&DynamicValue> {
+        index.get(self)
+    }
+
+    /// Return a mutable member by message field name or sequence index.
+    pub fn get_mut<I: DynamicValueIndex>(&mut self, index: I) -> Option<&mut DynamicValue> {
+        index.get_mut(self)
+    }
+
+    pub fn is_unit(&self) -> bool {
+        matches!(self, Self::Unit)
+    }
+
+    /// Alias for [`Self::is_unit`] matching `serde_json::Value` terminology.
+    pub fn is_null(&self) -> bool {
+        self.is_unit()
+    }
+
+    /// Alias for [`Self::is_bool`] matching `serde_json::Value` terminology.
+    pub fn is_boolean(&self) -> bool {
+        self.is_bool()
+    }
+
+    pub fn is_signed_integer(&self) -> bool {
+        matches!(
+            self,
+            Self::I8(_) | Self::I16(_) | Self::I32(_) | Self::I64(_)
+        )
+    }
+
+    pub fn is_unsigned_integer(&self) -> bool {
+        matches!(
+            self,
+            Self::U8(_) | Self::U16(_) | Self::U32(_) | Self::U64(_)
+        )
+    }
+
+    pub fn is_integer(&self) -> bool {
+        self.is_signed_integer() || self.is_unsigned_integer()
+    }
+
+    pub fn is_float(&self) -> bool {
+        matches!(self, Self::F32(_) | Self::F64(_))
+    }
+
+    pub fn is_number(&self) -> bool {
+        self.is_integer() || self.is_float()
+    }
+
+    pub fn is_string(&self) -> bool {
+        matches!(self, Self::String(_))
+    }
+
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            Self::String(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn is_bytes(&self) -> bool {
+        matches!(self, Self::Bytes(_))
+    }
+
+    pub fn as_bytes(&self) -> Option<&[u8]> {
+        match self {
+            Self::Bytes(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn is_sequence(&self) -> bool {
+        matches!(self, Self::Sequence(_))
+    }
+
+    pub fn as_sequence(&self) -> Option<&Vec<DynamicValue>> {
+        match self {
+            Self::Sequence(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn as_sequence_mut(&mut self) -> Option<&mut Vec<DynamicValue>> {
+        match self {
+            Self::Sequence(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    /// Alias for [`Self::is_sequence`] matching `serde_json::Value` terminology.
+    pub fn is_array(&self) -> bool {
+        self.is_sequence()
+    }
+
+    /// Alias for [`Self::as_sequence`] matching `serde_json::Value` terminology.
+    pub fn as_array(&self) -> Option<&Vec<DynamicValue>> {
+        self.as_sequence()
+    }
+
+    /// Alias for [`Self::as_sequence_mut`] matching `serde_json::Value` terminology.
+    pub fn as_array_mut(&mut self) -> Option<&mut Vec<DynamicValue>> {
+        self.as_sequence_mut()
+    }
+
+    pub fn is_message(&self) -> bool {
+        matches!(self, Self::Message(_))
+    }
+
+    pub fn as_message(&self) -> Option<&Vec<DynamicField>> {
+        match self {
+            Self::Message(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn as_message_mut(&mut self) -> Option<&mut Vec<DynamicField>> {
+        match self {
+            Self::Message(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    /// Alias for [`Self::is_message`] matching `serde_json::Value` terminology.
+    pub fn is_object(&self) -> bool {
+        self.is_message()
+    }
+
+    /// Alias for [`Self::as_message`] matching `serde_json::Value` terminology.
+    pub fn as_object(&self) -> Option<&Vec<DynamicField>> {
+        self.as_message()
+    }
+
+    /// Alias for [`Self::as_message_mut`] matching `serde_json::Value` terminology.
+    pub fn as_object_mut(&mut self) -> Option<&mut Vec<DynamicField>> {
+        self.as_message_mut()
+    }
+}
+
 /// Serialize the natural value shape without attaching enum variant names.
 ///
 /// This is intended for human-readable interchange formats. Format-specific policies, such as
@@ -250,6 +481,12 @@ impl DynamicMessage {
 
     pub fn value(&self) -> &DynamicValue {
         &self.value
+    }
+
+    /// Return a top-level field or sequence element without exposing mutable access to the
+    /// schema-validated value.
+    pub fn get<I: DynamicValueIndex>(&self, index: I) -> Option<&DynamicValue> {
+        self.value.get(index)
     }
 
     pub fn into_value(self) -> DynamicValue {

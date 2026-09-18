@@ -47,6 +47,40 @@ schema's exact scalar widths. A raw `DynamicValue::Sequence` can temporarily con
 elements because it has no element schema; it cannot become a `DynamicMessage` for a homogeneous
 ROS sequence unless every element validates.
 
+## Inspecting values
+
+`DynamicValue` has `serde_json::Value`-style accessors for walking values without matching every
+enum variant:
+
+```rust,ignore
+let message = MESSAGE_REGISTRY.message_from(
+    "geometry_msgs/Point",
+    &serde_json::json!({"x": 1.0, "y": 2.0, "z": 3.0}),
+)?;
+
+assert!(message.value().is_object());
+assert_eq!(message.get("x").and_then(DynamicValue::as_f64), Some(1.0));
+```
+
+Field names and sequence indices can be passed to `get`:
+
+```rust,ignore
+let frame_id = message
+    .get("header")
+    .and_then(|header| header.get("frame_id"))
+    .and_then(DynamicValue::as_str);
+
+let first = message
+    .get("values")
+    .and_then(|values| values.get(0));
+```
+
+The scalar accessors retain ROS type information: `as_i16()` only succeeds for `I16`, rather than
+silently converting another integer width. `is_number()`, `is_integer()`, and related category
+checks are available when the exact width is unimportant. Raw `DynamicValue` also provides
+`get_mut`, `as_array_mut`, and `as_object_mut`. `DynamicMessage` intentionally exposes only
+read-only access, preserving the guarantee that its contents satisfy its descriptor.
+
 ```rust,ignore
 use roslibrust::{DynamicField, DynamicValue};
 

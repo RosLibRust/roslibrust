@@ -24,6 +24,57 @@ fn dynamic_value_uses_its_natural_serde_shape() {
     );
 }
 
+#[test]
+fn values_can_be_inspected_and_walked_like_serde_json_values() {
+    let mut value = DynamicValue::Message(vec![
+        field("name", DynamicValue::String("robot".to_owned())),
+        field(
+            "samples",
+            DynamicValue::Sequence(vec![DynamicValue::I16(-1), DynamicValue::I16(2)]),
+        ),
+    ]);
+
+    assert!(value.is_message());
+    assert!(value.is_object());
+    assert_eq!(
+        value.get("name").and_then(DynamicValue::as_str),
+        Some("robot")
+    );
+    assert!(value.get("samples").unwrap().is_array());
+    assert_eq!(
+        value
+            .get("samples")
+            .and_then(|samples| samples.get(1))
+            .and_then(DynamicValue::as_i16),
+        Some(2)
+    );
+    assert_eq!(value.get("samples").unwrap().get(99), None);
+    assert_eq!(value.get("missing"), None);
+
+    *value.get_mut("samples").unwrap().get_mut(0).unwrap() = DynamicValue::I16(10);
+    assert_eq!(
+        value.get("samples").unwrap().get(0).unwrap().as_i16(),
+        Some(10)
+    );
+
+    // Width-specific accessors do not silently coerce the schema's scalar type.
+    assert_eq!(value.get("samples").unwrap().get(0).unwrap().as_i64(), None);
+    assert!(value.get("samples").unwrap().get(0).unwrap().is_number());
+}
+
+#[test]
+fn dynamic_message_provides_read_only_top_level_access() {
+    let message = MESSAGE_REGISTRY
+        .message_from("std_msgs/String", &serde_json::json!({"data": "hello"}))
+        .unwrap();
+
+    assert_eq!(
+        message.get("data").and_then(DynamicValue::as_str),
+        Some("hello")
+    );
+    assert_eq!(message.get("missing"), None);
+}
+
 fn assert_invalid(type_name: &str, value: DynamicValue, expected: &str) {
     let error = MESSAGE_REGISTRY
         .from_value(type_name, value)
