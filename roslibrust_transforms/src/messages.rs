@@ -1987,6 +1987,7 @@ string frame_id"####,
         pub struct ServiceEventInfo {
             pub r#event_type: u8,
             pub r#stamp: builtin_interfaces::Time,
+            #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
             pub r#client_gid: [u8; 16],
             pub r#sequence_number: i64,
         }
@@ -5837,6 +5838,7 @@ uint32 nanosec"####,
         pub struct ServiceEventInfo {
             pub r#event_type: u8,
             pub r#stamp: builtin_interfaces::Time,
+            #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
             pub r#client_gid: [u8; 16],
             pub r#sequence_number: i64,
         }
