@@ -31,11 +31,9 @@ enum GenericHeader {
 impl RosMessageType for GenericHeader {
     /// Note: this trick only works (well) if the messages we're being generic over have
     /// the same ROS type name.
-    const ROS_TYPE_NAME: &'static str = "std_msgs/Header";
-
-    // "*" is used as a wildcard to match any md5sum
-    const MD5SUM: &'static str = "*";
-    const DEFINITION: &'static str = "";
+    // "*" is used as a wildcard to match any md5sum.
+    const DESCRIPTION: roslibrust::MessageDescriptor =
+        roslibrust::MessageDescriptor::new::<Self>("std_msgs/Header", "*", "", "", &[0; 32]);
 }
 
 /// Sets up a subscriber that could get either of two versions of a message

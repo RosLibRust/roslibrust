@@ -57,9 +57,8 @@ pub struct ShapeShifter(Vec<u8>);
 
 // The equivalent of rospy AnyMsg or C++ ShapeShifter, subscribe_any() uses this type
 impl RosMessageType for ShapeShifter {
-    const ROS_TYPE_NAME: &'static str = "*";
-    const MD5SUM: &'static str = "*";
-    const DEFINITION: &'static str = "";
+    const DESCRIPTION: MessageDescriptor =
+        MessageDescriptor::new::<Self>("*", "*", "", "", &[0; 32]);
 }
 
 /// Contains functions for calculating md5sums of message definitions.
@@ -71,6 +70,26 @@ pub mod md5sum;
 /// Runtime metadata and type-erased values for generated ROS messages.
 pub mod dynamic;
 pub use dynamic::*;
+
+/// Implements [`RosMessageType`] from one canonical set of message metadata.
+///
+/// This is an implementation detail of generated message source. Use
+/// [`MessageDescriptor::new`] when implementing [`RosMessageType`] by hand.
+#[doc(hidden)]
+#[macro_export]
+macro_rules! impl_ros_message_type {
+    ($message_type:ty, $ros_type_name:expr, $md5sum:expr, $definition:expr, $ros2_type_name:expr, $ros2_hash:expr $(,)?) => {
+        impl $crate::RosMessageType for $message_type {
+            const DESCRIPTION: $crate::MessageDescriptor = $crate::MessageDescriptor::new::<Self>(
+                $ros_type_name,
+                $md5sum,
+                $definition,
+                $ros2_type_name,
+                $ros2_hash,
+            );
+        }
+    };
+}
 
 /// Contains the generic traits represent a pubsub system and service system.
 /// These traits will be implemented for specific backends to provides access to "ROS Like" functionality.

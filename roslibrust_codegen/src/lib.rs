@@ -693,32 +693,15 @@ pub fn generate_rust_ros_message_definitions(
 ) -> Result<TokenStream, Error> {
     // Keep both module output and registry iteration deterministic regardless of discovery order.
     messages.sort_by_key(|message| message.get_full_name());
-    let registry_descriptors = messages
+    let registry_entries = messages
         .iter()
-        .enumerate()
-        .map(|(index, message)| {
+        .map(|message| {
             let package = format_ident!("{}", message.get_package_name());
             let message_type = format_ident!("{}", message.get_short_name());
-            let descriptor = format_ident!("__ROSLIBRUST_MESSAGE_DESCRIPTOR_{index}");
             quote! {
-                const #descriptor: ::roslibrust::MessageDescriptor =
-                    ::roslibrust::MessageDescriptor::new(
-                    <#package::#message_type as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
-                    <#package::#message_type as ::roslibrust::RosMessageType>::MD5SUM,
-                    <#package::#message_type as ::roslibrust::RosMessageType>::DEFINITION,
-                    <#package::#message_type as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
-                    <#package::#message_type as ::roslibrust::RosMessageType>::ROS2_HASH,
-                    ::roslibrust::MessageOperations::new(
-                        ::roslibrust::dynamic::support::normalize::<#package::#message_type>,
-                        ::roslibrust::dynamic::support::serialize::<#package::#message_type>,
-                        ::roslibrust::dynamic::support::deserialize::<#package::#message_type>,
-                    ),
-                );
+                #package::#message_type::DESCRIPTION
             }
         })
-        .collect::<Vec<_>>();
-    let registry_entries = (0..registry_descriptors.len())
-        .map(|index| format_ident!("__ROSLIBRUST_MESSAGE_DESCRIPTOR_{index}"))
         .collect::<Vec<_>>();
     let mut modules_to_struct_definitions: BTreeMap<String, Vec<TokenStream>> = BTreeMap::new();
 
@@ -757,7 +740,9 @@ pub fn generate_rust_ros_message_definitions(
     Ok(quote! {
         #(#module_definitions)*
 
-        #(#registry_descriptors)*
+        // Bring the trait-provided associated constant into scope while keeping the generated
+        // registry entries as concise as `std_msgs::String::DESCRIPTION`.
+        use ::roslibrust::RosMessageType as _;
 
         /// Runtime lookup and codecs for all generated ROS message types.
         #[allow(dead_code)]

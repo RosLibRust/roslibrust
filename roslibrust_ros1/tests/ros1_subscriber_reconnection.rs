@@ -14,7 +14,7 @@ mod tests {
     // TODO a lot of the helpers in this file could be made more generic to help other testing efforts
 
     const TOPIC_TYPE: &str = "std_msgs/String";
-    const MD5SUM: &str = roslibrust_test::ros1::std_msgs::String::MD5SUM;
+    const MD5SUM: &str = roslibrust_test::ros1::std_msgs::String::DESCRIPTION.md5sum;
 
     /// Helper to build a simple connection header for our mock publisher
     fn build_connection_header(

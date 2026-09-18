@@ -1,4 +1,4 @@
-use roslibrust::{DynamicField, DynamicMessageError, DynamicValue};
+use roslibrust::{DynamicField, DynamicMessageError, DynamicValue, RosMessageType};
 use roslibrust_test::ros1::MESSAGE_REGISTRY;
 
 fn field(name: &str, value: DynamicValue) -> DynamicField {
@@ -6,6 +6,29 @@ fn field(name: &str, value: DynamicValue) -> DynamicField {
         name: name.to_owned(),
         value,
     }
+}
+
+#[test]
+fn generated_types_expose_their_own_description() {
+    let descriptor = &roslibrust_test::ros1::std_msgs::String::DESCRIPTION;
+
+    assert_eq!(descriptor.ros_type_name, "std_msgs/String");
+    assert_eq!(
+        roslibrust_test::ros1::std_msgs::String::ROS_TYPE_NAME,
+        descriptor.ros_type_name
+    );
+    assert_eq!(
+        MESSAGE_REGISTRY.get("std_msgs/String").unwrap().md5sum,
+        descriptor.md5sum
+    );
+    assert_eq!(
+        descriptor
+            .message_from(&serde_json::json!({"data": "hello"}))
+            .unwrap()
+            .get("data")
+            .and_then(DynamicValue::as_str),
+        Some("hello")
+    );
 }
 
 #[test]

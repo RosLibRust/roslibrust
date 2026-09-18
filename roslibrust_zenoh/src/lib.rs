@@ -382,7 +382,11 @@ impl TopicProvider for ZenohClient {
         topic: impl ToGlobalTopicName,
     ) -> Result<Self::Publisher<MsgType>> {
         let topic: GlobalTopicName = topic.to_global_name()?;
-        let mangled_topic = mangle_topic(topic.as_ref(), MsgType::ROS_TYPE_NAME, MsgType::MD5SUM);
+        let mangled_topic = mangle_topic(
+            topic.as_ref(),
+            MsgType::DESCRIPTION.ros_type_name,
+            MsgType::DESCRIPTION.md5sum,
+        );
         let publisher = match self.session.declare_publisher(mangled_topic).await {
             Ok(publisher) => publisher,
             Err(e) => {
@@ -396,8 +400,8 @@ impl TopicProvider for ZenohClient {
             self.session.clone(),
             DiscoveryClass::Publisher,
             topic.as_ref(),
-            MsgType::ROS_TYPE_NAME,
-            MsgType::MD5SUM,
+            MsgType::DESCRIPTION.ros_type_name,
+            MsgType::DESCRIPTION.md5sum,
         )
         .await?;
 
@@ -414,7 +418,11 @@ impl TopicProvider for ZenohClient {
         topic: impl ToGlobalTopicName,
     ) -> Result<Self::Subscriber<MsgType>> {
         let topic: GlobalTopicName = topic.to_global_name()?;
-        let mangled_topic = mangle_topic(topic.as_ref(), MsgType::ROS_TYPE_NAME, MsgType::MD5SUM);
+        let mangled_topic = mangle_topic(
+            topic.as_ref(),
+            MsgType::DESCRIPTION.ros_type_name,
+            MsgType::DESCRIPTION.md5sum,
+        );
         let sub = match self.session.declare_subscriber(mangled_topic).await {
             Ok(sub) => sub,
             Err(e) => {
@@ -428,8 +436,8 @@ impl TopicProvider for ZenohClient {
             self.session.clone(),
             DiscoveryClass::Subscriber,
             topic.as_ref(),
-            MsgType::ROS_TYPE_NAME,
-            MsgType::MD5SUM,
+            MsgType::DESCRIPTION.ros_type_name,
+            MsgType::DESCRIPTION.md5sum,
         )
         .await?;
         Ok(ZenohSubscriber {

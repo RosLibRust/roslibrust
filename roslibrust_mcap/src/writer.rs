@@ -43,9 +43,8 @@ impl<T: RosMessageType> Channel<T> {
     /// # #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
     /// # struct String { data: std::string::String }
     /// # impl RosMessageType for String {
-    /// #     const ROS_TYPE_NAME: &'static str = "std_msgs/String";
-    /// #     const MD5SUM: &'static str = "";
-    /// #     const DEFINITION: &'static str = "";
+    /// #     const DESCRIPTION: roslibrust_common::MessageDescriptor =
+    /// #         roslibrust_common::MessageDescriptor::new::<Self>("std_msgs/String", "", "", "", &[0; 32]);
     /// # }
     /// # fn main() -> Result<()> {
     /// # let file = File::create("output.mcap")?;
@@ -118,9 +117,8 @@ impl<W: Write + Seek> McapWriter<W> {
     /// # #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
     /// # struct String { data: std::string::String }
     /// # impl RosMessageType for String {
-    /// #     const ROS_TYPE_NAME: &'static str = "std_msgs/String";
-    /// #     const MD5SUM: &'static str = "";
-    /// #     const DEFINITION: &'static str = "";
+    /// #     const DESCRIPTION: roslibrust_common::MessageDescriptor =
+    /// #         roslibrust_common::MessageDescriptor::new::<Self>("std_msgs/String", "", "", "", &[0; 32]);
     /// # }
     /// # fn main() -> Result<()> {
     /// # let file = File::create("output.mcap")?;
@@ -143,16 +141,16 @@ impl<W: Write + Seek> McapWriter<W> {
         }
 
         // Get or create schema for this message type
-        let schema_key = T::ROS_TYPE_NAME.to_string();
+        let schema_key = T::DESCRIPTION.ros_type_name.to_string();
         let schema_id = if let Some(&id) = self.schemas.get(&schema_key) {
             id
         } else {
             // Create a new schema using the Writer API
             // For CDR, we use the ROS message definition
-            let schema_data = T::DEFINITION.as_bytes().to_vec();
-            let schema_id = self
-                .writer
-                .add_schema(T::ROS_TYPE_NAME, "ros2msg", &schema_data)?;
+            let schema_data = T::DESCRIPTION.definition.as_bytes().to_vec();
+            let schema_id =
+                self.writer
+                    .add_schema(T::DESCRIPTION.ros_type_name, "ros2msg", &schema_data)?;
             self.schemas.insert(schema_key, schema_id);
             schema_id
         };

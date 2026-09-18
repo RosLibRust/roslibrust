@@ -132,13 +132,15 @@ impl ClientHandle {
             .entry(topic_name.to_string())
             .or_insert(Subscription {
                 handles: HashMap::new(),
-                topic_type: Msg::ROS_TYPE_NAME.to_string(),
+                topic_type: Msg::DESCRIPTION.ros_type_name.to_string(),
             });
 
         // TODO Possible bug here? We send a subscribe message each time even if already subscribed
         // Send subscribe message to rosbridge to initiate it sending us messages
         let mut stream = client.writer.write().await;
-        stream.subscribe(topic_name, Msg::ROS_TYPE_NAME).await?;
+        stream
+            .subscribe(topic_name, Msg::DESCRIPTION.ros_type_name)
+            .await?;
 
         // Create a new watch channel for this topic
         let queue = Arc::new(MessageQueue::new(QUEUE_SIZE));
@@ -387,7 +389,7 @@ impl ClientHandle {
             client.publishers.insert(
                 topic.to_string(),
                 PublisherHandle {
-                    topic_type: T::ROS_TYPE_NAME.to_string(),
+                    topic_type: T::DESCRIPTION.ros_type_name.to_string(),
                 },
             );
         }

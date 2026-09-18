@@ -151,7 +151,7 @@ impl RosBridgeComm for Writer {
             {
                 "op": Ops::Publish.to_string(),
                 "topic": topic,
-                "type": T::ROS_TYPE_NAME,
+                "type": T::DESCRIPTION.ros_type_name,
                 "msg": &msg,
             }
         );
@@ -180,7 +180,8 @@ impl RosBridgeComm for Writer {
     }
 
     async fn advertise<T: RosMessageType>(&mut self, topic: &str) -> Result<()> {
-        self.advertise_str(topic, T::ROS_TYPE_NAME).await
+        self.advertise_str(topic, T::DESCRIPTION.ros_type_name)
+            .await
     }
 
     // Identical to advertise, but allows providing a string argument for the topic type

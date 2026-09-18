@@ -26,29 +26,28 @@ pub struct ServiceInfo {
 pub trait RosMessageType:
     'static + serde::de::DeserializeOwned + Send + serde::Serialize + Sync + Clone + std::fmt::Debug
 {
-    /// Expected to be the combination pkg_name/type_name string describing the type to ros
-    /// Example: std_msgs/Header
-    const ROS_TYPE_NAME: &'static str;
-    /// The computed md5sum of the message file and its dependencies
-    /// This field is optional, and only needed when using ros1 native communication
-    const MD5SUM: &'static str = "";
-    /// The definition from the msg, srv, or action file
-    /// This field is optional, and only needed when using ros1 native communication
-    const DEFINITION: &'static str = "";
-    /// The fully qualified type name we need to work with ROS2 zenoh
-    /// e.g. std_msgs::msg::dds_::String_
-    /// This field is optional, and only needed when using ros2 native communication
-    const ROS2_TYPE_NAME: &'static str = "";
-    /// The computed ROS2 hash of the message file and its dependencies
-    /// This field is optional, and only needed when using ros2 native communication
-    const ROS2_HASH: &'static [u8; 32] = &[0; 32];
+    /// Runtime metadata and format-independent operations for this message type.
+    ///
+    /// This is the single source of message metadata used by both statically typed backends and
+    /// the runtime-selected message API. Implementations should construct it with
+    /// [`MessageDescriptor::new`], which derives the format-independent operations from `Self`.
+    const DESCRIPTION: MessageDescriptor;
+
+    /// ROS 1 type name, projected from [`Self::DESCRIPTION`] for compatibility.
+    const ROS_TYPE_NAME: &'static str = Self::DESCRIPTION.ros_type_name;
+    /// ROS 1 message hash, projected from [`Self::DESCRIPTION`] for compatibility.
+    const MD5SUM: &'static str = Self::DESCRIPTION.md5sum;
+    /// ROS 1 message definition, projected from [`Self::DESCRIPTION`] for compatibility.
+    const DEFINITION: &'static str = Self::DESCRIPTION.definition;
+    /// ROS 2 DDS type name, projected from [`Self::DESCRIPTION`] for compatibility.
+    const ROS2_TYPE_NAME: &'static str = Self::DESCRIPTION.ros2_type_name;
+    /// ROS 2 type hash, projected from [`Self::DESCRIPTION`] for compatibility.
+    const ROS2_HASH: &'static [u8; 32] = Self::DESCRIPTION.ros2_hash;
 }
 
 // This special impl allows for services with no args / returns
 impl RosMessageType for () {
-    const ROS_TYPE_NAME: &'static str = "";
-    const MD5SUM: &'static str = "";
-    const DEFINITION: &'static str = "";
+    const DESCRIPTION: MessageDescriptor = MessageDescriptor::new::<Self>("", "", "", "", &[0; 32]);
 }
 
 /// Represents a ROS service type definition corresponding to a `.srv` file.

@@ -37,14 +37,14 @@ fn ros2_hash_checks() {
 
     // Basic string message
     assert_eq!(
-        *std_msgs::String::ROS2_HASH,
+        *std_msgs::String::DESCRIPTION.ros2_hash,
         parse("RIHS01_df668c740482bbd48fb39d76a70dfd4bd59db1288021743503259e948f6b1a18")
     );
 
     // MultiArrayLayout has a dependency on MultiArrayDimension
     // Proving we can handle chained dependencies
     assert_eq!(
-        *std_msgs::MultiArrayLayout::ROS2_HASH,
+        *std_msgs::MultiArrayLayout::DESCRIPTION.ros2_hash,
         parse("RIHS01_4c66e6f78e740ac103a94cf63259f968e48c617e7699e829b63c21a5cb50dac6")
     );
 
@@ -71,49 +71,49 @@ fn ros2_hash_checks() {
     }
     */
     assert_eq!(
-        *std_msgs::Empty::ROS2_HASH,
+        *std_msgs::Empty::DESCRIPTION.ros2_hash,
         parse("RIHS01_20b625256f32d5dbc0d04fee44f43c41e51c70d3502f84b4a08e7a9c26a96312")
     );
 
     // Testing a message with a capacity limit on a primitive
     assert_eq!(
-        *ros2_test_msgs::BoundedInt::ROS2_HASH,
+        *ros2_test_msgs::BoundedInt::DESCRIPTION.ros2_hash,
         parse("RIHS01_82105d57673153229ad6f8aa943ead090bc9756da35c9b73cf919a64bf902d6c")
     );
 
     // Testing a message with a capacity limit on a nested type
     assert_eq!(
-        *ros2_test_msgs::BoundedReferenced::ROS2_HASH,
+        *ros2_test_msgs::BoundedReferenced::DESCRIPTION.ros2_hash,
         parse("RIHS01_f6a7e6732d79d9bfff7abc475f2dda336233f75d3b1984537d2acb07054c3975")
     );
 
     // Testing a message with a capacity limit on a string
     assert_eq!(
-        *ros2_test_msgs::BoundedString::ROS2_HASH,
+        *ros2_test_msgs::BoundedString::DESCRIPTION.ros2_hash,
         parse("RIHS01_e9965b1be42dce770d8936688f88b2f79cc1a828daa2295f1224186fd3c85b70")
     );
 
     // Testing a message that references builtin_interfaces/Time and builtin_interfaces/Duration
     assert_eq!(
-        *ros2_test_msgs::Stamped::ROS2_HASH,
+        *ros2_test_msgs::Stamped::DESCRIPTION.ros2_hash,
         parse("RIHS01_d568324df43c14673c2d014c1c568d399b42e793d32050a4f396fd3cbd2f50cc")
     );
 
     // Testing a message working with the `char` type
     assert_eq!(
-        *ros2_test_msgs::Char::ROS2_HASH,
+        *ros2_test_msgs::Char::DESCRIPTION.ros2_hash,
         parse("RIHS01_7398a047b7ae995eeb12bd58e9884a30f25968d9c19a79b929778bebde4e678a")
     );
 
     // Test a message with a bool
     assert_eq!(
-        *ros2_test_msgs::Bool::ROS2_HASH,
+        *ros2_test_msgs::Bool::DESCRIPTION.ros2_hash,
         parse("RIHS01_14ae37d5c5f596ff013e8658e1af0c02f9dcad8f0d75e3d6243809c90264acd7")
     );
 
     // A message that previously failed on us
     assert_eq!(
-        *sensor_msgs::CameraInfo::ROS2_HASH,
+        *sensor_msgs::CameraInfo::DESCRIPTION.ros2_hash,
         parse("RIHS01_b3dfd68ff46c9d56c80fd3bd4ed22c7a4ddce8c8348f2f59c299e73118e7e275")
     );
 

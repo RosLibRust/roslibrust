@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 pub struct EmptyRequest {}
 
 impl RosMessageType for EmptyRequest {
-    const ROS_TYPE_NAME: &'static str = "";
+    const DESCRIPTION: roslibrust_common::MessageDescriptor =
+        roslibrust_common::MessageDescriptor::new::<Self>("", "", "", "", &[0; 32]);
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -15,7 +16,8 @@ pub struct TopicsResponse {
 }
 
 impl RosMessageType for TopicsResponse {
-    const ROS_TYPE_NAME: &'static str = "";
+    const DESCRIPTION: roslibrust_common::MessageDescriptor =
+        roslibrust_common::MessageDescriptor::new::<Self>("", "", "", "", &[0; 32]);
 }
 
 pub struct Topics;
@@ -32,7 +34,8 @@ pub struct ServicesResponse {
 }
 
 impl RosMessageType for ServicesResponse {
-    const ROS_TYPE_NAME: &'static str = "";
+    const DESCRIPTION: roslibrust_common::MessageDescriptor =
+        roslibrust_common::MessageDescriptor::new::<Self>("", "", "", "", &[0; 32]);
 }
 
 pub struct Services;
@@ -49,7 +52,8 @@ pub struct ServiceTypeRequest {
 }
 
 impl RosMessageType for ServiceTypeRequest {
-    const ROS_TYPE_NAME: &'static str = "";
+    const DESCRIPTION: roslibrust_common::MessageDescriptor =
+        roslibrust_common::MessageDescriptor::new::<Self>("", "", "", "", &[0; 32]);
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -59,7 +63,8 @@ pub struct ServiceTypeResponse {
 }
 
 impl RosMessageType for ServiceTypeResponse {
-    const ROS_TYPE_NAME: &'static str = "";
+    const DESCRIPTION: roslibrust_common::MessageDescriptor =
+        roslibrust_common::MessageDescriptor::new::<Self>("", "", "", "", &[0; 32]);
 }
 
 pub struct ServiceType;

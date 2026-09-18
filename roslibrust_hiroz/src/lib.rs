@@ -115,7 +115,10 @@ impl ZenohClient {
 
 /// Build a TypeInfo from a RosMessageType's type name and hash.
 fn ros_type_info<T: RosMessageType>() -> TypeInfo {
-    TypeInfo::new(T::ROS2_TYPE_NAME, TypeHash::new(1, *T::ROS2_HASH))
+    TypeInfo::new(
+        T::DESCRIPTION.ros2_type_name,
+        TypeHash::new(1, *T::DESCRIPTION.ros2_hash),
+    )
 }
 
 fn dynamic_ros_type_info(descriptor: &MessageDescriptor) -> TypeInfo {

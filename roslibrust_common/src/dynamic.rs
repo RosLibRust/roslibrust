@@ -343,17 +343,16 @@ type SerializeFn = fn(&DynamicValue, &mut dyn erased_serde::Serializer) -> Dynam
 type DeserializeFn =
     for<'de> fn(&mut dyn erased_serde::Deserializer<'de>) -> DynamicMessageResult<DynamicValue>;
 
-/// Generated operations for a single concrete message type.
+/// Operations derived from a single concrete message type.
 #[derive(Clone, Copy)]
-pub struct MessageOperations {
+pub(crate) struct MessageOperations {
     normalize: NormalizeFn,
     serialize: SerializeFn,
     deserialize: DeserializeFn,
 }
 
 impl MessageOperations {
-    #[doc(hidden)]
-    pub const fn new(
+    pub(crate) const fn new(
         normalize: NormalizeFn,
         serialize: SerializeFn,
         deserialize: DeserializeFn,
@@ -391,14 +390,17 @@ impl std::fmt::Debug for MessageDescriptor {
 }
 
 impl MessageDescriptor {
-    #[doc(hidden)]
-    pub const fn new(
+    /// Construct the descriptor for a concrete ROS message type.
+    ///
+    /// The supplied fields are the type's complete metadata. Serialization, deserialization, and
+    /// schema-normalization operations are derived from `T` so generated implementations do not
+    /// need to repeat their callback wiring.
+    pub const fn new<T: crate::RosMessageType>(
         ros_type_name: &'static str,
         md5sum: &'static str,
         definition: &'static str,
         ros2_type_name: &'static str,
         ros2_hash: &'static [u8; 32],
-        operations: MessageOperations,
     ) -> Self {
         Self {
             ros_type_name,
@@ -406,7 +408,11 @@ impl MessageDescriptor {
             definition,
             ros2_type_name,
             ros2_hash,
-            operations,
+            operations: MessageOperations::new(
+                support::normalize::<T>,
+                support::serialize::<T>,
+                support::deserialize::<T>,
+            ),
         }
     }
 
@@ -596,15 +602,14 @@ pub fn normalize_ros_type_name(type_name: &str) -> Cow<'_, str> {
 }
 
 /// Transport-neutral helpers used by generated registry callbacks.
-#[doc(hidden)]
-pub mod support {
+pub(crate) mod support {
     use super::{DynamicMessageError, DynamicMessageResult, DynamicValue};
     use crate::RosMessageType;
 
     pub fn to_value<T: RosMessageType>(message: T) -> DynamicMessageResult<DynamicValue> {
         serde::Serialize::serialize(&message, super::value_serde::Serializer).map_err(|error| {
             DynamicMessageError::InvalidValue {
-                type_name: T::ROS_TYPE_NAME,
+                type_name: T::DESCRIPTION.ros_type_name,
                 message: error.to_string(),
             }
         })
@@ -613,7 +618,7 @@ pub mod support {
     pub fn from_value<T: RosMessageType>(value: DynamicValue) -> DynamicMessageResult<T> {
         serde::Deserialize::deserialize(value).map_err(|error: super::value_serde::Error| {
             DynamicMessageError::InvalidValue {
-                type_name: T::ROS_TYPE_NAME,
+                type_name: T::DESCRIPTION.ros_type_name,
                 message: error.to_string(),
             }
         })
@@ -632,7 +637,7 @@ pub mod support {
         let message: T = from_value(value.clone())?;
         erased_serde::Serialize::erased_serialize(&message, serializer).map_err(|error| {
             DynamicMessageError::Serialize {
-                type_name: T::ROS_TYPE_NAME,
+                type_name: T::DESCRIPTION.ros_type_name,
                 message: error.to_string(),
             }
         })
@@ -643,7 +648,7 @@ pub mod support {
     ) -> DynamicMessageResult<DynamicValue> {
         let message: T = erased_serde::deserialize(deserializer).map_err(|error| {
             DynamicMessageError::Deserialize {
-                type_name: T::ROS_TYPE_NAME,
+                type_name: T::DESCRIPTION.ros_type_name,
                 message: error.to_string(),
             }
         })?;

@@ -39,10 +39,16 @@ impl<T: RosMessageType> Subscriber<T> {
     }
 
     pub async fn next(&mut self) -> Option<Result<T, SubscriberError>> {
-        trace!("Subscriber of type {:?} awaiting recv()", T::ROS_TYPE_NAME);
+        trace!(
+            "Subscriber of type {:?} awaiting recv()",
+            T::DESCRIPTION.ros_type_name
+        );
         let data = match self.receiver.recv().await {
             Ok(v) => {
-                trace!("Subscriber of type {:?} received data", T::ROS_TYPE_NAME);
+                trace!(
+                    "Subscriber of type {:?} received data",
+                    T::DESCRIPTION.ros_type_name
+                );
                 v
             }
             Err(RecvError::Closed) => return None,
@@ -50,7 +56,7 @@ impl<T: RosMessageType> Subscriber<T> {
         };
         trace!(
             "Subscriber of type {:?} deserializing data",
-            T::ROS_TYPE_NAME
+            T::DESCRIPTION.ros_type_name
         );
         let tick = tokio::time::Instant::now();
         match roslibrust_serde_rosmsg::from_slice::<T>(&data[..]) {
@@ -58,7 +64,7 @@ impl<T: RosMessageType> Subscriber<T> {
                 let duration = tick.elapsed();
                 trace!(
                     "Subscriber of type {:?} deserialized data in {duration:?}",
-                    T::ROS_TYPE_NAME
+                    T::DESCRIPTION.ros_type_name
                 );
                 Some(Ok(p))
             }

@@ -153,10 +153,10 @@ impl NodeServerHandle {
         let mut node = self.node.lock().await;
         node.register_publisher(
             topic.to_owned(),
-            T::ROS_TYPE_NAME,
+            T::DESCRIPTION.ros_type_name,
             queue_size,
-            T::DEFINITION.to_owned(),
-            T::MD5SUM.to_owned(),
+            T::DESCRIPTION.definition.to_owned(),
+            T::DESCRIPTION.md5sum.to_owned(),
             latching,
             weak_node,
         )
@@ -209,8 +209,14 @@ impl NodeServerHandle {
         &self,
         service_name: &Name,
     ) -> Result<ServiceClient<T>, NodeError> {
-        let srv_definition =
-            String::from_iter([T::Request::DEFINITION, "\n", T::Response::DEFINITION].into_iter());
+        let srv_definition = String::from_iter(
+            [
+                T::Request::DESCRIPTION.definition,
+                "\n",
+                T::Response::DESCRIPTION.definition,
+            ]
+            .into_iter(),
+        );
 
         let mut node = self.node.lock().await;
         let link = node
@@ -253,8 +259,14 @@ impl NodeServerHandle {
             };
         let server_typeless = Box::new(server_typeless);
 
-        let srv_definition =
-            String::from_iter([T::Request::DEFINITION, "\n", T::Response::DEFINITION].into_iter());
+        let srv_definition = String::from_iter(
+            [
+                T::Request::DESCRIPTION.definition,
+                "\n",
+                T::Response::DESCRIPTION.definition,
+            ]
+            .into_iter(),
+        );
 
         let mut node = self.node.lock().await;
         node.register_service_server(
@@ -284,10 +296,10 @@ impl NodeServerHandle {
         let mut node = self.node.lock().await;
         node.register_subscriber(
             topic,
-            T::ROS_TYPE_NAME,
+            T::DESCRIPTION.ros_type_name,
             queue_size,
-            T::DEFINITION,
-            T::MD5SUM,
+            T::DESCRIPTION.definition,
+            T::DESCRIPTION.md5sum,
         )
         .await
         .map_err(|err| {

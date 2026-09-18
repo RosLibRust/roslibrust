@@ -102,11 +102,11 @@ impl TopicProvider for MockRos {
         {
             let topics = self.topics.read().await;
             if let Some(entry) = topics.get(topic_str) {
-                if entry.type_name != MsgType::ROS_TYPE_NAME {
+                if entry.type_name != MsgType::DESCRIPTION.ros_type_name {
                     return Err(Error::ServerError(format!(
                         "Topic {topic_str} already registered with type {}, cannot also use {}",
                         entry.type_name,
-                        MsgType::ROS_TYPE_NAME
+                        MsgType::DESCRIPTION.ros_type_name
                     )));
                 }
                 debug!("Issued new publisher to existing topic {}", topic_str);
@@ -125,7 +125,7 @@ impl TopicProvider for MockRos {
             TopicEntry {
                 sender: tx_rx.0,
                 receiver: tx_rx.1,
-                type_name: MsgType::ROS_TYPE_NAME.to_string(),
+                type_name: MsgType::DESCRIPTION.ros_type_name.to_string(),
             },
         );
         debug!("Created new publisher and channel for topic {}", topic_str);
@@ -145,11 +145,11 @@ impl TopicProvider for MockRos {
         {
             let topics = self.topics.read().await;
             if let Some(entry) = topics.get(topic_str) {
-                if entry.type_name != MsgType::ROS_TYPE_NAME {
+                if entry.type_name != MsgType::DESCRIPTION.ros_type_name {
                     return Err(Error::ServerError(format!(
                         "Topic {topic_str} already registered with type {}, cannot also use {}",
                         entry.type_name,
-                        MsgType::ROS_TYPE_NAME
+                        MsgType::DESCRIPTION.ros_type_name
                     )));
                 }
                 debug!("Issued new subscriber to existing topic {}", topic_str);
@@ -168,7 +168,7 @@ impl TopicProvider for MockRos {
             TopicEntry {
                 sender: tx_rx.0,
                 receiver: tx_rx.1,
-                type_name: MsgType::ROS_TYPE_NAME.to_string(),
+                type_name: MsgType::DESCRIPTION.ros_type_name.to_string(),
             },
         );
         debug!("Created new subscriber and channel for topic {}", topic_str);
@@ -440,7 +440,7 @@ impl<T: RosMessageType> Publish<T> for MockPublisher<T> {
         let data =
             bincode::serialize(data).map_err(|e| Error::SerializationError(e.to_string()))?;
         self.sender.send(data).map_err(|_e| Error::Disconnected)?;
-        debug!("Sent data on topic {}", T::ROS_TYPE_NAME);
+        debug!("Sent data on topic {}", T::DESCRIPTION.ros_type_name);
         Ok(())
     }
 }
@@ -460,7 +460,7 @@ impl<T: RosMessageType> Subscribe<T> for MockSubscriber<T> {
             .map_err(|_| Error::Disconnected)?;
         let msg = bincode::deserialize(&data[..])
             .map_err(|e| Error::SerializationError(e.to_string()))?;
-        debug!("Received data on topic {}", T::ROS_TYPE_NAME);
+        debug!("Received data on topic {}", T::DESCRIPTION.ros_type_name);
         Ok(msg)
     }
 }

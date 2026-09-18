@@ -53,9 +53,8 @@
 //! # #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 //! # struct String { data: std::string::String }
 //! # impl RosMessageType for String {
-//! #     const ROS_TYPE_NAME: &'static str = "std_msgs/String";
-//! #     const MD5SUM: &'static str = "";
-//! #     const DEFINITION: &'static str = "";
+//! #     const DESCRIPTION: roslibrust_common::MessageDescriptor =
+//! #         roslibrust_common::MessageDescriptor::new::<Self>("std_msgs/String", "", "", "", &[0; 32]);
 //! # }
 //!
 //! # fn main() -> Result<()> {
@@ -132,10 +131,14 @@ mod tests {
         }
 
         impl RosMessageType for TestMessage {
-            const ROS_TYPE_NAME: &'static str = "test_msgs/TestMessage";
-            const MD5SUM: &'static str = "test";
-            const DEFINITION: &'static str = "string data\nint32 value";
-            const ROS2_TYPE_NAME: &'static str = "test_msgs/msg/TestMessage";
+            const DESCRIPTION: roslibrust_common::MessageDescriptor =
+                roslibrust_common::MessageDescriptor::new::<Self>(
+                    "test_msgs/TestMessage",
+                    "test",
+                    "string data\nint32 value",
+                    "test_msgs/msg/TestMessage",
+                    &[0; 32],
+                );
         }
 
         // Write an MCAP file

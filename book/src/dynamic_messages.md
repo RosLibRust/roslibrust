@@ -30,6 +30,20 @@ let message = descriptor.message_from(&serde_json::json!({
 }))?;
 ```
 
+Every generated message also exposes its descriptor through the `RosMessageType` trait. When the
+concrete type is known, it can be used without a registry lookup:
+
+```rust,ignore
+use my_messages::std_msgs;
+use roslibrust::RosMessageType;
+
+let descriptor = &std_msgs::String::DESCRIPTION;
+let message = descriptor.message_from(&serde_json::json!({"data": "hello"}))?;
+```
+
+The generated registry is an array of these associated constants; it does not generate separate
+per-message descriptor definitions.
+
 `message_from` accepts any Serde `Serialize` value whose shape represents the selected message.
 Structs and string-keyed maps are supported. The registry offers the same operation when the type
 name is not resolved separately:
