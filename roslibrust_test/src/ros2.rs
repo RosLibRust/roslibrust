@@ -21098,7 +21098,7 @@ float32 v"####,
         type Response = GetInteractiveMarkersResponse;
     }
 }
-use ::roslibrust::RosMessageType as _;
+use ::roslibrust::{RosMessageType as _, RosServiceType as _};
 #[doc = r" Runtime lookup and codecs for all generated ROS message types."]
 #[allow(dead_code)]
 pub static MESSAGE_REGISTRY: ::roslibrust::MessageRegistry = ::roslibrust::MessageRegistry::new(&[
@@ -21232,4 +21232,20 @@ pub static MESSAGE_REGISTRY: ::roslibrust::MessageRegistry = ::roslibrust::Messa
     visualization_msgs::MenuEntry::DESCRIPTION,
     visualization_msgs::MeshFile::DESCRIPTION,
     visualization_msgs::UVCoordinate::DESCRIPTION,
+]);
+#[doc = r" Runtime lookup and codecs for all generated ROS service types."]
+#[allow(dead_code)]
+pub static SERVICE_REGISTRY: ::roslibrust::ServiceRegistry = ::roslibrust::ServiceRegistry::new(&[
+    diagnostic_msgs::AddDiagnostics::DESCRIPTION,
+    diagnostic_msgs::SelfTest::DESCRIPTION,
+    nav_msgs::GetMap::DESCRIPTION,
+    nav_msgs::GetPlan::DESCRIPTION,
+    nav_msgs::LoadMap::DESCRIPTION,
+    nav_msgs::SetMap::DESCRIPTION,
+    ros2_test_msgs::AddTwoInts::DESCRIPTION,
+    sensor_msgs::SetCameraInfo::DESCRIPTION,
+    std_srvs::Empty::DESCRIPTION,
+    std_srvs::SetBool::DESCRIPTION,
+    std_srvs::Trigger::DESCRIPTION,
+    visualization_msgs::GetInteractiveMarkers::DESCRIPTION,
 ]);

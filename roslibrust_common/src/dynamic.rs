@@ -516,8 +516,9 @@ impl DynamicMessage {
 /// included inside `mod messages`, it is available as `messages::MESSAGE_REGISTRY`.
 ///
 /// The registry is always generated and contains topic and action message types. Service request
-/// and response dispatch are not included. Its descriptor slice is sorted by canonical ROS1 type
-/// name, providing deterministic iteration and allocation-free binary-search lookup.
+/// and response codecs are available through the generated service registry. Its descriptor slice
+/// is sorted by canonical ROS1 type name, providing deterministic iteration and allocation-free
+/// binary-search lookup.
 #[derive(Clone, Copy, Debug)]
 pub struct MessageRegistry {
     descriptors: &'static [MessageDescriptor],
@@ -577,6 +578,59 @@ impl MessageRegistry {
         self.get(type_name)
             .ok_or_else(|| DynamicMessageError::UnknownType(type_name.to_owned()))?
             .deserialize_with(deserializer)
+    }
+}
+
+/// Metadata and request/response codecs for one generated ROS service type.
+#[derive(Clone, Copy, Debug)]
+pub struct ServiceDescriptor {
+    pub ros_service_name: &'static str,
+    pub md5sum: &'static str,
+    pub ros2_type_name: &'static str,
+    pub ros2_hash: &'static [u8; 32],
+    pub request: &'static MessageDescriptor,
+    pub response: &'static MessageDescriptor,
+}
+
+impl ServiceDescriptor {
+    /// Construct the descriptor for a concrete ROS service type.
+    pub const fn new<T: crate::RosServiceType>() -> Self {
+        Self {
+            ros_service_name: T::ROS_SERVICE_NAME,
+            md5sum: T::MD5SUM,
+            ros2_type_name: T::ROS2_TYPE_NAME,
+            ros2_hash: T::ROS2_HASH,
+            request: &<T::Request as crate::RosMessageType>::DESCRIPTION,
+            response: &<T::Response as crate::RosMessageType>::DESCRIPTION,
+        }
+    }
+}
+
+/// An immutable registry generated alongside a set of ROS service types.
+#[derive(Clone, Copy, Debug)]
+pub struct ServiceRegistry {
+    descriptors: &'static [ServiceDescriptor],
+}
+
+impl ServiceRegistry {
+    #[doc(hidden)]
+    pub const fn new(descriptors: &'static [ServiceDescriptor]) -> Self {
+        Self { descriptors }
+    }
+
+    pub fn descriptors(&self) -> &'static [ServiceDescriptor] {
+        self.descriptors
+    }
+
+    /// Look up a service using a ROS1 name, ROS2 interface name, or ROS2 DDS name.
+    pub fn get(&self, type_name: &str) -> Option<&'static ServiceDescriptor> {
+        let normalized = normalize_ros_type_name(type_name);
+        self.descriptors
+            .binary_search_by_key(&normalized.as_ref(), |descriptor| {
+                descriptor.ros_service_name
+            })
+            .ok()
+            .map(|index| &self.descriptors[index])
     }
 }
 

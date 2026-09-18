@@ -162,6 +162,40 @@ pub struct ServiceClient<T> {
     topic: String,
 }
 
+/// A rosbridge service client using runtime-selected request and response types.
+pub struct DynamicServiceClient {
+    client: ClientHandle,
+    topic: String,
+    descriptor: &'static ServiceDescriptor,
+}
+
+impl DynamicService for DynamicServiceClient {
+    fn descriptor(&self) -> &'static ServiceDescriptor {
+        self.descriptor
+    }
+
+    async fn call(&self, request: &DynamicMessage) -> Result<DynamicMessage> {
+        if request.descriptor().ros_type_name != self.descriptor.request.ros_type_name {
+            return Err(Error::SerializationError(format!(
+                "service {} expects request {}, but message is {}",
+                self.descriptor.ros_service_name,
+                self.descriptor.request.ros_type_name,
+                request.descriptor().ros_type_name
+            )));
+        }
+        let value = serde_json::to_value(request.value())
+            .map_err(|error| Error::SerializationError(error.to_string()))?;
+        let response = self.client.call_service_value(&self.topic, value).await?;
+        if let Some(error) = response.as_str() {
+            return Err(Error::ServerError(error.to_owned()));
+        }
+        self.descriptor
+            .response
+            .message_from(&response)
+            .map_err(|error| Error::SerializationError(error.to_string()))
+    }
+}
+
 impl<T: RosServiceType> ServiceClient<T> {
     pub async fn call(&self, request: T::Request) -> Result<T::Response> {
         self.client
@@ -243,6 +277,34 @@ impl ServiceProvider for crate::ClientHandle {
     ) -> Result<Self::ServiceServer> {
         let service: GlobalTopicName = service.to_global_name()?;
         ClientHandle::advertise_service(self, service.as_ref(), server).await
+    }
+}
+
+impl DynamicServiceProvider for crate::ClientHandle {
+    type DynamicServiceClient = crate::DynamicServiceClient;
+
+    async fn dynamic_call_service(
+        &self,
+        service: impl ToGlobalTopicName,
+        descriptor: &'static ServiceDescriptor,
+        request: DynamicMessage,
+    ) -> Result<DynamicMessage> {
+        let client =
+            DynamicServiceProvider::dynamic_service_client(self, service, descriptor).await?;
+        client.call(&request).await
+    }
+
+    async fn dynamic_service_client(
+        &self,
+        service: impl ToGlobalTopicName,
+        descriptor: &'static ServiceDescriptor,
+    ) -> Result<Self::DynamicServiceClient> {
+        let service: GlobalTopicName = service.to_global_name()?;
+        Ok(crate::DynamicServiceClient {
+            client: self.clone(),
+            topic: String::from(service),
+            descriptor,
+        })
     }
 }
 

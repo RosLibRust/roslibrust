@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added `DynamicServiceProvider` trait which provides runtime type select service calling, and
+  is now implemented for all backends.
+
 ## 0.24.0 - September 18th, 2026
 
 ### Added

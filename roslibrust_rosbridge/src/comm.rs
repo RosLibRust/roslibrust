@@ -100,11 +100,11 @@ pub(crate) trait RosBridgeComm {
     ) -> Result<()>;
     async fn advertise<T: RosMessageType>(&mut self, topic: &str) -> Result<()>;
     async fn advertise_str(&mut self, topic: &str, msg_type: &str) -> Result<()>;
-    async fn call_service<Req: RosMessageType>(
+    async fn call_service_value(
         &mut self,
         service: &str,
         id: &str,
-        req: Req,
+        req: serde_json::Value,
     ) -> Result<()>;
     async fn unadvertise(&mut self, topic: &str) -> Result<()>;
     async fn advertise_service(&mut self, topic: &str, srv_type: &str) -> Result<()>;
@@ -201,20 +201,18 @@ impl RosBridgeComm for Writer {
         Ok(())
     }
 
-    async fn call_service<Req: RosMessageType>(
+    async fn call_service_value(
         &mut self,
         service: &str,
         id: &str,
-        req: Req,
+        req: serde_json::Value,
     ) -> Result<()> {
-        let msg = json!(
-            {
-                "op": Ops::CallService.to_string(),
-                "service": service,
-                "id": id,
-                "args": req,
-            }
-        );
+        let msg = json!({
+            "op": Ops::CallService.to_string(),
+            "service": service,
+            "id": id,
+            "args": req,
+        });
         let msg = Message::Text(msg.to_string());
         debug!("Sending call_service: {:?}", &msg);
         self.send(msg).await.map_to_roslibrust()?;

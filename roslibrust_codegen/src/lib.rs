@@ -688,7 +688,7 @@ pub fn find_and_parse_ros_messages(
 /// * `options` - Code generation options.
 pub fn generate_rust_ros_message_definitions(
     mut messages: Vec<MessageFile>,
-    services: Vec<ServiceFile>,
+    mut services: Vec<ServiceFile>,
     options: &CodegenOptions,
 ) -> Result<TokenStream, Error> {
     // Keep both module output and registry iteration deterministic regardless of discovery order.
@@ -700,6 +700,17 @@ pub fn generate_rust_ros_message_definitions(
             let message_type = format_ident!("{}", message.get_short_name());
             quote! {
                 #package::#message_type::DESCRIPTION
+            }
+        })
+        .collect::<Vec<_>>();
+    services.sort_by_key(|service| service.get_full_name());
+    let service_registry_entries = services
+        .iter()
+        .map(|service| {
+            let package = format_ident!("{}", service.get_package_name());
+            let service_type = format_ident!("{}", service.get_short_name());
+            quote! {
+                #package::#service_type::DESCRIPTION
             }
         })
         .collect::<Vec<_>>();
@@ -742,13 +753,20 @@ pub fn generate_rust_ros_message_definitions(
 
         // Bring the trait-provided associated constant into scope while keeping the generated
         // registry entries as concise as `std_msgs::String::DESCRIPTION`.
-        use ::roslibrust::RosMessageType as _;
+        use ::roslibrust::{RosMessageType as _, RosServiceType as _};
 
         /// Runtime lookup and codecs for all generated ROS message types.
         #[allow(dead_code)]
         pub static MESSAGE_REGISTRY: ::roslibrust::MessageRegistry =
             ::roslibrust::MessageRegistry::new(&[
                 #(#registry_entries,)*
+            ]);
+
+        /// Runtime lookup and codecs for all generated ROS service types.
+        #[allow(dead_code)]
+        pub static SERVICE_REGISTRY: ::roslibrust::ServiceRegistry =
+            ::roslibrust::ServiceRegistry::new(&[
+                #(#service_registry_entries,)*
             ]);
     })
 }

@@ -32,9 +32,10 @@
 use roslibrust_common::topic_name::{GlobalTopicName, ToGlobalTopicName};
 use roslibrust_common::Error;
 use roslibrust_common::{
-    DynamicMessage, DynamicMessageError, DynamicMessageResult, DynamicPublish, DynamicSubscribe,
-    DynamicTopicProvider, MessageDescriptor, Publish, RosMessageType, RosServiceType, Service,
-    ServiceFn, ServiceProvider, Subscribe, TopicProvider,
+    DynamicMessage, DynamicMessageError, DynamicMessageResult, DynamicPublish, DynamicService,
+    DynamicServiceProvider, DynamicSubscribe, DynamicTopicProvider, MessageDescriptor, Publish,
+    RosMessageType, RosServiceType, Service, ServiceDescriptor, ServiceFn, ServiceProvider,
+    Subscribe, TopicProvider,
 };
 
 /// Serialize a runtime-selected message as a ROS1 message body.
@@ -108,7 +109,7 @@ mod publisher;
 pub use publisher::Publisher;
 pub use publisher::PublisherAny;
 mod service_client;
-pub use service_client::ServiceClient;
+pub use service_client::{DynamicServiceClient, ServiceClient};
 mod subscriber;
 pub use subscriber::Subscriber;
 pub use subscriber::SubscriberAny;
@@ -284,6 +285,32 @@ impl ServiceProvider for crate::NodeHandle {
         NodeHandle::advertise_service::<SrvType, F>(self, service.as_ref(), server)
             .await
             .map_err(|e| e.into())
+    }
+}
+
+impl DynamicServiceProvider for crate::NodeHandle {
+    type DynamicServiceClient = crate::DynamicServiceClient;
+
+    async fn dynamic_call_service(
+        &self,
+        service: impl ToGlobalTopicName,
+        descriptor: &'static ServiceDescriptor,
+        request: DynamicMessage,
+    ) -> roslibrust_common::Result<DynamicMessage> {
+        let client =
+            DynamicServiceProvider::dynamic_service_client(self, service, descriptor).await?;
+        client.call(&request).await
+    }
+
+    async fn dynamic_service_client(
+        &self,
+        service: impl ToGlobalTopicName,
+        descriptor: &'static ServiceDescriptor,
+    ) -> roslibrust_common::Result<Self::DynamicServiceClient> {
+        let service: GlobalTopicName = service.to_global_name()?;
+        NodeHandle::dynamic_service_client(self, service.as_ref(), descriptor)
+            .await
+            .map_err(Into::into)
     }
 }
 
