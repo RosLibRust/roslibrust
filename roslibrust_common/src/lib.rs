@@ -68,6 +68,10 @@ impl RosMessageType for ShapeShifter {
 /// for the moment.
 pub mod md5sum;
 
+/// Runtime metadata and type-erased values for generated ROS messages.
+pub mod dynamic;
+pub use dynamic::*;
+
 /// Contains the generic traits represent a pubsub system and service system.
 /// These traits will be implemented for specific backends to provides access to "ROS Like" functionality.
 pub mod traits;

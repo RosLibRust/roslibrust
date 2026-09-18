@@ -32,9 +32,33 @@
 use roslibrust_common::topic_name::{GlobalTopicName, ToGlobalTopicName};
 use roslibrust_common::Error;
 use roslibrust_common::{
-    Publish, RosMessageType, RosServiceType, Service, ServiceFn, ServiceProvider, Subscribe,
-    TopicProvider,
+    DynamicMessage, DynamicMessageError, DynamicMessageResult, DynamicPublish, DynamicSubscribe,
+    DynamicTopicProvider, MessageDescriptor, Publish, RosMessageType, RosServiceType, Service,
+    ServiceFn, ServiceProvider, Subscribe, TopicProvider,
 };
+
+/// Serialize a runtime-selected message as a ROS1 message body.
+///
+/// The returned bytes do not include the four-byte TCPROS frame length.
+pub fn serialize_dynamic_message(message: &DynamicMessage) -> DynamicMessageResult<Vec<u8>> {
+    let mut bytes = Vec::new();
+    let mut serializer = roslibrust_serde_rosmsg::Serializer::new(&mut bytes);
+    message.serialize_with(&mut serializer)?;
+    Ok(bytes)
+}
+
+/// Deserialize a ROS1 message body using a runtime-selected message descriptor.
+pub fn deserialize_dynamic_message(
+    descriptor: &'static MessageDescriptor,
+    bytes: &[u8],
+) -> DynamicMessageResult<DynamicMessage> {
+    let length = u32::try_from(bytes.len()).map_err(|_| DynamicMessageError::Deserialize {
+        type_name: descriptor.ros_type_name,
+        message: "message body exceeds the ROS1 u32 length limit".to_owned(),
+    })?;
+    let mut deserializer = roslibrust_serde_rosmsg::Deserializer::new(bytes, length);
+    descriptor.deserialize_with(&mut deserializer)
+}
 
 /// [master_client] module contains code for calling xmlrpc functions on the master
 mod master_client;
@@ -91,6 +115,97 @@ impl TopicProvider for crate::NodeHandle {
         NodeHandle::subscribe(self, topic.as_ref(), 10)
             .await
             .map_err(|e| e.into())
+    }
+}
+
+/// Runtime-typed ROS1 publisher backed by [`PublisherAny`].
+pub struct DynamicPublisher {
+    publisher: PublisherAny,
+    descriptor: &'static MessageDescriptor,
+}
+
+impl DynamicPublish for DynamicPublisher {
+    fn descriptor(&self) -> &'static MessageDescriptor {
+        self.descriptor
+    }
+
+    async fn publish(&self, data: &DynamicMessage) -> roslibrust_common::Result<()> {
+        if data.descriptor().ros_type_name != self.descriptor.ros_type_name {
+            return Err(Error::SerializationError(format!(
+                "publisher expects {}, but message is {}",
+                self.descriptor.ros_type_name,
+                data.descriptor().ros_type_name
+            )));
+        }
+
+        let body = serialize_dynamic_message(data)
+            .map_err(|error| Error::SerializationError(error.to_string()))?;
+        let length = u32::try_from(body.len()).map_err(|_| {
+            Error::SerializationError("message body exceeds the ROS1 u32 length limit".to_owned())
+        })?;
+        let mut framed = Vec::with_capacity(body.len() + 4);
+        framed.extend_from_slice(&length.to_le_bytes());
+        framed.extend_from_slice(&body);
+        self.publisher
+            .publish(framed)
+            .await
+            .map_err(|error| Error::SerializationError(error.to_string()))
+    }
+}
+
+/// Runtime-typed ROS1 subscriber backed by [`SubscriberAny`].
+pub struct DynamicSubscriber {
+    subscriber: SubscriberAny,
+    descriptor: &'static MessageDescriptor,
+}
+
+impl DynamicSubscribe for DynamicSubscriber {
+    async fn next(&mut self) -> roslibrust_common::Result<DynamicMessage> {
+        match self.subscriber.next().await {
+            Some(Ok(bytes)) => deserialize_dynamic_message(self.descriptor, &bytes)
+                .map_err(|error| Error::SerializationError(error.to_string())),
+            Some(Err(error)) => Err(Error::Unexpected(anyhow::anyhow!(error))),
+            None => Err(Error::Disconnected),
+        }
+    }
+}
+
+impl DynamicTopicProvider for crate::NodeHandle {
+    type DynamicPublisher = DynamicPublisher;
+    type DynamicSubscriber = DynamicSubscriber;
+
+    async fn dynamic_advertise(
+        &self,
+        topic: impl ToGlobalTopicName,
+        descriptor: &'static MessageDescriptor,
+    ) -> roslibrust_common::Result<Self::DynamicPublisher> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        let publisher = NodeHandle::advertise_any(
+            self,
+            topic.as_ref(),
+            descriptor.ros_type_name,
+            descriptor.definition,
+            10,
+            false,
+        )
+        .await?;
+        Ok(DynamicPublisher {
+            publisher,
+            descriptor,
+        })
+    }
+
+    async fn dynamic_subscribe(
+        &self,
+        topic: impl ToGlobalTopicName,
+        descriptor: &'static MessageDescriptor,
+    ) -> roslibrust_common::Result<Self::DynamicSubscriber> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        let subscriber = NodeHandle::subscribe_any(self, topic.as_ref(), 10).await?;
+        Ok(DynamicSubscriber {
+            subscriber,
+            descriptor,
+        })
     }
 }
 
@@ -167,6 +282,34 @@ impl<T: RosMessageType> Publish<T> for Publisher<T> {
         self.publish(data)
             .await
             .map_err(|e| Error::SerializationError(e.to_string()))
+    }
+}
+
+#[cfg(test)]
+mod dynamic_message_tests {
+    use super::*;
+    use roslibrust_common::{DynamicField, DynamicValue};
+
+    #[test]
+    fn ros1_codec_round_trips_runtime_selected_message() {
+        let descriptor = roslibrust_test::ros1::MESSAGE_REGISTRY
+            .get("std_msgs/Int16")
+            .unwrap();
+        let message = descriptor
+            .message(DynamicValue::Message(vec![DynamicField {
+                name: "data".to_owned(),
+                value: DynamicValue::I16(42),
+            }]))
+            .unwrap();
+
+        let bytes = serialize_dynamic_message(&message).unwrap();
+        assert_eq!(bytes, 42_i16.to_le_bytes());
+        assert_eq!(
+            deserialize_dynamic_message(descriptor, &bytes)
+                .unwrap()
+                .value(),
+            message.value()
+        );
     }
 }
 

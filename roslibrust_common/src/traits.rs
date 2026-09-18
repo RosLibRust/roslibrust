@@ -1,5 +1,5 @@
 use crate::topic_name::*;
-use crate::{Result, ServiceError};
+use crate::{DynamicMessage, MessageDescriptor, Result, ServiceError};
 use std::future::Future;
 
 /// Information about a topic currently visible in the ROS graph.
@@ -172,6 +172,107 @@ pub trait TopicProvider {
     ) -> impl Future<Output = Result<Self::Subscriber<MsgType>>> + Send;
 }
 // ANCHOR_END: topic_provider
+
+/// A publisher for messages whose concrete Rust type was selected at runtime.
+pub trait DynamicPublish {
+    /// The generated descriptor this publisher was advertised with.
+    fn descriptor(&self) -> &'static MessageDescriptor;
+
+    /// Publish a schema-validated dynamic message.
+    ///
+    /// Implementations must reject messages whose descriptor differs from the descriptor used to
+    /// advertise the publisher.
+    ///
+    /// ```ignore
+    /// let descriptor = MESSAGE_REGISTRY.get("std_msgs/String").unwrap();
+    /// let publisher = ros.dynamic_advertise("/chatter", descriptor).await?;
+    /// let message = descriptor.message_from(&serde_json::json!({"data": "hello"}))?;
+    /// publisher.publish(&message).await?;
+    /// ```
+    fn publish(&self, data: &DynamicMessage) -> impl Future<Output = Result<()>> + Send;
+
+    /// Validate and publish any Serde value using this publisher's generated message schema.
+    ///
+    /// Structs and string-keyed maps can represent messages. The input is converted to a
+    /// [`DynamicMessage`] and fully schema-checked before the backend serializes it. This method is
+    /// a convenience for tools that already have a Serde-friendly input representation; callers
+    /// that reuse a message should construct it once and call [`Self::publish`] instead.
+    fn publish_serializable<T>(&self, data: &T) -> impl Future<Output = Result<()>> + Send
+    where
+        Self: Sync,
+        T: serde::Serialize + Sync + ?Sized,
+    {
+        async move {
+            let message = self
+                .descriptor()
+                .message_from(data)
+                .map_err(|error| crate::Error::SerializationError(error.to_string()))?;
+            self.publish(&message).await
+        }
+    }
+}
+
+/// A subscriber for messages whose concrete Rust type was selected at runtime.
+pub trait DynamicSubscribe
+where
+    Self: Sized,
+{
+    /// Return the next message, validated against the descriptor supplied at subscription time.
+    fn next(&mut self) -> impl Future<Output = Result<DynamicMessage>> + Send;
+
+    /// Convert this subscriber into an infinite asynchronous stream.
+    fn into_stream(mut self) -> impl futures_core::Stream<Item = Result<DynamicMessage>> {
+        use async_stream::stream;
+        stream! {
+            loop {
+                yield self.next().await;
+            }
+        }
+    }
+}
+
+/// Describes a backend that can advertise and subscribe using runtime-selected message types.
+///
+/// The descriptor normally comes from a generated [`crate::MessageRegistry`] lookup. It carries
+/// the canonical type name, ROS metadata, and the generated conversion callbacks needed by the
+/// backend's serializer.
+pub trait DynamicTopicProvider {
+    type DynamicPublisher: DynamicPublish + Send + Sync + 'static;
+    type DynamicSubscriber: DynamicSubscribe + Send + Sync + 'static;
+
+    /// Advertise `topic` using a message type selected at runtime.
+    ///
+    /// The descriptor determines the ROS type metadata and validates every message passed to the
+    /// returned publisher.
+    ///
+    /// ```ignore
+    /// let descriptor = MESSAGE_REGISTRY.get(type_name).expect("unknown message type");
+    /// let publisher = ros.dynamic_advertise("/chatter", descriptor).await?;
+    /// publisher.publish_serializable(&serde_json::json!({"data": "hello"})).await?;
+    /// ```
+    fn dynamic_advertise(
+        &self,
+        topic: impl ToGlobalTopicName,
+        descriptor: &'static MessageDescriptor,
+    ) -> impl Future<Output = Result<Self::DynamicPublisher>> + Send;
+
+    /// Subscribe to `topic` using a message type selected at runtime.
+    ///
+    /// Incoming transport data is deserialized through the generated type associated with
+    /// `descriptor`, so each returned [`DynamicMessage`] has already passed schema validation.
+    ///
+    /// ```ignore
+    /// let descriptor = MESSAGE_REGISTRY.get(type_name).expect("unknown message type");
+    /// let mut subscriber = ros.dynamic_subscribe("/chatter", descriptor).await?;
+    /// let message = subscriber.next().await?;
+    /// println!("{}", serde_json::to_string(message.value())?);
+    /// ```
+    fn dynamic_subscribe(
+        &self,
+        topic: impl ToGlobalTopicName,
+        descriptor: &'static MessageDescriptor,
+    ) -> impl Future<Output = Result<Self::DynamicSubscriber>> + Send;
+}
 
 /// Defines what it means to be something that is callable as a service
 pub trait Service<T: RosServiceType> {

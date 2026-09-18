@@ -16,6 +16,28 @@ use std::{
 use tokio::sync::RwLock;
 use zenoh::bytes::ZBytes;
 
+/// Serialize a runtime-selected message as the ROS1 message body carried by the Zenoh ROS1
+/// bridge.
+pub fn serialize_dynamic_message(message: &DynamicMessage) -> DynamicMessageResult<Vec<u8>> {
+    let mut bytes = Vec::new();
+    let mut serializer = roslibrust_serde_rosmsg::Serializer::new(&mut bytes);
+    message.serialize_with(&mut serializer)?;
+    Ok(bytes)
+}
+
+/// Deserialize a ROS1 message body received through the Zenoh ROS1 bridge.
+pub fn deserialize_dynamic_message(
+    descriptor: &'static MessageDescriptor,
+    bytes: &[u8],
+) -> DynamicMessageResult<DynamicMessage> {
+    let length = u32::try_from(bytes.len()).map_err(|_| DynamicMessageError::Deserialize {
+        type_name: descriptor.ros_type_name,
+        message: "message body exceeds the ROS1 u32 length limit".to_owned(),
+    })?;
+    let mut deserializer = roslibrust_serde_rosmsg::Deserializer::new(bytes, length);
+    descriptor.deserialize_with(&mut deserializer)
+}
+
 const DISCOVERY_NAMESPACE: &str = "*";
 const BRIDGE_NAMESPACE: &str = "*";
 const DISCOVERY_KEYEXPR: &str = "ros1_discovery_info/*/*/*/*/*/**";
@@ -274,6 +296,56 @@ pub struct ZenohSubscriber<T> {
     _marker: std::marker::PhantomData<T>,
 }
 
+/// Runtime-typed publisher for the Zenoh ROS1 bridge wire format.
+pub struct DynamicZenohPublisher {
+    publisher: zenoh::pubsub::Publisher<'static>,
+    _discovery: DiscoveryDeclaration,
+    descriptor: &'static MessageDescriptor,
+}
+
+impl DynamicPublish for DynamicZenohPublisher {
+    fn descriptor(&self) -> &'static MessageDescriptor {
+        self.descriptor
+    }
+
+    async fn publish(&self, data: &DynamicMessage) -> Result<()> {
+        if data.descriptor().ros_type_name != self.descriptor.ros_type_name {
+            return Err(Error::SerializationError(format!(
+                "publisher expects {}, but message is {}",
+                self.descriptor.ros_type_name,
+                data.descriptor().ros_type_name
+            )));
+        }
+        let bytes = serialize_dynamic_message(data)
+            .map_err(|error| Error::SerializationError(error.to_string()))?;
+        self.publisher.put(bytes).await.map_err(|error| {
+            Error::Unexpected(anyhow::anyhow!(
+                "Failed to publish dynamic message to zenoh: {error:?}"
+            ))
+        })
+    }
+}
+
+/// Runtime-typed subscriber for the Zenoh ROS1 bridge wire format.
+pub struct DynamicZenohSubscriber {
+    subscriber: ZenohSubInner,
+    _discovery: DiscoveryDeclaration,
+    descriptor: &'static MessageDescriptor,
+}
+
+impl DynamicSubscribe for DynamicZenohSubscriber {
+    async fn next(&mut self) -> Result<DynamicMessage> {
+        let sample = self.subscriber.recv_async().await.map_err(|error| {
+            Error::Unexpected(anyhow::anyhow!(
+                "Failed to receive dynamic message from zenoh: {error:?}"
+            ))
+        })?;
+        let bytes = sample.payload().to_bytes();
+        deserialize_dynamic_message(self.descriptor, &bytes)
+            .map_err(|error| Error::SerializationError(error.to_string()))
+    }
+}
+
 impl<T: RosMessageType> Subscribe<T> for ZenohSubscriber<T> {
     async fn next(&mut self) -> Result<T> {
         let next = self.subscriber.recv_async().await;
@@ -364,6 +436,75 @@ impl TopicProvider for ZenohClient {
             subscriber: sub,
             _discovery: discovery,
             _marker: std::marker::PhantomData,
+        })
+    }
+}
+
+impl DynamicTopicProvider for ZenohClient {
+    type DynamicPublisher = DynamicZenohPublisher;
+    type DynamicSubscriber = DynamicZenohSubscriber;
+
+    async fn dynamic_advertise(
+        &self,
+        topic: impl ToGlobalTopicName,
+        descriptor: &'static MessageDescriptor,
+    ) -> Result<Self::DynamicPublisher> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        let mangled_topic =
+            mangle_topic(topic.as_ref(), descriptor.ros_type_name, descriptor.md5sum);
+        let publisher = self
+            .session
+            .declare_publisher(mangled_topic)
+            .await
+            .map_err(|error| {
+                Error::Unexpected(anyhow::anyhow!(
+                    "Failed to declare dynamic publisher: {error:?}"
+                ))
+            })?;
+        let discovery = DiscoveryDeclaration::new(
+            self.session.clone(),
+            DiscoveryClass::Publisher,
+            topic.as_ref(),
+            descriptor.ros_type_name,
+            descriptor.md5sum,
+        )
+        .await?;
+        Ok(DynamicZenohPublisher {
+            publisher,
+            _discovery: discovery,
+            descriptor,
+        })
+    }
+
+    async fn dynamic_subscribe(
+        &self,
+        topic: impl ToGlobalTopicName,
+        descriptor: &'static MessageDescriptor,
+    ) -> Result<Self::DynamicSubscriber> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        let mangled_topic =
+            mangle_topic(topic.as_ref(), descriptor.ros_type_name, descriptor.md5sum);
+        let subscriber = self
+            .session
+            .declare_subscriber(mangled_topic)
+            .await
+            .map_err(|error| {
+                Error::Unexpected(anyhow::anyhow!(
+                    "Failed to declare dynamic subscriber: {error:?}"
+                ))
+            })?;
+        let discovery = DiscoveryDeclaration::new(
+            self.session.clone(),
+            DiscoveryClass::Subscriber,
+            topic.as_ref(),
+            descriptor.ros_type_name,
+            descriptor.md5sum,
+        )
+        .await?;
+        Ok(DynamicZenohSubscriber {
+            subscriber,
+            _discovery: discovery,
+            descriptor,
         })
     }
 }

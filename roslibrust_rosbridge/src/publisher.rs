@@ -1,5 +1,5 @@
 use crate::ClientHandle;
-use roslibrust_common::RosMessageType;
+use roslibrust_common::{DynamicMessage, MessageDescriptor, RosMessageType};
 
 /// A handle given to the caller when they advertise a topic
 ///
@@ -50,5 +50,41 @@ impl<T: RosMessageType> Publisher<T> {
     /// match the topic's definition on roscore.
     pub async fn publish(&self, msg: &T) -> roslibrust_common::Result<()> {
         self.client.publish(&self.topic, msg).await
+    }
+}
+
+/// A rosbridge publisher whose generated message type is selected at runtime.
+pub struct DynamicPublisher {
+    topic: String,
+    client: ClientHandle,
+    pub(crate) descriptor: &'static MessageDescriptor,
+}
+
+impl DynamicPublisher {
+    pub(crate) fn new(
+        topic: String,
+        client: ClientHandle,
+        descriptor: &'static MessageDescriptor,
+    ) -> Self {
+        Self {
+            topic,
+            client,
+            descriptor,
+        }
+    }
+
+    pub(crate) async fn publish_dynamic(
+        &self,
+        message: &DynamicMessage,
+    ) -> roslibrust_common::Result<()> {
+        self.client
+            .publish_dynamic(&self.topic, self.descriptor, message)
+            .await
+    }
+}
+
+impl Drop for DynamicPublisher {
+    fn drop(&mut self) {
+        self.client.unadvertise(&self.topic);
     }
 }

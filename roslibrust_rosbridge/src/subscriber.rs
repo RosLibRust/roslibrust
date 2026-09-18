@@ -6,7 +6,7 @@ use log::error;
 use std::sync::Arc;
 
 use crate::{ClientHandle, MessageQueue};
-use roslibrust_common::RosMessageType;
+use roslibrust_common::{DynamicMessage, Result, RosMessageType};
 
 /// Represents a single instance of listening to a topic, and provides the ability to extract messages
 ///
@@ -88,6 +88,48 @@ impl<T: RosMessageType> Drop for Subscriber<T> {
             Err(e) => {
                 error!("Failed to unsubscribe while dropping subscriber: topic={:?}, id={:?}, err={:?}", &self.topic, &self.id, e);
             }
+        }
+    }
+}
+
+/// A rosbridge subscriber whose generated message type is selected at runtime.
+pub struct DynamicSubscriber {
+    id: uuid::Uuid,
+    topic: String,
+    client: ClientHandle,
+    queue: Arc<MessageQueue<Result<DynamicMessage>>>,
+}
+
+impl DynamicSubscriber {
+    pub(crate) fn new(
+        client: ClientHandle,
+        queue: Arc<MessageQueue<Result<DynamicMessage>>>,
+        topic: String,
+    ) -> Self {
+        Self {
+            id: uuid::Uuid::new_v4(),
+            topic,
+            client,
+            queue,
+        }
+    }
+
+    pub(crate) async fn next_dynamic(&self) -> Result<DynamicMessage> {
+        self.queue.pop().await
+    }
+
+    pub(crate) fn get_id(&self) -> &uuid::Uuid {
+        &self.id
+    }
+}
+
+impl Drop for DynamicSubscriber {
+    fn drop(&mut self) {
+        if let Err(error) = self.client.unsubscribe(&self.topic, &self.id) {
+            error!(
+                "Failed to unsubscribe dynamic subscriber: topic={:?}, id={:?}, err={:?}",
+                self.topic, self.id, error
+            );
         }
     }
 }

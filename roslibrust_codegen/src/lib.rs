@@ -17,7 +17,7 @@ use std::{
 
 use log::*;
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{format_ident, quote, ToTokens};
 use simple_error::{bail, SimpleError as Error};
 use utils::Package;
 
@@ -687,10 +687,39 @@ pub fn find_and_parse_ros_messages(
 /// * `services` - Collection of ROS service definition data.
 /// * `options` - Code generation options.
 pub fn generate_rust_ros_message_definitions(
-    messages: Vec<MessageFile>,
+    mut messages: Vec<MessageFile>,
     services: Vec<ServiceFile>,
     options: &CodegenOptions,
 ) -> Result<TokenStream, Error> {
+    // Keep both module output and registry iteration deterministic regardless of discovery order.
+    messages.sort_by_key(|message| message.get_full_name());
+    let registry_descriptors = messages
+        .iter()
+        .enumerate()
+        .map(|(index, message)| {
+            let package = format_ident!("{}", message.get_package_name());
+            let message_type = format_ident!("{}", message.get_short_name());
+            let descriptor = format_ident!("__ROSLIBRUST_MESSAGE_DESCRIPTOR_{index}");
+            quote! {
+                const #descriptor: ::roslibrust::MessageDescriptor =
+                    ::roslibrust::MessageDescriptor::new(
+                    <#package::#message_type as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+                    <#package::#message_type as ::roslibrust::RosMessageType>::MD5SUM,
+                    <#package::#message_type as ::roslibrust::RosMessageType>::DEFINITION,
+                    <#package::#message_type as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+                    <#package::#message_type as ::roslibrust::RosMessageType>::ROS2_HASH,
+                    ::roslibrust::MessageOperations::new(
+                        ::roslibrust::dynamic::support::normalize::<#package::#message_type>,
+                        ::roslibrust::dynamic::support::serialize::<#package::#message_type>,
+                        ::roslibrust::dynamic::support::deserialize::<#package::#message_type>,
+                    ),
+                );
+            }
+        })
+        .collect::<Vec<_>>();
+    let registry_entries = (0..registry_descriptors.len())
+        .map(|index| format_ident!("__ROSLIBRUST_MESSAGE_DESCRIPTOR_{index}"))
+        .collect::<Vec<_>>();
     let mut modules_to_struct_definitions: BTreeMap<String, Vec<TokenStream>> = BTreeMap::new();
 
     // Convert messages files into rust token streams and insert them into BTree organized by package
@@ -728,6 +757,14 @@ pub fn generate_rust_ros_message_definitions(
     Ok(quote! {
         #(#module_definitions)*
 
+        #(#registry_descriptors)*
+
+        /// Runtime lookup and codecs for all generated ROS message types.
+        #[allow(dead_code)]
+        pub static MESSAGE_REGISTRY: ::roslibrust::MessageRegistry =
+            ::roslibrust::MessageRegistry::new(&[
+                #(#registry_entries,)*
+            ]);
     })
 }
 

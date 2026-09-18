@@ -50,11 +50,13 @@ fn derive_attrs(options: &CodegenOptions, _has_large_array: bool) -> Vec<syn::At
             parse_quote! { #[derive(::roslibrust::codegen::SmartDefault)] },
         );
         attrs.push(parse_quote! { #[serde(crate = "::roslibrust::codegen::serde")] });
+        attrs.push(parse_quote! { #[serde(deny_unknown_fields)] });
     } else {
         // Use standard Rust serde with SmartDefault (SmartDefault works with any serde)
         attrs.insert(0, parse_quote! { #[derive(serde::Deserialize)] });
         attrs.insert(1, parse_quote! { #[derive(serde::Serialize)] });
         attrs.insert(2, parse_quote! { #[derive(smart_default::SmartDefault)] });
+        attrs.push(parse_quote! { #[serde(deny_unknown_fields)] });
     }
 
     attrs

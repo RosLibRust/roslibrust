@@ -21,6 +21,7 @@ env_logger = "0.11"
 roslibrust = { path = "../roslibrust", features = ["mock"] }
 # Tests also use test-util to pause time
 tokio = { version = "1", features = ["test-util"] }
+serde_json = "1.0"
 
 # What crates your code needs to run it's build.rs file
 [build-dependencies]

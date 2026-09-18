@@ -92,6 +92,12 @@ pub(crate) trait RosBridgeComm {
     async fn subscribe(&mut self, topic: &str, msg_type: &str) -> Result<()>;
     async fn unsubscribe(&mut self, topic: &str) -> Result<()>;
     async fn publish<T: RosMessageType>(&mut self, topic: &str, msg: &T) -> Result<()>;
+    async fn publish_value(
+        &mut self,
+        topic: &str,
+        msg_type: &str,
+        msg: serde_json::Value,
+    ) -> Result<()>;
     async fn advertise<T: RosMessageType>(&mut self, topic: &str) -> Result<()>;
     async fn advertise_str(&mut self, topic: &str, msg_type: &str) -> Result<()>;
     async fn call_service<Req: RosMessageType>(
@@ -152,6 +158,24 @@ impl RosBridgeComm for Writer {
         let msg = Message::Text(msg.to_string());
         debug!("Sending publish: {:?}", &msg);
         self.send(msg).await.map_to_roslibrust()?;
+        Ok(())
+    }
+
+    async fn publish_value(
+        &mut self,
+        topic: &str,
+        msg_type: &str,
+        msg: serde_json::Value,
+    ) -> Result<()> {
+        let message = json!({
+            "op": Ops::Publish.to_string(),
+            "topic": topic,
+            "type": msg_type,
+            "msg": msg,
+        });
+        let message = Message::Text(message.to_string());
+        debug!("Sending dynamic publish: {:?}", &message);
+        self.send(message).await.map_to_roslibrust()?;
         Ok(())
     }
 

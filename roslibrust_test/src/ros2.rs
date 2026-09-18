@@ -24,6 +24,7 @@ pub mod actionlib_msgs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct GoalID {
         pub r#stamp: builtin_interfaces::Time,
         pub r#id: ::std::string::String,
@@ -71,6 +72,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct GoalStatus {
         pub r#goal_id: self::GoalID,
         pub r#status: u8,
@@ -170,6 +172,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct GoalStatusArray {
         pub r#header: std_msgs::Header,
         pub r#status_list: ::std::vec::Vec<self::GoalStatus>,
@@ -338,6 +341,7 @@ pub mod builtin_interfaces {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Duration {
         pub r#sec: i32,
         pub r#nanosec: u32,
@@ -375,6 +379,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Time {
         pub r#sec: i32,
         pub r#nanosec: u32,
@@ -427,6 +432,7 @@ pub mod diagnostic_msgs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct DiagnosticArray {
         pub r#header: std_msgs::Header,
         pub r#status: ::std::vec::Vec<self::DiagnosticStatus>,
@@ -524,6 +530,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct DiagnosticStatus {
         pub r#level: u8,
         pub r#name: ::std::string::String,
@@ -583,6 +590,7 @@ string value"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct KeyValue {
         pub r#key: ::std::string::String,
         pub r#value: ::std::string::String,
@@ -612,6 +620,7 @@ string value"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct AddDiagnosticsRequest {
         pub r#load_namespace: ::std::string::String,
     }
@@ -653,6 +662,7 @@ string load_namespace"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct AddDiagnosticsResponse {
         pub r#success: bool,
         pub r#message: ::std::string::String,
@@ -700,6 +710,7 @@ string message"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct SelfTestRequest {}
     impl ::roslibrust::RosMessageType for SelfTestRequest {
         const ROS_TYPE_NAME: &'static str = "diagnostic_msgs/SelfTestRequest";
@@ -723,6 +734,7 @@ string message"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct SelfTestResponse {
         pub r#id: ::std::string::String,
         pub r#passed: u8,
@@ -814,6 +826,7 @@ pub mod geometry_msgs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Accel {
         pub r#linear: self::Vector3,
         pub r#angular: self::Vector3,
@@ -853,6 +866,7 @@ float64 z"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct AccelStamped {
         pub r#header: std_msgs::Header,
         pub r#accel: self::Accel,
@@ -945,6 +959,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct AccelWithCovariance {
         pub r#accel: self::Accel,
         #[default(_code = "[Default::default(); 36]")]
@@ -1008,6 +1023,7 @@ float64 z"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct AccelWithCovarianceStamped {
         pub r#header: std_msgs::Header,
         pub r#accel: self::AccelWithCovariance,
@@ -1139,6 +1155,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Inertia {
         pub r#m: f64,
         pub r#com: self::Vector3,
@@ -1197,6 +1214,7 @@ float64 z"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct InertiaStamped {
         pub r#header: std_msgs::Header,
         pub r#inertia: self::Inertia,
@@ -1303,6 +1321,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Point {
         pub r#x: f64,
         pub r#y: f64,
@@ -1333,6 +1352,7 @@ float64 z"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Point32 {
         pub r#x: f32,
         pub r#y: f32,
@@ -1370,6 +1390,7 @@ float32 z"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct PointStamped {
         pub r#header: std_msgs::Header,
         pub r#point: self::Point,
@@ -1442,6 +1463,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Polygon {
         pub r#points: ::std::vec::Vec<self::Point32>,
     }
@@ -1482,6 +1504,7 @@ float32 z"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct PolygonStamped {
         pub r#header: std_msgs::Header,
         pub r#polygon: self::Polygon,
@@ -1579,6 +1602,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Pose {
         pub r#position: self::Point,
         pub r#orientation: self::Quaternion,
@@ -1622,6 +1646,7 @@ float64 w 1"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Pose2D {
         pub r#x: f64,
         pub r#y: f64,
@@ -1658,6 +1683,7 @@ float64 theta"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct PoseArray {
         pub r#header: std_msgs::Header,
         pub r#poses: ::std::vec::Vec<self::Pose>,
@@ -1759,6 +1785,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct PoseStamped {
         pub r#header: std_msgs::Header,
         pub r#pose: self::Pose,
@@ -1859,6 +1886,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct PoseWithCovariance {
         pub r#pose: self::Pose,
         #[default(_code = "[Default::default(); 36]")]
@@ -1929,6 +1957,7 @@ float64 w 1"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct PoseWithCovarianceStamped {
         pub r#header: std_msgs::Header,
         pub r#pose: self::PoseWithCovariance,
@@ -2074,6 +2103,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Quaternion {
         #[default(0f64)]
         pub r#x: f64,
@@ -2111,6 +2141,7 @@ float64 w 1"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct QuaternionStamped {
         pub r#header: std_msgs::Header,
         pub r#quaternion: self::Quaternion,
@@ -2185,6 +2216,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Transform {
         pub r#translation: self::Vector3,
         pub r#rotation: self::Quaternion,
@@ -2233,6 +2265,7 @@ float64 z"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct TransformStamped {
         pub r#header: std_msgs::Header,
         pub r#child_frame_id: ::std::string::String,
@@ -2359,6 +2392,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Twist {
         pub r#linear: self::Vector3,
         pub r#angular: self::Vector3,
@@ -2399,6 +2433,7 @@ float64 z"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct TwistStamped {
         pub r#header: std_msgs::Header,
         pub r#twist: self::Twist,
@@ -2493,6 +2528,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct TwistWithCovariance {
         pub r#twist: self::Twist,
         #[default(_code = "[Default::default(); 36]")]
@@ -2557,6 +2593,7 @@ float64 z"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct TwistWithCovarianceStamped {
         pub r#header: std_msgs::Header,
         pub r#twist: self::TwistWithCovariance,
@@ -2691,6 +2728,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Vector3 {
         pub r#x: f64,
         pub r#y: f64,
@@ -2726,6 +2764,7 @@ float64 z"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Vector3Stamped {
         pub r#header: std_msgs::Header,
         pub r#vector: self::Vector3,
@@ -2806,6 +2845,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Wrench {
         pub r#force: self::Vector3,
         pub r#torque: self::Vector3,
@@ -2846,6 +2886,7 @@ float64 z"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct WrenchStamped {
         pub r#header: std_msgs::Header,
         pub r#wrench: self::Wrench,
@@ -2956,6 +2997,7 @@ pub mod nav_msgs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct GridCells {
         pub r#header: std_msgs::Header,
         pub r#cell_width: f32,
@@ -3038,6 +3080,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct MapMetaData {
         pub r#map_load_time: builtin_interfaces::Time,
         pub r#resolution: f32,
@@ -3130,6 +3173,7 @@ float64 w 1"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct OccupancyGrid {
         pub r#header: std_msgs::Header,
         pub r#info: self::MapMetaData,
@@ -3306,6 +3350,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Odometry {
         pub r#header: std_msgs::Header,
         pub r#child_frame_id: ::std::string::String,
@@ -3531,6 +3576,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Path {
         pub r#header: std_msgs::Header,
         pub r#poses: ::std::vec::Vec<geometry_msgs::PoseStamped>,
@@ -3711,6 +3757,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct GetMapRequest {}
     impl ::roslibrust::RosMessageType for GetMapRequest {
         const ROS_TYPE_NAME: &'static str = "nav_msgs/GetMapRequest";
@@ -3734,6 +3781,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct GetMapResponse {
         pub r#map: self::OccupancyGrid,
     }
@@ -4063,6 +4111,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct GetPlanRequest {
         pub r#start: geometry_msgs::PoseStamped,
         pub r#goal: geometry_msgs::PoseStamped,
@@ -4248,6 +4297,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct GetPlanResponse {
         pub r#plan: self::Path,
     }
@@ -4593,6 +4643,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct LoadMapRequest {
         pub r#map_url: ::std::string::String,
     }
@@ -4621,6 +4672,7 @@ string map_url"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct LoadMapResponse {
         pub r#map: self::OccupancyGrid,
         pub r#result: u8,
@@ -4967,6 +5019,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct SetMapRequest {
         pub r#map: self::OccupancyGrid,
         pub r#initial_pose: geometry_msgs::PoseWithCovarianceStamped,
@@ -5455,6 +5508,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct SetMapResponse {
         pub r#success: bool,
     }
@@ -5511,6 +5565,7 @@ pub mod ros2_test_msgs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Bool {
         pub r#data: bool,
     }
@@ -5536,6 +5591,7 @@ pub mod ros2_test_msgs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct BoundedInt {
         #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
         pub r#data: ::std::vec::Vec<u8>,
@@ -5563,6 +5619,7 @@ uint8[<=5] data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct BoundedReferenced {
         pub r#data: ::std::vec::Vec<self::BoundedInt>,
     }
@@ -5593,6 +5650,7 @@ uint8[<=5] data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct BoundedString {
         pub r#data: ::std::string::String,
         pub r#data_list: ::std::vec::Vec<::std::string::String>,
@@ -5623,6 +5681,7 @@ string<=5[<=3] data_matrix"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Char {
         pub r#data: u8,
         pub r#data_array: ::std::vec::Vec<u8>,
@@ -5653,6 +5712,7 @@ char[<=11] data_bounded_array"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Defaults {
         #[default(42u8)]
         pub r#x: u8,
@@ -5704,6 +5764,7 @@ string[] s_vec ["hello", "world"]
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Stamped {
         pub r#stamp: builtin_interfaces::Time,
         pub r#duration: builtin_interfaces::Duration,
@@ -5759,6 +5820,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct AddTwoIntsRequest {
         pub r#a: i64,
         pub r#b: i64,
@@ -5786,6 +5848,7 @@ int64 b"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct AddTwoIntsResponse {
         pub r#sum: i64,
     }
@@ -5841,6 +5904,7 @@ pub mod sensor_msgs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct BatteryState {
         pub r#header: std_msgs::Header,
         pub r#voltage: f32,
@@ -5992,6 +6056,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct CameraInfo {
         pub r#header: std_msgs::Header,
         pub r#height: u32,
@@ -6215,6 +6280,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct ChannelFloat32 {
         pub r#name: ::std::string::String,
         pub r#values: ::std::vec::Vec<f32>,
@@ -6264,6 +6330,7 @@ float32[] values"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct CompressedImage {
         pub r#header: std_msgs::Header,
         pub r#format: ::std::string::String,
@@ -6342,6 +6409,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct FluidPressure {
         pub r#header: std_msgs::Header,
         pub r#fluid_pressure: f64,
@@ -6417,6 +6485,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Illuminance {
         pub r#header: std_msgs::Header,
         pub r#illuminance: f64,
@@ -6500,6 +6569,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Image {
         pub r#header: std_msgs::Header,
         pub r#height: u32,
@@ -6594,6 +6664,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Imu {
         pub r#header: std_msgs::Header,
         pub r#orientation: geometry_msgs::Quaternion,
@@ -6704,6 +6775,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct JointState {
         pub r#header: std_msgs::Header,
         pub r#name: ::std::vec::Vec<::std::string::String>,
@@ -6794,6 +6866,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Joy {
         pub r#header: std_msgs::Header,
         pub r#axes: ::std::vec::Vec<f32>,
@@ -6867,6 +6940,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct JoyFeedback {
         pub r#type: u8,
         pub r#id: u8,
@@ -6913,6 +6987,7 @@ float32 intensity"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct JoyFeedbackArray {
         pub r#array: ::std::vec::Vec<self::JoyFeedback>,
     }
@@ -6955,6 +7030,7 @@ float32 intensity"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct LaserEcho {
         pub r#echoes: ::std::vec::Vec<f32>,
     }
@@ -6984,6 +7060,7 @@ float32[] echoes  # Multiple values of ranges or intensities.
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct LaserScan {
         pub r#header: std_msgs::Header,
         pub r#angle_min: f32,
@@ -7084,6 +7161,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct MagneticField {
         pub r#header: std_msgs::Header,
         pub r#magnetic_field: geometry_msgs::Vector3,
@@ -7179,6 +7257,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct MultiDOFJointState {
         pub r#header: std_msgs::Header,
         pub r#joint_names: ::std::vec::Vec<::std::string::String>,
@@ -7348,6 +7427,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct MultiEchoLaserScan {
         pub r#header: std_msgs::Header,
         pub r#angle_min: f32,
@@ -7457,6 +7537,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct NavSatFix {
         pub r#header: std_msgs::Header,
         pub r#status: self::NavSatStatus,
@@ -7600,6 +7681,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct NavSatStatus {
         pub r#status: i8,
         pub r#service: u16,
@@ -7658,6 +7740,7 @@ uint16 service"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct PointCloud {
         pub r#header: std_msgs::Header,
         pub r#points: ::std::vec::Vec<geometry_msgs::Point32>,
@@ -7777,6 +7860,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct PointCloud2 {
         pub r#header: std_msgs::Header,
         pub r#height: u32,
@@ -7891,6 +7975,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct PointField {
         pub r#name: ::std::string::String,
         pub r#offset: u32,
@@ -7945,6 +8030,7 @@ uint32 count     # How many elements in the field"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Range {
         pub r#header: std_msgs::Header,
         pub r#radiation_type: u8,
@@ -8055,6 +8141,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct RegionOfInterest {
         pub r#x_offset: u32,
         pub r#y_offset: u32,
@@ -8102,6 +8189,7 @@ bool do_rectify"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct RelativeHumidity {
         pub r#header: std_msgs::Header,
         pub r#relative_humidity: f64,
@@ -8178,6 +8266,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Temperature {
         pub r#header: std_msgs::Header,
         pub r#temperature: f64,
@@ -8249,6 +8338,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct TimeReference {
         pub r#header: std_msgs::Header,
         pub r#time_ref: builtin_interfaces::Time,
@@ -8319,6 +8409,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct SetCameraInfoRequest {
         pub r#camera_info: self::CameraInfo,
     }
@@ -8601,6 +8692,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct SetCameraInfoResponse {
         pub r#success: bool,
         pub r#status_message: ::std::string::String,
@@ -8658,6 +8750,7 @@ pub mod service_msgs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct ServiceEventInfo {
         pub r#event_type: u8,
         pub r#stamp: builtin_interfaces::Time,
@@ -8742,6 +8835,7 @@ pub mod shape_msgs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Mesh {
         pub r#triangles: ::std::vec::Vec<self::MeshTriangle>,
         pub r#vertices: ::std::vec::Vec<geometry_msgs::Point>,
@@ -8785,6 +8879,7 @@ uint32[3] vertex_indices"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct MeshTriangle {
         pub r#vertex_indices: [u32; 3],
     }
@@ -8812,6 +8907,7 @@ uint32[3] vertex_indices"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Plane {
         pub r#coef: [f64; 4],
     }
@@ -8843,6 +8939,7 @@ float64[4] coef"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct SolidPrimitive {
         pub r#type: u8,
         pub r#dimensions: ::std::vec::Vec<f64>,
@@ -8983,6 +9080,7 @@ pub mod std_msgs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Bool {
         pub r#data: bool,
     }
@@ -9013,6 +9111,7 @@ bool data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Byte {
         pub r#data: u8,
     }
@@ -9043,6 +9142,7 @@ byte data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct ByteMultiArray {
         pub r#layout: self::MultiArrayLayout,
         #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
@@ -9132,6 +9232,7 @@ uint32 stride  # stride of given dimension"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Char {
         pub r#data: u8,
     }
@@ -9162,6 +9263,7 @@ char data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct ColorRGBA {
         pub r#r: f32,
         pub r#g: f32,
@@ -9193,6 +9295,7 @@ float32 a"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Empty {}
     impl ::roslibrust::RosMessageType for Empty {
         const ROS_TYPE_NAME: &'static str = "std_msgs/Empty";
@@ -9216,6 +9319,7 @@ float32 a"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Float32 {
         pub r#data: f32,
     }
@@ -9246,6 +9350,7 @@ float32 data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Float32MultiArray {
         pub r#layout: self::MultiArrayLayout,
         pub r#data: ::std::vec::Vec<f32>,
@@ -9334,6 +9439,7 @@ uint32 stride  # stride of given dimension"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Float64 {
         pub r#data: f64,
     }
@@ -9364,6 +9470,7 @@ float64 data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Float64MultiArray {
         pub r#layout: self::MultiArrayLayout,
         pub r#data: ::std::vec::Vec<f64>,
@@ -9452,6 +9559,7 @@ uint32 stride  # stride of given dimension"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Header {
         pub r#stamp: builtin_interfaces::Time,
         pub r#frame_id: ::std::string::String,
@@ -9499,6 +9607,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Int16 {
         pub r#data: i16,
     }
@@ -9529,6 +9638,7 @@ int16 data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Int16MultiArray {
         pub r#layout: self::MultiArrayLayout,
         pub r#data: ::std::vec::Vec<i16>,
@@ -9617,6 +9727,7 @@ uint32 stride  # stride of given dimension"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Int32 {
         pub r#data: i32,
     }
@@ -9647,6 +9758,7 @@ int32 data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Int32MultiArray {
         pub r#layout: self::MultiArrayLayout,
         pub r#data: ::std::vec::Vec<i32>,
@@ -9735,6 +9847,7 @@ uint32 stride  # stride of given dimension"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Int64 {
         pub r#data: i64,
     }
@@ -9765,6 +9878,7 @@ int64 data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Int64MultiArray {
         pub r#layout: self::MultiArrayLayout,
         pub r#data: ::std::vec::Vec<i64>,
@@ -9853,6 +9967,7 @@ uint32 stride  # stride of given dimension"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Int8 {
         pub r#data: i8,
     }
@@ -9883,6 +9998,7 @@ int8 data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Int8MultiArray {
         pub r#layout: self::MultiArrayLayout,
         pub r#data: ::std::vec::Vec<i8>,
@@ -9971,6 +10087,7 @@ uint32 stride  # stride of given dimension"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct MultiArrayDimension {
         pub r#label: ::std::string::String,
         pub r#size: u32,
@@ -10005,6 +10122,7 @@ uint32 stride  # stride of given dimension"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct MultiArrayLayout {
         pub r#dim: ::std::vec::Vec<self::MultiArrayDimension>,
         pub r#data_offset: u32,
@@ -10071,6 +10189,7 @@ uint32 stride  # stride of given dimension"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct String {
         pub r#data: ::std::string::String,
     }
@@ -10101,6 +10220,7 @@ string data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct UInt16 {
         pub r#data: u16,
     }
@@ -10131,6 +10251,7 @@ uint16 data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct UInt16MultiArray {
         pub r#layout: self::MultiArrayLayout,
         pub r#data: ::std::vec::Vec<u16>,
@@ -10219,6 +10340,7 @@ uint32 stride  # stride of given dimension"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct UInt32 {
         pub r#data: u32,
     }
@@ -10249,6 +10371,7 @@ uint32 data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct UInt32MultiArray {
         pub r#layout: self::MultiArrayLayout,
         pub r#data: ::std::vec::Vec<u32>,
@@ -10337,6 +10460,7 @@ uint32 stride  # stride of given dimension"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct UInt64 {
         pub r#data: u64,
     }
@@ -10367,6 +10491,7 @@ uint64 data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct UInt64MultiArray {
         pub r#layout: self::MultiArrayLayout,
         pub r#data: ::std::vec::Vec<u64>,
@@ -10455,6 +10580,7 @@ uint32 stride  # stride of given dimension"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct UInt8 {
         pub r#data: u8,
     }
@@ -10485,6 +10611,7 @@ uint8 data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct UInt8MultiArray {
         pub r#layout: self::MultiArrayLayout,
         #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
@@ -10590,6 +10717,7 @@ pub mod std_srvs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct EmptyRequest {}
     impl ::roslibrust::RosMessageType for EmptyRequest {
         const ROS_TYPE_NAME: &'static str = "std_srvs/EmptyRequest";
@@ -10613,6 +10741,7 @@ pub mod std_srvs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct EmptyResponse {}
     impl ::roslibrust::RosMessageType for EmptyResponse {
         const ROS_TYPE_NAME: &'static str = "std_srvs/EmptyResponse";
@@ -10650,6 +10779,7 @@ pub mod std_srvs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct SetBoolRequest {
         pub r#data: bool,
     }
@@ -10676,6 +10806,7 @@ pub mod std_srvs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct SetBoolResponse {
         pub r#success: bool,
         pub r#message: ::std::string::String,
@@ -10717,6 +10848,7 @@ string message # informational, e.g. for error messages"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct TriggerRequest {}
     impl ::roslibrust::RosMessageType for TriggerRequest {
         const ROS_TYPE_NAME: &'static str = "std_srvs/TriggerRequest";
@@ -10740,6 +10872,7 @@ string message # informational, e.g. for error messages"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct TriggerResponse {
         pub r#success: bool,
         pub r#message: ::std::string::String,
@@ -10797,6 +10930,7 @@ pub mod stereo_msgs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct DisparityImage {
         pub r#header: std_msgs::Header,
         pub r#image: sensor_msgs::Image,
@@ -10996,6 +11130,7 @@ pub mod trajectory_msgs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct JointTrajectory {
         pub r#header: std_msgs::Header,
         pub r#joint_names: ::std::vec::Vec<::std::string::String>,
@@ -11126,6 +11261,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct JointTrajectoryPoint {
         pub r#positions: ::std::vec::Vec<f64>,
         pub r#velocities: ::std::vec::Vec<f64>,
@@ -11194,6 +11330,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct MultiDOFJointTrajectory {
         pub r#header: std_msgs::Header,
         pub r#joint_names: ::std::vec::Vec<::std::string::String>,
@@ -11430,6 +11567,7 @@ float64 z"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct MultiDOFJointTrajectoryPoint {
         pub r#transforms: ::std::vec::Vec<geometry_msgs::Transform>,
         pub r#velocities: ::std::vec::Vec<geometry_msgs::Twist>,
@@ -11560,6 +11698,7 @@ pub mod visualization_msgs {
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct ImageMarker {
         pub r#header: std_msgs::Header,
         pub r#ns: ::std::string::String,
@@ -11705,6 +11844,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct InteractiveMarker {
         pub r#header: std_msgs::Header,
         pub r#pose: geometry_msgs::Pose,
@@ -12744,6 +12884,7 @@ float32 v"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct InteractiveMarkerControl {
         pub r#name: ::std::string::String,
         pub r#orientation: geometry_msgs::Quaternion,
@@ -13293,6 +13434,7 @@ float32 v"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct InteractiveMarkerFeedback {
         pub r#header: std_msgs::Header,
         pub r#client_id: ::std::string::String,
@@ -13448,6 +13590,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct InteractiveMarkerInit {
         pub r#server_id: ::std::string::String,
         pub r#seq_num: u64,
@@ -15483,6 +15626,7 @@ float32 v"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct InteractiveMarkerPose {
         pub r#header: std_msgs::Header,
         pub r#pose: geometry_msgs::Pose,
@@ -15590,6 +15734,7 @@ uint32 nanosec"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct InteractiveMarkerUpdate {
         pub r#server_id: ::std::string::String,
         pub r#seq_num: u64,
@@ -17732,6 +17877,7 @@ float32 v"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct Marker {
         pub r#header: std_msgs::Header,
         pub r#ns: ::std::string::String,
@@ -18044,6 +18190,7 @@ float32 v"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct MarkerArray {
         pub r#markers: ::std::vec::Vec<self::Marker>,
     }
@@ -18493,6 +18640,7 @@ float32 v"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct MenuEntry {
         pub r#id: u32,
         pub r#parent_id: u32,
@@ -18581,6 +18729,7 @@ uint8 command_type"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct MeshFile {
         pub r#filename: ::std::string::String,
         #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
@@ -18615,6 +18764,7 @@ uint8[] data"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct UVCoordinate {
         pub r#u: f32,
         pub r#v: f32,
@@ -18644,6 +18794,7 @@ float32 v"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct GetInteractiveMarkersRequest {}
     impl ::roslibrust::RosMessageType for GetInteractiveMarkersRequest {
         const ROS_TYPE_NAME: &'static str = "visualization_msgs/GetInteractiveMarkersRequest";
@@ -18668,6 +18819,7 @@ float32 v"####;
         PartialEq,
     )]
     #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
     pub struct GetInteractiveMarkersResponse {
         pub r#sequence_number: u64,
         pub r#markers: ::std::vec::Vec<self::InteractiveMarker>,
@@ -20701,3 +20853,1751 @@ float32 v"####;
         type Response = GetInteractiveMarkersResponse;
     }
 }
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_0: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <actionlib_msgs::GoalID as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <actionlib_msgs::GoalID as ::roslibrust::RosMessageType>::MD5SUM,
+        <actionlib_msgs::GoalID as ::roslibrust::RosMessageType>::DEFINITION,
+        <actionlib_msgs::GoalID as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <actionlib_msgs::GoalID as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<actionlib_msgs::GoalID>,
+            ::roslibrust::dynamic::support::serialize::<actionlib_msgs::GoalID>,
+            ::roslibrust::dynamic::support::deserialize::<actionlib_msgs::GoalID>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_1: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <actionlib_msgs::GoalStatus as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <actionlib_msgs::GoalStatus as ::roslibrust::RosMessageType>::MD5SUM,
+        <actionlib_msgs::GoalStatus as ::roslibrust::RosMessageType>::DEFINITION,
+        <actionlib_msgs::GoalStatus as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <actionlib_msgs::GoalStatus as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<actionlib_msgs::GoalStatus>,
+            ::roslibrust::dynamic::support::serialize::<actionlib_msgs::GoalStatus>,
+            ::roslibrust::dynamic::support::deserialize::<actionlib_msgs::GoalStatus>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_2: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <actionlib_msgs::GoalStatusArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <actionlib_msgs::GoalStatusArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <actionlib_msgs::GoalStatusArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <actionlib_msgs::GoalStatusArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <actionlib_msgs::GoalStatusArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<actionlib_msgs::GoalStatusArray>,
+            ::roslibrust::dynamic::support::serialize::<actionlib_msgs::GoalStatusArray>,
+            ::roslibrust::dynamic::support::deserialize::<actionlib_msgs::GoalStatusArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_3: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <builtin_interfaces::Duration as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <builtin_interfaces::Duration as ::roslibrust::RosMessageType>::MD5SUM,
+        <builtin_interfaces::Duration as ::roslibrust::RosMessageType>::DEFINITION,
+        <builtin_interfaces::Duration as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <builtin_interfaces::Duration as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<builtin_interfaces::Duration>,
+            ::roslibrust::dynamic::support::serialize::<builtin_interfaces::Duration>,
+            ::roslibrust::dynamic::support::deserialize::<builtin_interfaces::Duration>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_4: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <builtin_interfaces::Time as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <builtin_interfaces::Time as ::roslibrust::RosMessageType>::MD5SUM,
+        <builtin_interfaces::Time as ::roslibrust::RosMessageType>::DEFINITION,
+        <builtin_interfaces::Time as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <builtin_interfaces::Time as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<builtin_interfaces::Time>,
+            ::roslibrust::dynamic::support::serialize::<builtin_interfaces::Time>,
+            ::roslibrust::dynamic::support::deserialize::<builtin_interfaces::Time>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_5: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <diagnostic_msgs::DiagnosticArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <diagnostic_msgs::DiagnosticArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <diagnostic_msgs::DiagnosticArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <diagnostic_msgs::DiagnosticArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <diagnostic_msgs::DiagnosticArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<diagnostic_msgs::DiagnosticArray>,
+            ::roslibrust::dynamic::support::serialize::<diagnostic_msgs::DiagnosticArray>,
+            ::roslibrust::dynamic::support::deserialize::<diagnostic_msgs::DiagnosticArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_6: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <diagnostic_msgs::DiagnosticStatus as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <diagnostic_msgs::DiagnosticStatus as ::roslibrust::RosMessageType>::MD5SUM,
+        <diagnostic_msgs::DiagnosticStatus as ::roslibrust::RosMessageType>::DEFINITION,
+        <diagnostic_msgs::DiagnosticStatus as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <diagnostic_msgs::DiagnosticStatus as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<diagnostic_msgs::DiagnosticStatus>,
+            ::roslibrust::dynamic::support::serialize::<diagnostic_msgs::DiagnosticStatus>,
+            ::roslibrust::dynamic::support::deserialize::<diagnostic_msgs::DiagnosticStatus>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_7: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <diagnostic_msgs::KeyValue as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <diagnostic_msgs::KeyValue as ::roslibrust::RosMessageType>::MD5SUM,
+        <diagnostic_msgs::KeyValue as ::roslibrust::RosMessageType>::DEFINITION,
+        <diagnostic_msgs::KeyValue as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <diagnostic_msgs::KeyValue as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<diagnostic_msgs::KeyValue>,
+            ::roslibrust::dynamic::support::serialize::<diagnostic_msgs::KeyValue>,
+            ::roslibrust::dynamic::support::deserialize::<diagnostic_msgs::KeyValue>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_8: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::Accel as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::Accel as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::Accel as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::Accel as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::Accel as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::Accel>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::Accel>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::Accel>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_9: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::AccelStamped as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::AccelStamped as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::AccelStamped as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::AccelStamped as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::AccelStamped as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::AccelStamped>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::AccelStamped>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::AccelStamped>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_10: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::AccelWithCovariance as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::AccelWithCovariance as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::AccelWithCovariance as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::AccelWithCovariance as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::AccelWithCovariance as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::AccelWithCovariance>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::AccelWithCovariance>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::AccelWithCovariance>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_11: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::AccelWithCovarianceStamped as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::AccelWithCovarianceStamped as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::AccelWithCovarianceStamped as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::AccelWithCovarianceStamped as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::AccelWithCovarianceStamped as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::AccelWithCovarianceStamped>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::AccelWithCovarianceStamped>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::AccelWithCovarianceStamped>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_12: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::Inertia as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::Inertia as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::Inertia as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::Inertia as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::Inertia as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::Inertia>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::Inertia>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::Inertia>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_13: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::InertiaStamped as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::InertiaStamped as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::InertiaStamped as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::InertiaStamped as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::InertiaStamped as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::InertiaStamped>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::InertiaStamped>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::InertiaStamped>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_14: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::Point as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::Point as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::Point as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::Point as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::Point as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::Point>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::Point>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::Point>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_15: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::Point32 as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::Point32 as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::Point32 as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::Point32 as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::Point32 as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::Point32>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::Point32>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::Point32>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_16: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::PointStamped as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::PointStamped as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::PointStamped as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::PointStamped as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::PointStamped as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::PointStamped>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::PointStamped>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::PointStamped>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_17: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::Polygon as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::Polygon as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::Polygon as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::Polygon as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::Polygon as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::Polygon>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::Polygon>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::Polygon>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_18: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::PolygonStamped as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::PolygonStamped as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::PolygonStamped as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::PolygonStamped as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::PolygonStamped as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::PolygonStamped>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::PolygonStamped>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::PolygonStamped>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_19: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::Pose as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::Pose as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::Pose as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::Pose as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::Pose as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::Pose>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::Pose>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::Pose>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_20: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::Pose2D as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::Pose2D as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::Pose2D as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::Pose2D as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::Pose2D as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::Pose2D>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::Pose2D>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::Pose2D>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_21: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::PoseArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::PoseArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::PoseArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::PoseArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::PoseArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::PoseArray>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::PoseArray>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::PoseArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_22: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::PoseStamped as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::PoseStamped as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::PoseStamped as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::PoseStamped as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::PoseStamped as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::PoseStamped>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::PoseStamped>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::PoseStamped>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_23: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::PoseWithCovariance as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::PoseWithCovariance as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::PoseWithCovariance as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::PoseWithCovariance as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::PoseWithCovariance as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::PoseWithCovariance>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::PoseWithCovariance>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::PoseWithCovariance>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_24: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::PoseWithCovarianceStamped as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::PoseWithCovarianceStamped as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::PoseWithCovarianceStamped as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::PoseWithCovarianceStamped as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::PoseWithCovarianceStamped as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::PoseWithCovarianceStamped>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::PoseWithCovarianceStamped>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::PoseWithCovarianceStamped>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_25: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::Quaternion as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::Quaternion as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::Quaternion as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::Quaternion as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::Quaternion as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::Quaternion>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::Quaternion>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::Quaternion>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_26: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::QuaternionStamped as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::QuaternionStamped as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::QuaternionStamped as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::QuaternionStamped as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::QuaternionStamped as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::QuaternionStamped>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::QuaternionStamped>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::QuaternionStamped>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_27: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::Transform as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::Transform as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::Transform as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::Transform as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::Transform as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::Transform>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::Transform>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::Transform>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_28: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::TransformStamped as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::TransformStamped as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::TransformStamped as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::TransformStamped as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::TransformStamped as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::TransformStamped>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::TransformStamped>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::TransformStamped>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_29: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::Twist as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::Twist as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::Twist as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::Twist as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::Twist as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::Twist>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::Twist>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::Twist>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_30: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::TwistStamped as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::TwistStamped as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::TwistStamped as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::TwistStamped as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::TwistStamped as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::TwistStamped>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::TwistStamped>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::TwistStamped>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_31: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::TwistWithCovariance as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::TwistWithCovariance as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::TwistWithCovariance as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::TwistWithCovariance as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::TwistWithCovariance as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::TwistWithCovariance>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::TwistWithCovariance>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::TwistWithCovariance>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_32: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::TwistWithCovarianceStamped as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::TwistWithCovarianceStamped as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::TwistWithCovarianceStamped as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::TwistWithCovarianceStamped as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::TwistWithCovarianceStamped as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::TwistWithCovarianceStamped>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::TwistWithCovarianceStamped>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::TwistWithCovarianceStamped>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_33: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::Vector3 as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::Vector3 as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::Vector3 as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::Vector3 as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::Vector3 as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::Vector3>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::Vector3>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::Vector3>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_34: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::Vector3Stamped as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::Vector3Stamped as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::Vector3Stamped as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::Vector3Stamped as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::Vector3Stamped as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::Vector3Stamped>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::Vector3Stamped>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::Vector3Stamped>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_35: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::Wrench as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::Wrench as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::Wrench as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::Wrench as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::Wrench as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::Wrench>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::Wrench>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::Wrench>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_36: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <geometry_msgs::WrenchStamped as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <geometry_msgs::WrenchStamped as ::roslibrust::RosMessageType>::MD5SUM,
+        <geometry_msgs::WrenchStamped as ::roslibrust::RosMessageType>::DEFINITION,
+        <geometry_msgs::WrenchStamped as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <geometry_msgs::WrenchStamped as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<geometry_msgs::WrenchStamped>,
+            ::roslibrust::dynamic::support::serialize::<geometry_msgs::WrenchStamped>,
+            ::roslibrust::dynamic::support::deserialize::<geometry_msgs::WrenchStamped>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_37: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <nav_msgs::GridCells as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <nav_msgs::GridCells as ::roslibrust::RosMessageType>::MD5SUM,
+        <nav_msgs::GridCells as ::roslibrust::RosMessageType>::DEFINITION,
+        <nav_msgs::GridCells as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <nav_msgs::GridCells as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<nav_msgs::GridCells>,
+            ::roslibrust::dynamic::support::serialize::<nav_msgs::GridCells>,
+            ::roslibrust::dynamic::support::deserialize::<nav_msgs::GridCells>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_38: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <nav_msgs::MapMetaData as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <nav_msgs::MapMetaData as ::roslibrust::RosMessageType>::MD5SUM,
+        <nav_msgs::MapMetaData as ::roslibrust::RosMessageType>::DEFINITION,
+        <nav_msgs::MapMetaData as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <nav_msgs::MapMetaData as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<nav_msgs::MapMetaData>,
+            ::roslibrust::dynamic::support::serialize::<nav_msgs::MapMetaData>,
+            ::roslibrust::dynamic::support::deserialize::<nav_msgs::MapMetaData>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_39: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <nav_msgs::OccupancyGrid as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <nav_msgs::OccupancyGrid as ::roslibrust::RosMessageType>::MD5SUM,
+        <nav_msgs::OccupancyGrid as ::roslibrust::RosMessageType>::DEFINITION,
+        <nav_msgs::OccupancyGrid as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <nav_msgs::OccupancyGrid as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<nav_msgs::OccupancyGrid>,
+            ::roslibrust::dynamic::support::serialize::<nav_msgs::OccupancyGrid>,
+            ::roslibrust::dynamic::support::deserialize::<nav_msgs::OccupancyGrid>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_40: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <nav_msgs::Odometry as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <nav_msgs::Odometry as ::roslibrust::RosMessageType>::MD5SUM,
+        <nav_msgs::Odometry as ::roslibrust::RosMessageType>::DEFINITION,
+        <nav_msgs::Odometry as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <nav_msgs::Odometry as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<nav_msgs::Odometry>,
+            ::roslibrust::dynamic::support::serialize::<nav_msgs::Odometry>,
+            ::roslibrust::dynamic::support::deserialize::<nav_msgs::Odometry>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_41: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <nav_msgs::Path as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <nav_msgs::Path as ::roslibrust::RosMessageType>::MD5SUM,
+        <nav_msgs::Path as ::roslibrust::RosMessageType>::DEFINITION,
+        <nav_msgs::Path as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <nav_msgs::Path as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<nav_msgs::Path>,
+            ::roslibrust::dynamic::support::serialize::<nav_msgs::Path>,
+            ::roslibrust::dynamic::support::deserialize::<nav_msgs::Path>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_42: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <ros2_test_msgs::Bool as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <ros2_test_msgs::Bool as ::roslibrust::RosMessageType>::MD5SUM,
+        <ros2_test_msgs::Bool as ::roslibrust::RosMessageType>::DEFINITION,
+        <ros2_test_msgs::Bool as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <ros2_test_msgs::Bool as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<ros2_test_msgs::Bool>,
+            ::roslibrust::dynamic::support::serialize::<ros2_test_msgs::Bool>,
+            ::roslibrust::dynamic::support::deserialize::<ros2_test_msgs::Bool>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_43: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <ros2_test_msgs::BoundedInt as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <ros2_test_msgs::BoundedInt as ::roslibrust::RosMessageType>::MD5SUM,
+        <ros2_test_msgs::BoundedInt as ::roslibrust::RosMessageType>::DEFINITION,
+        <ros2_test_msgs::BoundedInt as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <ros2_test_msgs::BoundedInt as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<ros2_test_msgs::BoundedInt>,
+            ::roslibrust::dynamic::support::serialize::<ros2_test_msgs::BoundedInt>,
+            ::roslibrust::dynamic::support::deserialize::<ros2_test_msgs::BoundedInt>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_44: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <ros2_test_msgs::BoundedReferenced as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <ros2_test_msgs::BoundedReferenced as ::roslibrust::RosMessageType>::MD5SUM,
+        <ros2_test_msgs::BoundedReferenced as ::roslibrust::RosMessageType>::DEFINITION,
+        <ros2_test_msgs::BoundedReferenced as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <ros2_test_msgs::BoundedReferenced as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<ros2_test_msgs::BoundedReferenced>,
+            ::roslibrust::dynamic::support::serialize::<ros2_test_msgs::BoundedReferenced>,
+            ::roslibrust::dynamic::support::deserialize::<ros2_test_msgs::BoundedReferenced>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_45: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <ros2_test_msgs::BoundedString as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <ros2_test_msgs::BoundedString as ::roslibrust::RosMessageType>::MD5SUM,
+        <ros2_test_msgs::BoundedString as ::roslibrust::RosMessageType>::DEFINITION,
+        <ros2_test_msgs::BoundedString as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <ros2_test_msgs::BoundedString as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<ros2_test_msgs::BoundedString>,
+            ::roslibrust::dynamic::support::serialize::<ros2_test_msgs::BoundedString>,
+            ::roslibrust::dynamic::support::deserialize::<ros2_test_msgs::BoundedString>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_46: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <ros2_test_msgs::Char as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <ros2_test_msgs::Char as ::roslibrust::RosMessageType>::MD5SUM,
+        <ros2_test_msgs::Char as ::roslibrust::RosMessageType>::DEFINITION,
+        <ros2_test_msgs::Char as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <ros2_test_msgs::Char as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<ros2_test_msgs::Char>,
+            ::roslibrust::dynamic::support::serialize::<ros2_test_msgs::Char>,
+            ::roslibrust::dynamic::support::deserialize::<ros2_test_msgs::Char>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_47: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <ros2_test_msgs::Defaults as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <ros2_test_msgs::Defaults as ::roslibrust::RosMessageType>::MD5SUM,
+        <ros2_test_msgs::Defaults as ::roslibrust::RosMessageType>::DEFINITION,
+        <ros2_test_msgs::Defaults as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <ros2_test_msgs::Defaults as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<ros2_test_msgs::Defaults>,
+            ::roslibrust::dynamic::support::serialize::<ros2_test_msgs::Defaults>,
+            ::roslibrust::dynamic::support::deserialize::<ros2_test_msgs::Defaults>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_48: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <ros2_test_msgs::Stamped as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <ros2_test_msgs::Stamped as ::roslibrust::RosMessageType>::MD5SUM,
+        <ros2_test_msgs::Stamped as ::roslibrust::RosMessageType>::DEFINITION,
+        <ros2_test_msgs::Stamped as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <ros2_test_msgs::Stamped as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<ros2_test_msgs::Stamped>,
+            ::roslibrust::dynamic::support::serialize::<ros2_test_msgs::Stamped>,
+            ::roslibrust::dynamic::support::deserialize::<ros2_test_msgs::Stamped>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_49: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::BatteryState as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::BatteryState as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::BatteryState as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::BatteryState as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::BatteryState as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::BatteryState>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::BatteryState>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::BatteryState>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_50: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::CameraInfo as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::CameraInfo as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::CameraInfo as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::CameraInfo as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::CameraInfo as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::CameraInfo>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::CameraInfo>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::CameraInfo>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_51: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::ChannelFloat32 as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::ChannelFloat32 as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::ChannelFloat32 as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::ChannelFloat32 as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::ChannelFloat32 as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::ChannelFloat32>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::ChannelFloat32>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::ChannelFloat32>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_52: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::CompressedImage as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::CompressedImage as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::CompressedImage as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::CompressedImage as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::CompressedImage as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::CompressedImage>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::CompressedImage>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::CompressedImage>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_53: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::FluidPressure as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::FluidPressure as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::FluidPressure as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::FluidPressure as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::FluidPressure as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::FluidPressure>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::FluidPressure>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::FluidPressure>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_54: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::Illuminance as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::Illuminance as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::Illuminance as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::Illuminance as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::Illuminance as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::Illuminance>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::Illuminance>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::Illuminance>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_55: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::Image as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::Image as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::Image as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::Image as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::Image as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::Image>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::Image>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::Image>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_56: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::Imu as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::Imu as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::Imu as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::Imu as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::Imu as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::Imu>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::Imu>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::Imu>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_57: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::JointState as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::JointState as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::JointState as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::JointState as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::JointState as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::JointState>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::JointState>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::JointState>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_58: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::Joy as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::Joy as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::Joy as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::Joy as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::Joy as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::Joy>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::Joy>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::Joy>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_59: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::JoyFeedback as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::JoyFeedback as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::JoyFeedback as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::JoyFeedback as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::JoyFeedback as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::JoyFeedback>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::JoyFeedback>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::JoyFeedback>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_60: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::JoyFeedbackArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::JoyFeedbackArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::JoyFeedbackArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::JoyFeedbackArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::JoyFeedbackArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::JoyFeedbackArray>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::JoyFeedbackArray>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::JoyFeedbackArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_61: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::LaserEcho as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::LaserEcho as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::LaserEcho as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::LaserEcho as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::LaserEcho as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::LaserEcho>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::LaserEcho>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::LaserEcho>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_62: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::LaserScan as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::LaserScan as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::LaserScan as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::LaserScan as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::LaserScan as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::LaserScan>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::LaserScan>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::LaserScan>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_63: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::MagneticField as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::MagneticField as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::MagneticField as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::MagneticField as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::MagneticField as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::MagneticField>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::MagneticField>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::MagneticField>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_64: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::MultiDOFJointState as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::MultiDOFJointState as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::MultiDOFJointState as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::MultiDOFJointState as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::MultiDOFJointState as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::MultiDOFJointState>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::MultiDOFJointState>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::MultiDOFJointState>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_65: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::MultiEchoLaserScan as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::MultiEchoLaserScan as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::MultiEchoLaserScan as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::MultiEchoLaserScan as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::MultiEchoLaserScan as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::MultiEchoLaserScan>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::MultiEchoLaserScan>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::MultiEchoLaserScan>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_66: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::NavSatFix as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::NavSatFix as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::NavSatFix as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::NavSatFix as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::NavSatFix as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::NavSatFix>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::NavSatFix>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::NavSatFix>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_67: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::NavSatStatus as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::NavSatStatus as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::NavSatStatus as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::NavSatStatus as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::NavSatStatus as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::NavSatStatus>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::NavSatStatus>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::NavSatStatus>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_68: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::PointCloud as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::PointCloud as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::PointCloud as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::PointCloud as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::PointCloud as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::PointCloud>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::PointCloud>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::PointCloud>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_69: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::PointCloud2 as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::PointCloud2 as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::PointCloud2 as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::PointCloud2 as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::PointCloud2 as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::PointCloud2>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::PointCloud2>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::PointCloud2>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_70: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::PointField as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::PointField as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::PointField as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::PointField as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::PointField as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::PointField>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::PointField>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::PointField>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_71: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::Range as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::Range as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::Range as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::Range as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::Range as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::Range>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::Range>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::Range>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_72: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::RegionOfInterest as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::RegionOfInterest as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::RegionOfInterest as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::RegionOfInterest as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::RegionOfInterest as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::RegionOfInterest>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::RegionOfInterest>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::RegionOfInterest>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_73: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::RelativeHumidity as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::RelativeHumidity as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::RelativeHumidity as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::RelativeHumidity as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::RelativeHumidity as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::RelativeHumidity>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::RelativeHumidity>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::RelativeHumidity>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_74: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::Temperature as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::Temperature as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::Temperature as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::Temperature as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::Temperature as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::Temperature>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::Temperature>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::Temperature>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_75: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <sensor_msgs::TimeReference as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <sensor_msgs::TimeReference as ::roslibrust::RosMessageType>::MD5SUM,
+        <sensor_msgs::TimeReference as ::roslibrust::RosMessageType>::DEFINITION,
+        <sensor_msgs::TimeReference as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <sensor_msgs::TimeReference as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<sensor_msgs::TimeReference>,
+            ::roslibrust::dynamic::support::serialize::<sensor_msgs::TimeReference>,
+            ::roslibrust::dynamic::support::deserialize::<sensor_msgs::TimeReference>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_76: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <service_msgs::ServiceEventInfo as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <service_msgs::ServiceEventInfo as ::roslibrust::RosMessageType>::MD5SUM,
+        <service_msgs::ServiceEventInfo as ::roslibrust::RosMessageType>::DEFINITION,
+        <service_msgs::ServiceEventInfo as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <service_msgs::ServiceEventInfo as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<service_msgs::ServiceEventInfo>,
+            ::roslibrust::dynamic::support::serialize::<service_msgs::ServiceEventInfo>,
+            ::roslibrust::dynamic::support::deserialize::<service_msgs::ServiceEventInfo>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_77: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <shape_msgs::Mesh as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <shape_msgs::Mesh as ::roslibrust::RosMessageType>::MD5SUM,
+        <shape_msgs::Mesh as ::roslibrust::RosMessageType>::DEFINITION,
+        <shape_msgs::Mesh as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <shape_msgs::Mesh as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<shape_msgs::Mesh>,
+            ::roslibrust::dynamic::support::serialize::<shape_msgs::Mesh>,
+            ::roslibrust::dynamic::support::deserialize::<shape_msgs::Mesh>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_78: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <shape_msgs::MeshTriangle as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <shape_msgs::MeshTriangle as ::roslibrust::RosMessageType>::MD5SUM,
+        <shape_msgs::MeshTriangle as ::roslibrust::RosMessageType>::DEFINITION,
+        <shape_msgs::MeshTriangle as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <shape_msgs::MeshTriangle as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<shape_msgs::MeshTriangle>,
+            ::roslibrust::dynamic::support::serialize::<shape_msgs::MeshTriangle>,
+            ::roslibrust::dynamic::support::deserialize::<shape_msgs::MeshTriangle>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_79: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <shape_msgs::Plane as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <shape_msgs::Plane as ::roslibrust::RosMessageType>::MD5SUM,
+        <shape_msgs::Plane as ::roslibrust::RosMessageType>::DEFINITION,
+        <shape_msgs::Plane as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <shape_msgs::Plane as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<shape_msgs::Plane>,
+            ::roslibrust::dynamic::support::serialize::<shape_msgs::Plane>,
+            ::roslibrust::dynamic::support::deserialize::<shape_msgs::Plane>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_80: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <shape_msgs::SolidPrimitive as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <shape_msgs::SolidPrimitive as ::roslibrust::RosMessageType>::MD5SUM,
+        <shape_msgs::SolidPrimitive as ::roslibrust::RosMessageType>::DEFINITION,
+        <shape_msgs::SolidPrimitive as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <shape_msgs::SolidPrimitive as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<shape_msgs::SolidPrimitive>,
+            ::roslibrust::dynamic::support::serialize::<shape_msgs::SolidPrimitive>,
+            ::roslibrust::dynamic::support::deserialize::<shape_msgs::SolidPrimitive>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_81: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Bool as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Bool as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Bool as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Bool as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Bool as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Bool>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Bool>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Bool>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_82: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Byte as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Byte as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Byte as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Byte as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Byte as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Byte>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Byte>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Byte>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_83: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::ByteMultiArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::ByteMultiArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::ByteMultiArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::ByteMultiArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::ByteMultiArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::ByteMultiArray>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::ByteMultiArray>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::ByteMultiArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_84: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Char as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Char as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Char as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Char as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Char as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Char>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Char>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Char>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_85: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::ColorRGBA as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::ColorRGBA as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::ColorRGBA as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::ColorRGBA as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::ColorRGBA as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::ColorRGBA>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::ColorRGBA>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::ColorRGBA>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_86: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Empty as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Empty as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Empty as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Empty as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Empty as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Empty>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Empty>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Empty>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_87: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Float32 as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Float32 as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Float32 as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Float32 as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Float32 as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Float32>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Float32>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Float32>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_88: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Float32MultiArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Float32MultiArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Float32MultiArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Float32MultiArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Float32MultiArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Float32MultiArray>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Float32MultiArray>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Float32MultiArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_89: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Float64 as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Float64 as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Float64 as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Float64 as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Float64 as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Float64>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Float64>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Float64>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_90: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Float64MultiArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Float64MultiArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Float64MultiArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Float64MultiArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Float64MultiArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Float64MultiArray>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Float64MultiArray>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Float64MultiArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_91: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Header as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Header as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Header as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Header as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Header as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Header>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Header>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Header>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_92: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Int16 as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Int16 as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Int16 as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Int16 as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Int16 as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Int16>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Int16>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Int16>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_93: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Int16MultiArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Int16MultiArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Int16MultiArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Int16MultiArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Int16MultiArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Int16MultiArray>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Int16MultiArray>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Int16MultiArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_94: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Int32 as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Int32 as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Int32 as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Int32 as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Int32 as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Int32>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Int32>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Int32>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_95: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Int32MultiArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Int32MultiArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Int32MultiArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Int32MultiArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Int32MultiArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Int32MultiArray>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Int32MultiArray>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Int32MultiArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_96: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Int64 as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Int64 as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Int64 as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Int64 as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Int64 as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Int64>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Int64>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Int64>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_97: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Int64MultiArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Int64MultiArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Int64MultiArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Int64MultiArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Int64MultiArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Int64MultiArray>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Int64MultiArray>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Int64MultiArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_98: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Int8 as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Int8 as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Int8 as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Int8 as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Int8 as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Int8>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Int8>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Int8>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_99: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::Int8MultiArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::Int8MultiArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::Int8MultiArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::Int8MultiArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::Int8MultiArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::Int8MultiArray>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::Int8MultiArray>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::Int8MultiArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_100: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::MultiArrayDimension as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::MultiArrayDimension as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::MultiArrayDimension as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::MultiArrayDimension as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::MultiArrayDimension as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::MultiArrayDimension>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::MultiArrayDimension>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::MultiArrayDimension>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_101: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::MultiArrayLayout as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::MultiArrayLayout as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::MultiArrayLayout as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::MultiArrayLayout as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::MultiArrayLayout as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::MultiArrayLayout>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::MultiArrayLayout>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::MultiArrayLayout>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_102: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::String as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::String as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::String as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::String as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::String as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::String>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::String>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::String>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_103: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::UInt16 as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::UInt16 as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::UInt16 as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::UInt16 as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::UInt16 as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::UInt16>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::UInt16>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::UInt16>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_104: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::UInt16MultiArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::UInt16MultiArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::UInt16MultiArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::UInt16MultiArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::UInt16MultiArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::UInt16MultiArray>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::UInt16MultiArray>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::UInt16MultiArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_105: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::UInt32 as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::UInt32 as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::UInt32 as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::UInt32 as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::UInt32 as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::UInt32>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::UInt32>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::UInt32>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_106: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::UInt32MultiArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::UInt32MultiArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::UInt32MultiArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::UInt32MultiArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::UInt32MultiArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::UInt32MultiArray>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::UInt32MultiArray>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::UInt32MultiArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_107: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::UInt64 as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::UInt64 as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::UInt64 as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::UInt64 as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::UInt64 as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::UInt64>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::UInt64>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::UInt64>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_108: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::UInt64MultiArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::UInt64MultiArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::UInt64MultiArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::UInt64MultiArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::UInt64MultiArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::UInt64MultiArray>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::UInt64MultiArray>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::UInt64MultiArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_109: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::UInt8 as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::UInt8 as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::UInt8 as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::UInt8 as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::UInt8 as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::UInt8>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::UInt8>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::UInt8>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_110: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <std_msgs::UInt8MultiArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <std_msgs::UInt8MultiArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <std_msgs::UInt8MultiArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <std_msgs::UInt8MultiArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <std_msgs::UInt8MultiArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<std_msgs::UInt8MultiArray>,
+            ::roslibrust::dynamic::support::serialize::<std_msgs::UInt8MultiArray>,
+            ::roslibrust::dynamic::support::deserialize::<std_msgs::UInt8MultiArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_111: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <stereo_msgs::DisparityImage as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <stereo_msgs::DisparityImage as ::roslibrust::RosMessageType>::MD5SUM,
+        <stereo_msgs::DisparityImage as ::roslibrust::RosMessageType>::DEFINITION,
+        <stereo_msgs::DisparityImage as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <stereo_msgs::DisparityImage as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<stereo_msgs::DisparityImage>,
+            ::roslibrust::dynamic::support::serialize::<stereo_msgs::DisparityImage>,
+            ::roslibrust::dynamic::support::deserialize::<stereo_msgs::DisparityImage>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_112: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <trajectory_msgs::JointTrajectory as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <trajectory_msgs::JointTrajectory as ::roslibrust::RosMessageType>::MD5SUM,
+        <trajectory_msgs::JointTrajectory as ::roslibrust::RosMessageType>::DEFINITION,
+        <trajectory_msgs::JointTrajectory as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <trajectory_msgs::JointTrajectory as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<trajectory_msgs::JointTrajectory>,
+            ::roslibrust::dynamic::support::serialize::<trajectory_msgs::JointTrajectory>,
+            ::roslibrust::dynamic::support::deserialize::<trajectory_msgs::JointTrajectory>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_113: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <trajectory_msgs::JointTrajectoryPoint as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <trajectory_msgs::JointTrajectoryPoint as ::roslibrust::RosMessageType>::MD5SUM,
+        <trajectory_msgs::JointTrajectoryPoint as ::roslibrust::RosMessageType>::DEFINITION,
+        <trajectory_msgs::JointTrajectoryPoint as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <trajectory_msgs::JointTrajectoryPoint as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<trajectory_msgs::JointTrajectoryPoint>,
+            ::roslibrust::dynamic::support::serialize::<trajectory_msgs::JointTrajectoryPoint>,
+            ::roslibrust::dynamic::support::deserialize::<trajectory_msgs::JointTrajectoryPoint>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_114: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <trajectory_msgs::MultiDOFJointTrajectory as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <trajectory_msgs::MultiDOFJointTrajectory as ::roslibrust::RosMessageType>::MD5SUM,
+        <trajectory_msgs::MultiDOFJointTrajectory as ::roslibrust::RosMessageType>::DEFINITION,
+        <trajectory_msgs::MultiDOFJointTrajectory as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <trajectory_msgs::MultiDOFJointTrajectory as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<trajectory_msgs::MultiDOFJointTrajectory>,
+            ::roslibrust::dynamic::support::serialize::<trajectory_msgs::MultiDOFJointTrajectory>,
+            ::roslibrust::dynamic::support::deserialize::<trajectory_msgs::MultiDOFJointTrajectory>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_115 : :: roslibrust :: MessageDescriptor = :: roslibrust :: MessageDescriptor :: new (< trajectory_msgs :: MultiDOFJointTrajectoryPoint as :: roslibrust :: RosMessageType > :: ROS_TYPE_NAME , < trajectory_msgs :: MultiDOFJointTrajectoryPoint as :: roslibrust :: RosMessageType > :: MD5SUM , < trajectory_msgs :: MultiDOFJointTrajectoryPoint as :: roslibrust :: RosMessageType > :: DEFINITION , < trajectory_msgs :: MultiDOFJointTrajectoryPoint as :: roslibrust :: RosMessageType > :: ROS2_TYPE_NAME , < trajectory_msgs :: MultiDOFJointTrajectoryPoint as :: roslibrust :: RosMessageType > :: ROS2_HASH , :: roslibrust :: MessageOperations :: new (:: roslibrust :: dynamic :: support :: normalize :: < trajectory_msgs :: MultiDOFJointTrajectoryPoint > , :: roslibrust :: dynamic :: support :: serialize :: < trajectory_msgs :: MultiDOFJointTrajectoryPoint > , :: roslibrust :: dynamic :: support :: deserialize :: < trajectory_msgs :: MultiDOFJointTrajectoryPoint > ,) ,) ;
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_116: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <visualization_msgs::ImageMarker as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <visualization_msgs::ImageMarker as ::roslibrust::RosMessageType>::MD5SUM,
+        <visualization_msgs::ImageMarker as ::roslibrust::RosMessageType>::DEFINITION,
+        <visualization_msgs::ImageMarker as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <visualization_msgs::ImageMarker as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<visualization_msgs::ImageMarker>,
+            ::roslibrust::dynamic::support::serialize::<visualization_msgs::ImageMarker>,
+            ::roslibrust::dynamic::support::deserialize::<visualization_msgs::ImageMarker>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_117: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <visualization_msgs::InteractiveMarker as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <visualization_msgs::InteractiveMarker as ::roslibrust::RosMessageType>::MD5SUM,
+        <visualization_msgs::InteractiveMarker as ::roslibrust::RosMessageType>::DEFINITION,
+        <visualization_msgs::InteractiveMarker as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <visualization_msgs::InteractiveMarker as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<visualization_msgs::InteractiveMarker>,
+            ::roslibrust::dynamic::support::serialize::<visualization_msgs::InteractiveMarker>,
+            ::roslibrust::dynamic::support::deserialize::<visualization_msgs::InteractiveMarker>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_118 : :: roslibrust :: MessageDescriptor = :: roslibrust :: MessageDescriptor :: new (< visualization_msgs :: InteractiveMarkerControl as :: roslibrust :: RosMessageType > :: ROS_TYPE_NAME , < visualization_msgs :: InteractiveMarkerControl as :: roslibrust :: RosMessageType > :: MD5SUM , < visualization_msgs :: InteractiveMarkerControl as :: roslibrust :: RosMessageType > :: DEFINITION , < visualization_msgs :: InteractiveMarkerControl as :: roslibrust :: RosMessageType > :: ROS2_TYPE_NAME , < visualization_msgs :: InteractiveMarkerControl as :: roslibrust :: RosMessageType > :: ROS2_HASH , :: roslibrust :: MessageOperations :: new (:: roslibrust :: dynamic :: support :: normalize :: < visualization_msgs :: InteractiveMarkerControl > , :: roslibrust :: dynamic :: support :: serialize :: < visualization_msgs :: InteractiveMarkerControl > , :: roslibrust :: dynamic :: support :: deserialize :: < visualization_msgs :: InteractiveMarkerControl > ,) ,) ;
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_119 : :: roslibrust :: MessageDescriptor = :: roslibrust :: MessageDescriptor :: new (< visualization_msgs :: InteractiveMarkerFeedback as :: roslibrust :: RosMessageType > :: ROS_TYPE_NAME , < visualization_msgs :: InteractiveMarkerFeedback as :: roslibrust :: RosMessageType > :: MD5SUM , < visualization_msgs :: InteractiveMarkerFeedback as :: roslibrust :: RosMessageType > :: DEFINITION , < visualization_msgs :: InteractiveMarkerFeedback as :: roslibrust :: RosMessageType > :: ROS2_TYPE_NAME , < visualization_msgs :: InteractiveMarkerFeedback as :: roslibrust :: RosMessageType > :: ROS2_HASH , :: roslibrust :: MessageOperations :: new (:: roslibrust :: dynamic :: support :: normalize :: < visualization_msgs :: InteractiveMarkerFeedback > , :: roslibrust :: dynamic :: support :: serialize :: < visualization_msgs :: InteractiveMarkerFeedback > , :: roslibrust :: dynamic :: support :: deserialize :: < visualization_msgs :: InteractiveMarkerFeedback > ,) ,) ;
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_120: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <visualization_msgs::InteractiveMarkerInit as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <visualization_msgs::InteractiveMarkerInit as ::roslibrust::RosMessageType>::MD5SUM,
+        <visualization_msgs::InteractiveMarkerInit as ::roslibrust::RosMessageType>::DEFINITION,
+        <visualization_msgs::InteractiveMarkerInit as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <visualization_msgs::InteractiveMarkerInit as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<visualization_msgs::InteractiveMarkerInit>,
+            ::roslibrust::dynamic::support::serialize::<visualization_msgs::InteractiveMarkerInit>,
+            ::roslibrust::dynamic::support::deserialize::<visualization_msgs::InteractiveMarkerInit>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_121: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <visualization_msgs::InteractiveMarkerPose as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <visualization_msgs::InteractiveMarkerPose as ::roslibrust::RosMessageType>::MD5SUM,
+        <visualization_msgs::InteractiveMarkerPose as ::roslibrust::RosMessageType>::DEFINITION,
+        <visualization_msgs::InteractiveMarkerPose as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <visualization_msgs::InteractiveMarkerPose as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<visualization_msgs::InteractiveMarkerPose>,
+            ::roslibrust::dynamic::support::serialize::<visualization_msgs::InteractiveMarkerPose>,
+            ::roslibrust::dynamic::support::deserialize::<visualization_msgs::InteractiveMarkerPose>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_122 : :: roslibrust :: MessageDescriptor = :: roslibrust :: MessageDescriptor :: new (< visualization_msgs :: InteractiveMarkerUpdate as :: roslibrust :: RosMessageType > :: ROS_TYPE_NAME , < visualization_msgs :: InteractiveMarkerUpdate as :: roslibrust :: RosMessageType > :: MD5SUM , < visualization_msgs :: InteractiveMarkerUpdate as :: roslibrust :: RosMessageType > :: DEFINITION , < visualization_msgs :: InteractiveMarkerUpdate as :: roslibrust :: RosMessageType > :: ROS2_TYPE_NAME , < visualization_msgs :: InteractiveMarkerUpdate as :: roslibrust :: RosMessageType > :: ROS2_HASH , :: roslibrust :: MessageOperations :: new (:: roslibrust :: dynamic :: support :: normalize :: < visualization_msgs :: InteractiveMarkerUpdate > , :: roslibrust :: dynamic :: support :: serialize :: < visualization_msgs :: InteractiveMarkerUpdate > , :: roslibrust :: dynamic :: support :: deserialize :: < visualization_msgs :: InteractiveMarkerUpdate > ,) ,) ;
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_123: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <visualization_msgs::Marker as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <visualization_msgs::Marker as ::roslibrust::RosMessageType>::MD5SUM,
+        <visualization_msgs::Marker as ::roslibrust::RosMessageType>::DEFINITION,
+        <visualization_msgs::Marker as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <visualization_msgs::Marker as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<visualization_msgs::Marker>,
+            ::roslibrust::dynamic::support::serialize::<visualization_msgs::Marker>,
+            ::roslibrust::dynamic::support::deserialize::<visualization_msgs::Marker>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_124: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <visualization_msgs::MarkerArray as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <visualization_msgs::MarkerArray as ::roslibrust::RosMessageType>::MD5SUM,
+        <visualization_msgs::MarkerArray as ::roslibrust::RosMessageType>::DEFINITION,
+        <visualization_msgs::MarkerArray as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <visualization_msgs::MarkerArray as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<visualization_msgs::MarkerArray>,
+            ::roslibrust::dynamic::support::serialize::<visualization_msgs::MarkerArray>,
+            ::roslibrust::dynamic::support::deserialize::<visualization_msgs::MarkerArray>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_125: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <visualization_msgs::MenuEntry as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <visualization_msgs::MenuEntry as ::roslibrust::RosMessageType>::MD5SUM,
+        <visualization_msgs::MenuEntry as ::roslibrust::RosMessageType>::DEFINITION,
+        <visualization_msgs::MenuEntry as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <visualization_msgs::MenuEntry as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<visualization_msgs::MenuEntry>,
+            ::roslibrust::dynamic::support::serialize::<visualization_msgs::MenuEntry>,
+            ::roslibrust::dynamic::support::deserialize::<visualization_msgs::MenuEntry>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_126: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <visualization_msgs::MeshFile as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <visualization_msgs::MeshFile as ::roslibrust::RosMessageType>::MD5SUM,
+        <visualization_msgs::MeshFile as ::roslibrust::RosMessageType>::DEFINITION,
+        <visualization_msgs::MeshFile as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <visualization_msgs::MeshFile as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<visualization_msgs::MeshFile>,
+            ::roslibrust::dynamic::support::serialize::<visualization_msgs::MeshFile>,
+            ::roslibrust::dynamic::support::deserialize::<visualization_msgs::MeshFile>,
+        ),
+    );
+const __ROSLIBRUST_MESSAGE_DESCRIPTOR_127: ::roslibrust::MessageDescriptor =
+    ::roslibrust::MessageDescriptor::new(
+        <visualization_msgs::UVCoordinate as ::roslibrust::RosMessageType>::ROS_TYPE_NAME,
+        <visualization_msgs::UVCoordinate as ::roslibrust::RosMessageType>::MD5SUM,
+        <visualization_msgs::UVCoordinate as ::roslibrust::RosMessageType>::DEFINITION,
+        <visualization_msgs::UVCoordinate as ::roslibrust::RosMessageType>::ROS2_TYPE_NAME,
+        <visualization_msgs::UVCoordinate as ::roslibrust::RosMessageType>::ROS2_HASH,
+        ::roslibrust::MessageOperations::new(
+            ::roslibrust::dynamic::support::normalize::<visualization_msgs::UVCoordinate>,
+            ::roslibrust::dynamic::support::serialize::<visualization_msgs::UVCoordinate>,
+            ::roslibrust::dynamic::support::deserialize::<visualization_msgs::UVCoordinate>,
+        ),
+    );
+#[doc = r" Runtime lookup and codecs for all generated ROS message types."]
+#[allow(dead_code)]
+pub static MESSAGE_REGISTRY: ::roslibrust::MessageRegistry = ::roslibrust::MessageRegistry::new(&[
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_0,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_1,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_2,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_3,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_4,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_5,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_6,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_7,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_8,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_9,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_10,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_11,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_12,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_13,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_14,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_15,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_16,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_17,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_18,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_19,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_20,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_21,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_22,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_23,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_24,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_25,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_26,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_27,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_28,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_29,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_30,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_31,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_32,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_33,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_34,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_35,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_36,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_37,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_38,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_39,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_40,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_41,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_42,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_43,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_44,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_45,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_46,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_47,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_48,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_49,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_50,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_51,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_52,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_53,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_54,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_55,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_56,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_57,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_58,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_59,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_60,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_61,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_62,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_63,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_64,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_65,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_66,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_67,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_68,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_69,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_70,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_71,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_72,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_73,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_74,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_75,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_76,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_77,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_78,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_79,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_80,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_81,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_82,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_83,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_84,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_85,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_86,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_87,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_88,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_89,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_90,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_91,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_92,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_93,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_94,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_95,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_96,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_97,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_98,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_99,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_100,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_101,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_102,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_103,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_104,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_105,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_106,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_107,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_108,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_109,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_110,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_111,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_112,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_113,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_114,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_115,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_116,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_117,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_118,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_119,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_120,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_121,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_122,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_123,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_124,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_125,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_126,
+    __ROSLIBRUST_MESSAGE_DESCRIPTOR_127,
+]);

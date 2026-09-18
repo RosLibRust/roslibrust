@@ -9,6 +9,41 @@ use hiroz::{
     pubsub::{ZPub, ZSub},
 };
 
+/// Serialize a runtime-selected message as ROS 2 little-endian CDR, including its encapsulation
+/// header.
+pub fn serialize_dynamic_message(message: &DynamicMessage) -> DynamicMessageResult<Vec<u8>> {
+    let mut bytes = hiroz::msg::CDR_HEADER_LE.to_vec();
+    let mut serializer = hiroz_cdr::CdrSerializer::<hiroz_cdr::LittleEndian>::new(&mut bytes);
+    message.serialize_with(&mut serializer)?;
+    Ok(bytes)
+}
+
+/// Deserialize a ROS 2 little-endian CDR message using a runtime-selected descriptor.
+pub fn deserialize_dynamic_message<'de>(
+    descriptor: &'static MessageDescriptor,
+    bytes: &'de [u8],
+) -> DynamicMessageResult<DynamicMessage> {
+    if bytes.len() < 4 {
+        return Err(DynamicMessageError::Deserialize {
+            type_name: descriptor.ros_type_name,
+            message: "CDR data is too short for an encapsulation header".to_owned(),
+        });
+    }
+    if bytes[..2] != hiroz::msg::CDR_HEADER_LE[..2] {
+        return Err(DynamicMessageError::Deserialize {
+            type_name: descriptor.ros_type_name,
+            message: format!(
+                "expected little-endian CDR representation identifier {:?}, found {:?}",
+                &hiroz::msg::CDR_HEADER_LE[..2],
+                &bytes[..2]
+            ),
+        });
+    }
+
+    let mut deserializer = hiroz_cdr::CdrDeserializer::<hiroz_cdr::LittleEndian>::new(&bytes[4..]);
+    descriptor.deserialize_with(&mut deserializer)
+}
+
 /// Re-export hiroz's public API for configuring and extending native ROS 2 clients.
 pub use hiroz::*;
 
@@ -83,25 +118,16 @@ fn ros_type_info<T: RosMessageType>() -> TypeInfo {
     TypeInfo::new(T::ROS2_TYPE_NAME, TypeHash::new(1, *T::ROS2_HASH))
 }
 
+fn dynamic_ros_type_info(descriptor: &MessageDescriptor) -> TypeInfo {
+    TypeInfo::new(
+        descriptor.ros2_type_name,
+        TypeHash::new(1, *descriptor.ros2_hash),
+    )
+}
+
 // Converts a name that looks like std_msgs::msg::dds_::String_ to std_msgs/String
 fn normalize_ros2_graph_type(type_name: String) -> String {
-    if let Some((package, rest)) = type_name.split_once("::") {
-        if let Some(type_name) = rest
-            .strip_prefix("msg::dds_::")
-            .or_else(|| rest.strip_prefix("srv::dds_::"))
-            .and_then(|name| name.strip_suffix('_'))
-        {
-            return format!("{package}/{type_name}");
-        }
-    }
-
-    let mut parts = type_name.split('/');
-    match (parts.next(), parts.next(), parts.next(), parts.next()) {
-        (Some(package), Some("msg" | "srv"), Some(type_name), None) => {
-            format!("{package}/{type_name}")
-        }
-        _ => type_name,
-    }
+    roslibrust_common::normalize_ros_type_name(&type_name).into_owned()
 }
 
 impl roslibrust_common::TopicProvider for ZenohClient {
@@ -143,6 +169,97 @@ impl roslibrust_common::TopicProvider for ZenohClient {
     }
 }
 
+/// Runtime-typed native ROS 2 publisher.
+pub struct DynamicZenohPublisher {
+    publisher: ZPub<RosZMessage<()>, RosZSerdes<()>>,
+    descriptor: &'static MessageDescriptor,
+}
+
+impl DynamicPublish for DynamicZenohPublisher {
+    fn descriptor(&self) -> &'static MessageDescriptor {
+        self.descriptor
+    }
+
+    async fn publish(&self, data: &DynamicMessage) -> Result<()> {
+        if data.descriptor().ros_type_name != self.descriptor.ros_type_name {
+            return Err(Error::SerializationError(format!(
+                "publisher expects {}, but message is {}",
+                self.descriptor.ros_type_name,
+                data.descriptor().ros_type_name
+            )));
+        }
+        let bytes = serialize_dynamic_message(data)
+            .map_err(|error| Error::SerializationError(error.to_string()))?;
+        self.publisher
+            .publish_serialized(bytes)
+            .map_err(|error| Error::Unexpected(anyhow::anyhow!(error)))
+    }
+}
+
+/// Runtime-typed native ROS 2 subscriber.
+pub struct DynamicZenohSubscriber {
+    subscriber: ZSub<RosZMessage<()>, zenoh::sample::Sample, RosZSerdes<()>>,
+    descriptor: &'static MessageDescriptor,
+}
+
+impl DynamicSubscribe for DynamicZenohSubscriber {
+    async fn next(&mut self) -> Result<DynamicMessage> {
+        let sample = self
+            .subscriber
+            .async_recv_serialized()
+            .await
+            .map_err(|error| Error::Unexpected(anyhow::anyhow!(error)))?;
+        let bytes = sample.payload().to_bytes();
+        deserialize_dynamic_message(self.descriptor, &bytes)
+            .map_err(|error| Error::SerializationError(error.to_string()))
+    }
+}
+
+impl DynamicTopicProvider for ZenohClient {
+    type DynamicPublisher = DynamicZenohPublisher;
+    type DynamicSubscriber = DynamicZenohSubscriber;
+
+    async fn dynamic_advertise(
+        &self,
+        topic: impl roslibrust_common::topic_name::ToGlobalTopicName + Send,
+        descriptor: &'static MessageDescriptor,
+    ) -> Result<Self::DynamicPublisher> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        let publisher = self
+            .node
+            .create_pub_impl::<RosZMessage<()>>(
+                topic.as_ref(),
+                Some(dynamic_ros_type_info(descriptor)),
+            )
+            .build()
+            .map_err(|error| Error::Unexpected(anyhow::anyhow!(error)))?;
+        Ok(DynamicZenohPublisher {
+            publisher,
+            descriptor,
+        })
+    }
+
+    async fn dynamic_subscribe(
+        &self,
+        topic: impl roslibrust_common::topic_name::ToGlobalTopicName + Send,
+        descriptor: &'static MessageDescriptor,
+    ) -> Result<Self::DynamicSubscriber> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        let subscriber = self
+            .node
+            .create_sub_impl::<RosZMessage<()>>(
+                topic.as_ref(),
+                Some(dynamic_ros_type_info(descriptor)),
+            )
+            .build()
+            .map_err(|error| Error::Unexpected(anyhow::anyhow!(error)))?;
+        Ok(DynamicZenohSubscriber {
+            subscriber,
+            descriptor,
+        })
+    }
+}
+
 impl roslibrust_common::GraphProvider for ZenohClient {
     async fn list_topics(&self) -> Result<Vec<TopicInfo>> {
         let mut topics: Vec<_> = self
@@ -172,6 +289,33 @@ impl roslibrust_common::GraphProvider for ZenohClient {
             .collect();
         services.sort_by(|a, b| a.name.cmp(&b.name));
         Ok(services)
+    }
+}
+
+#[cfg(test)]
+mod dynamic_message_tests {
+    use super::*;
+
+    #[test]
+    fn cdr_codec_round_trips_runtime_selected_message() {
+        let descriptor = roslibrust_test::ros2::MESSAGE_REGISTRY
+            .get("std_msgs/Int16")
+            .unwrap();
+        let message = descriptor
+            .message(DynamicValue::Message(vec![DynamicField {
+                name: "data".to_owned(),
+                value: DynamicValue::I16(42),
+            }]))
+            .unwrap();
+
+        let bytes = serialize_dynamic_message(&message).unwrap();
+        assert_eq!(&bytes[..4], &hiroz::msg::CDR_HEADER_LE);
+        assert_eq!(
+            deserialize_dynamic_message(descriptor, &bytes)
+                .unwrap()
+                .value(),
+            message.value()
+        );
     }
 }
 

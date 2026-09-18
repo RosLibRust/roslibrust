@@ -29,6 +29,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use bincode::Options;
 use roslibrust_common::topic_name::{GlobalTopicName, ToGlobalTopicName};
 use roslibrust_common::*;
 
@@ -174,6 +175,91 @@ impl TopicProvider for MockRos {
         Ok(MockSubscriber {
             receiver: rx_copy,
             _marker: Default::default(),
+        })
+    }
+}
+
+impl DynamicTopicProvider for MockRos {
+    type DynamicPublisher = MockDynamicPublisher;
+    type DynamicSubscriber = MockDynamicSubscriber;
+
+    async fn dynamic_advertise(
+        &self,
+        topic: impl ToGlobalTopicName,
+        descriptor: &'static MessageDescriptor,
+    ) -> Result<Self::DynamicPublisher> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        let topic_str = topic.as_ref();
+        {
+            let topics = self.topics.read().await;
+            if let Some(entry) = topics.get(topic_str) {
+                if entry.type_name != descriptor.ros_type_name {
+                    return Err(Error::ServerError(format!(
+                        "Topic {topic_str} already registered with type {}, cannot also use {}",
+                        entry.type_name, descriptor.ros_type_name
+                    )));
+                }
+                return Ok(MockDynamicPublisher {
+                    sender: entry.sender.clone(),
+                    descriptor,
+                });
+            }
+        }
+
+        let (sender, receiver) = Channel::channel(10);
+        let publisher_sender = sender.clone();
+        let mut topics = self.topics.write().await;
+        topics.insert(
+            topic_str.to_owned(),
+            TopicEntry {
+                sender,
+                receiver,
+                type_name: descriptor.ros_type_name.to_owned(),
+            },
+        );
+        Ok(MockDynamicPublisher {
+            sender: publisher_sender,
+            descriptor,
+        })
+    }
+
+    async fn dynamic_subscribe(
+        &self,
+        topic: impl ToGlobalTopicName,
+        descriptor: &'static MessageDescriptor,
+    ) -> Result<Self::DynamicSubscriber> {
+        let topic: GlobalTopicName = topic.to_global_name()?;
+        let topic_str = topic.as_ref();
+        {
+            let topics = self.topics.read().await;
+            if let Some(entry) = topics.get(topic_str) {
+                if entry.type_name != descriptor.ros_type_name {
+                    return Err(Error::ServerError(format!(
+                        "Topic {topic_str} already registered with type {}, cannot also use {}",
+                        entry.type_name, descriptor.ros_type_name
+                    )));
+                }
+                return Ok(MockDynamicSubscriber {
+                    receiver: entry.receiver.resubscribe(),
+                    descriptor,
+                });
+            }
+        }
+
+        let (sender, receiver) = Channel::channel(10);
+        let subscriber_receiver = receiver.resubscribe();
+        let mut topics = self.topics.write().await;
+        topics.insert(
+            topic_str.to_owned(),
+            TopicEntry {
+                sender,
+                receiver,
+                type_name: descriptor.ros_type_name.to_owned(),
+            },
+        );
+        Ok(MockDynamicSubscriber {
+            receiver: subscriber_receiver,
+            descriptor,
         })
     }
 }
@@ -379,6 +465,61 @@ impl<T: RosMessageType> Subscribe<T> for MockSubscriber<T> {
     }
 }
 
+/// Dynamic publisher returned by [`DynamicTopicProvider::dynamic_advertise`] on [`MockRos`].
+pub struct MockDynamicPublisher {
+    sender: Channel::Sender<Vec<u8>>,
+    descriptor: &'static MessageDescriptor,
+}
+
+impl DynamicPublish for MockDynamicPublisher {
+    fn descriptor(&self) -> &'static MessageDescriptor {
+        self.descriptor
+    }
+
+    async fn publish(&self, data: &DynamicMessage) -> Result<()> {
+        if data.descriptor().ros_type_name != self.descriptor.ros_type_name {
+            return Err(Error::SerializationError(format!(
+                "publisher expects {}, but message is {}",
+                self.descriptor.ros_type_name,
+                data.descriptor().ros_type_name
+            )));
+        }
+
+        let mut bytes = Vec::new();
+        let options = bincode::DefaultOptions::new()
+            .with_fixint_encoding()
+            .allow_trailing_bytes();
+        let mut serializer = bincode::Serializer::new(&mut bytes, options);
+        data.serialize_with(&mut serializer)
+            .map_err(|error| Error::SerializationError(error.to_string()))?;
+        self.sender.send(bytes).map_err(|_| Error::Disconnected)?;
+        Ok(())
+    }
+}
+
+/// Dynamic subscriber returned by [`DynamicTopicProvider::dynamic_subscribe`] on [`MockRos`].
+pub struct MockDynamicSubscriber {
+    receiver: Channel::Receiver<Vec<u8>>,
+    descriptor: &'static MessageDescriptor,
+}
+
+impl DynamicSubscribe for MockDynamicSubscriber {
+    async fn next(&mut self) -> Result<DynamicMessage> {
+        let bytes = self
+            .receiver
+            .recv()
+            .await
+            .map_err(|_| Error::Disconnected)?;
+        let options = bincode::DefaultOptions::new()
+            .with_fixint_encoding()
+            .allow_trailing_bytes();
+        let mut deserializer = bincode::Deserializer::from_slice(&bytes, options);
+        self.descriptor
+            .deserialize_with(&mut deserializer)
+            .map_err(|error| Error::SerializationError(error.to_string()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -407,6 +548,79 @@ mod tests {
         let received_msg = sub_handle.next().await.unwrap();
 
         assert_eq!(msg, received_msg);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn dynamic_topics_interoperate_with_typed_topics() {
+        let mock_ros = MockRos::new();
+        let descriptor = roslibrust_test::ros1::MESSAGE_REGISTRY
+            .get("std_msgs/Int16")
+            .unwrap();
+
+        let typed_publisher = mock_ros
+            .advertise::<std_msgs::Int16>("/typed_to_dynamic")
+            .await
+            .unwrap();
+        let mut dynamic_subscriber = mock_ros
+            .dynamic_subscribe("/typed_to_dynamic", descriptor)
+            .await
+            .unwrap();
+        typed_publisher
+            .publish(&std_msgs::Int16 { data: 42 })
+            .await
+            .unwrap();
+        assert_eq!(
+            dynamic_subscriber.next().await.unwrap().value(),
+            &DynamicValue::Message(vec![DynamicField {
+                name: "data".to_owned(),
+                value: DynamicValue::I16(42),
+            }])
+        );
+
+        let dynamic_publisher = mock_ros
+            .dynamic_advertise("/dynamic_to_typed", descriptor)
+            .await
+            .unwrap();
+        let mut typed_subscriber = mock_ros
+            .subscribe::<std_msgs::Int16>("/dynamic_to_typed")
+            .await
+            .unwrap();
+        let message = descriptor
+            .message(DynamicValue::Message(vec![DynamicField {
+                name: "data".to_owned(),
+                value: DynamicValue::I16(-7),
+            }]))
+            .unwrap();
+        dynamic_publisher.publish(&message).await.unwrap();
+        assert_eq!(
+            typed_subscriber.next().await.unwrap(),
+            std_msgs::Int16 { data: -7 }
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn dynamic_topics_reject_descriptor_mismatches() {
+        let mock_ros = MockRos::new();
+        let int16 = roslibrust_test::ros1::MESSAGE_REGISTRY
+            .get("std_msgs/Int16")
+            .unwrap();
+        let string = roslibrust_test::ros1::MESSAGE_REGISTRY
+            .get("std_msgs/String")
+            .unwrap();
+
+        let publisher = mock_ros.dynamic_advertise("/dynamic", int16).await.unwrap();
+        assert!(mock_ros
+            .dynamic_subscribe("/dynamic", string)
+            .await
+            .is_err());
+
+        let wrong_message = string
+            .message(DynamicValue::Message(vec![DynamicField {
+                name: "data".to_owned(),
+                value: DynamicValue::String("wrong type".to_owned()),
+            }]))
+            .unwrap();
+        assert!(publisher.publish(&wrong_message).await.is_err());
     }
 
     #[tokio::test(flavor = "multi_thread")]
