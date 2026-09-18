@@ -58,22 +58,90 @@ jobs:
       - name: Lint
         run: source /root/.cargo/env && cargo fmt --all -- --check
 
-      - name: Start rosbridge services
-        run: |
-          source /opt/ros/${{ matrix.distro }}/setup.bash
-          ros2 launch rosbridge_server rosbridge_websocket_launch.xml &
-          ros2 run rosapi rosapi_node &
-          sleep 1
-
       - name: Start zenoh daemon
         if: matrix.zenoh
         run: |
           source /opt/ros/${{ matrix.distro }}/setup.bash
-          ros2 run rmw_zenoh_cpp rmw_zenohd -l tcp/0.0.0.0:7447 > zenoh.log 2>&1 &
-          sleep 1
+          ros2 run rmw_zenoh_cpp rmw_zenohd -l tcp/0.0.0.0:7447 > /tmp/zenoh.log 2>&1 &
+          echo $! > /tmp/zenoh.pid
+
+          for attempt in {1..20}; do
+            if bash -c '</dev/tcp/127.0.0.1/7447' 2>/dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/zenoh.pid)" 2>/dev/null; then
+              tail -n 200 /tmp/zenoh.log
+              exit 1
+            fi
+            sleep 0.5
+          done
+
+          tail -n 200 /tmp/zenoh.log
+          exit 1
+
+      - name: Start rosbridge services
+        run: |
+          source /opt/ros/${{ matrix.distro }}/setup.bash
+          ros2 launch rosbridge_server rosbridge_websocket_launch.xml > /tmp/rosbridge.log 2>&1 &
+          echo $! > /tmp/rosbridge.pid
+
+          for attempt in {1..20}; do
+            if bash -c '</dev/tcp/127.0.0.1/9090' 2>/dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$(cat /tmp/rosbridge.pid)" 2>/dev/null; then
+              tail -n 200 /tmp/rosbridge.log
+              exit 1
+            fi
+            sleep 0.5
+          done
+
+          tail -n 200 /tmp/rosbridge.log
+          exit 1
 
       - name: Integration Tests
         run: |
           source /opt/ros/${{ matrix.distro }}/setup.bash
           source /root/.cargo/env
           cargo test --features ${{ matrix.features }} -- --test-threads 1
+
+      - name: Dump service diagnostics
+        if: failure()
+        run: |
+          source /opt/ros/${{ matrix.distro }}/setup.bash
+          set +e
+
+          for service in zenoh rosbridge; do
+            pid_file="/tmp/${service}.pid"
+            if [[ -f "$pid_file" ]]; then
+              pid="$(cat "$pid_file")"
+              if kill -0 "$pid" 2>/dev/null; then
+                printf '%s is running with PID %s\n' "$service" "$pid"
+                ps -fp "$pid"
+              else
+                printf '%s is not running; recorded PID was %s\n' "$service" "$pid"
+              fi
+            fi
+          done
+
+          ps -ef | grep -E '[r]osbridge|[r]osapi|[r]mw_zenohd'
+          if command -v ss >/dev/null; then
+            ss -lntp
+          elif command -v netstat >/dev/null; then
+            netstat -lntp
+          fi
+          timeout 10s ros2 node list
+
+          for log in /tmp/zenoh.log /tmp/rosbridge.log; do
+            if [[ -f "$log" ]]; then
+              printf '\n--- %s ---\n' "$log"
+              tail -n 300 "$log"
+            fi
+          done
+
+          if [[ -d /root/.ros/log ]]; then
+            while IFS= read -r -d '' log; do
+              printf '\n--- %s ---\n' "$log"
+              tail -n 100 "$log"
+            done < <(find /root/.ros/log -type f -print0)
+          fi
