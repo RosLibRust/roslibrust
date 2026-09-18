@@ -43,6 +43,32 @@ fn fixed_sized_arrays() {
 }
 
 #[test]
+fn byte_array_variants_preserve_native_ros_framing() {
+    let message = test_msgs::ByteArrays {
+        dynamic_uint8: vec![0, 1, 2, 255],
+        dynamic_char: vec![3, 4, 5, 254],
+        fixed_uint8: [6, 7, 8, 253],
+        fixed_char: [9, 10, 11, 252],
+    };
+
+    let bytes = roslibrust_serde_rosmsg::to_vec(&message).unwrap();
+    assert_eq!(
+        bytes,
+        [
+            24, 0, 0, 0, // message body length
+            4, 0, 0, 0, 0, 1, 2, 255, // uint8[]
+            4, 0, 0, 0, 3, 4, 5, 254, // char[]
+            6, 7, 8, 253, // uint8[4]
+            9, 10, 11, 252, // char[4]
+        ]
+    );
+    assert_eq!(
+        roslibrust_serde_rosmsg::from_slice::<test_msgs::ByteArrays>(&bytes).unwrap(),
+        message
+    );
+}
+
+#[test]
 fn test_gendeps_in_message_definition() {
     // ROS1 requires that the message_definition includes the expanded
     // definitions of all referenced sub-messages.

@@ -35,7 +35,7 @@ mod ros2_builtin_interfaces;
 pub mod integral_types;
 pub use integral_types::*;
 
-// Custom serde module for Vec<u8> that handles both base64 (rosbridge) and arrays (other formats)
+// Custom serde module for byte vectors and arrays that handles rosbridge's base64 representation.
 pub mod serde_rosmsg_bytes;
 
 // These pub use statements are here to be able to export the dependencies of the generated code

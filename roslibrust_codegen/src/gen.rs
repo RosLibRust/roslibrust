@@ -273,12 +273,15 @@ fn generate_field_definition(
     // For larger arrays, we need special handling via BigArray.
     const MAX_FIXED_ARRAY_LEN: usize = 32;
 
-    let is_uint8_field = matches!(field.field_type.field_type.as_str(), "uint8" | "byte");
+    let is_byte_field = matches!(
+        field.field_type.field_type.as_str(),
+        "uint8" | "byte" | "char"
+    );
 
     let serde_line = match &field.field_type.array_info {
         // Dynamic-length arrays (Vec<T>)
         ArrayType::Unbounded | ArrayType::Bounded(_) => {
-            if is_uint8_field {
+            if is_byte_field {
                 if options.roslibrust_serde {
                     // Use roslibrust's custom module that handles both base64 (rosbridge) and binary
                     quote! { #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")] }
@@ -290,31 +293,22 @@ fn generate_field_definition(
                 quote! {}
             }
         }
+        // Fixed-length arrays larger than 32 need BigArray, except for byte arrays handled by
+        // roslibrust's adapter.
         ArrayType::FixedLength(len) if *len > MAX_FIXED_ARRAY_LEN => {
-            if is_uint8_field && options.roslibrust_serde {
-                quote! {
-                    #[serde(
-                        serialize_with = "::roslibrust::codegen::serde_rosmsg_bytes::fixed_serialize",
-                        deserialize_with = "::roslibrust::codegen::serde_rosmsg_bytes::fixed_deserialize"
-                    )]
-                }
+            if is_byte_field && options.roslibrust_serde {
+                quote! { #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")] }
             } else {
                 quote! { #[serde(with = "::roslibrust::codegen::BigArray")] }
             }
         }
+        // Fixed-length arrays <= 32 have automatic trait implementations
         ArrayType::FixedLength(_) => {
-            if is_uint8_field {
-                if options.roslibrust_serde {
-                    quote! {
-                        #[serde(
-                            serialize_with = "::roslibrust::codegen::serde_rosmsg_bytes::fixed_serialize",
-                            deserialize_with = "::roslibrust::codegen::serde_rosmsg_bytes::fixed_deserialize"
-                        )]
-                    }
-                } else {
-                    // Use serde_bytes for efficient serialization of byte arrays
-                    quote! { #[serde(with = "serde_bytes")] }
-                }
+            if is_byte_field && options.roslibrust_serde {
+                quote! { #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")] }
+            } else if is_byte_field {
+                // Use serde_bytes for efficient serialization of byte arrays
+                quote! { #[serde(with = "serde_bytes")] }
             } else {
                 quote! {}
             }

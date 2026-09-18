@@ -3695,6 +3695,7 @@ dependencies = [
  "roslibrust",
  "roslibrust_hiroz",
  "roslibrust_rosbridge",
+ "roslibrust_serde_rosmsg",
  "roslibrust_zenoh",
  "serde_json",
  "test-log",

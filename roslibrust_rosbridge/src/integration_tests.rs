@@ -528,4 +528,35 @@ mod integration_tests {
 
         assert_eq!(received, msg, "Messages do not match");
     }
+
+    /// Regression test for fixed-size byte arrays being encoded as JSON arrays instead of the
+    /// base64 string required by rosbridge.
+    #[cfg(feature = "ros2_test")]
+    #[test_log::test(tokio::test)]
+    async fn test_fixed_byte_array_roundtrip() {
+        let client =
+            ClientHandle::new_with_options(ClientHandleOptions::new(LOCAL_WS).timeout(TIMEOUT))
+                .await
+                .expect("Failed to construct client");
+
+        let publisher = client
+            .advertise("/test_fixed_byte_array_roundtrip")
+            .await
+            .expect("Failed to advertise");
+        let subscriber = client
+            .subscribe::<unique_identifier_msgs::UUID>("/test_fixed_byte_array_roundtrip")
+            .await
+            .expect("Failed to subscribe");
+
+        let message = unique_identifier_msgs::UUID {
+            uuid: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 255],
+        };
+        publisher
+            .publish(&message)
+            .await
+            .expect("Failed to publish");
+
+        let received = subscriber.next().await;
+        assert_eq!(received, message, "Messages do not match");
+    }
 }
