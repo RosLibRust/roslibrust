@@ -356,13 +356,21 @@ mod dynamic_message_tests {
 
     #[test]
     fn ros1_codec_deserializes_tcpros_framed_message() {
-        let message = int16_message(42);
+        let descriptor = roslibrust_test::ros1::MESSAGE_REGISTRY
+            .get("std_msgs/String")
+            .unwrap();
+        let message = descriptor
+            .message(DynamicValue::Message(vec![DynamicField {
+                name: "data".to_owned(),
+                value: DynamicValue::String("constructed message".to_owned()),
+            }]))
+            .unwrap();
         let body = serialize_dynamic_message(&message).unwrap();
         let mut frame = Vec::from((body.len() as u32).to_le_bytes());
         frame.extend_from_slice(&body);
 
         assert_eq!(
-            deserialize_framed_dynamic_message(int16_descriptor(), &frame)
+            deserialize_framed_dynamic_message(descriptor, &frame)
                 .unwrap()
                 .value(),
             message.value()
