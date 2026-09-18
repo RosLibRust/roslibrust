@@ -15,7 +15,8 @@ mod integration_tests {
     // On my laptop test was ~90% reliable at 10ms
     // Had 1 spurious github failure at 100
     const TIMEOUT: Duration = Duration::from_millis(500);
-    const CONNECTION_ATTEMPTS: usize = 5;
+    const CONNECTION_ATTEMPTS: usize = 10;
+    const DISCOVERY_ATTEMPTS: usize = 5;
     const LOCAL_WS: &str = "ws://localhost:9090";
 
     /// Establish a test connection without making every subsequent client operation wait longer.
@@ -35,6 +36,7 @@ mod integration_tests {
                     log::warn!(
                         "Failed to connect to rosbridge on attempt {attempt}/{CONNECTION_ATTEMPTS}: {error}"
                     );
+                    tokio::time::sleep(TIMEOUT).await;
                 }
                 Err(error) => return Err(error),
             }
@@ -96,7 +98,7 @@ mod integration_tests {
         // rather than assuming a fixed delay is sufficient on every runner.
         let msg_in = {
             let mut received = None;
-            for attempt in 1..=CONNECTION_ATTEMPTS {
+            for attempt in 1..=DISCOVERY_ATTEMPTS {
                 timeout(TIMEOUT, publisher.publish(&msg_out))
                     .await
                     .expect("Failed to publish in time")
@@ -106,9 +108,9 @@ mod integration_tests {
                         received = Some(message);
                         break;
                     }
-                    Err(_) if attempt < CONNECTION_ATTEMPTS => {
+                    Err(_) if attempt < DISCOVERY_ATTEMPTS => {
                         log::warn!(
-                            "Did not receive self-published message on attempt {attempt}/{CONNECTION_ATTEMPTS}"
+                            "Did not receive self-published message on attempt {attempt}/{DISCOVERY_ATTEMPTS}"
                         );
                     }
                     Err(error) => panic!("Failed to receive after {attempt} attempts: {error}"),
