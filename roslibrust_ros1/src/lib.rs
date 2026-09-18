@@ -60,6 +60,40 @@ pub fn deserialize_dynamic_message(
     descriptor.deserialize_with(&mut deserializer)
 }
 
+/// Deserialize a TCPROS-framed runtime-selected message.
+fn deserialize_framed_dynamic_message(
+    descriptor: &'static MessageDescriptor,
+    bytes: &[u8],
+) -> DynamicMessageResult<DynamicMessage> {
+    if bytes.len() < 4 {
+        return Err(DynamicMessageError::Deserialize {
+            type_name: descriptor.ros_type_name,
+            message: format!(
+                "TCPROS frame is missing its four-byte length prefix (received {} bytes)",
+                bytes.len()
+            ),
+        });
+    }
+
+    let body_length = u32::from_le_bytes(
+        bytes[..4]
+            .try_into()
+            .expect("length prefix was checked to contain four bytes"),
+    ) as usize;
+    let body = &bytes[4..];
+    if body_length != body.len() {
+        return Err(DynamicMessageError::Deserialize {
+            type_name: descriptor.ros_type_name,
+            message: format!(
+                "TCPROS frame declares a {body_length}-byte body, but received {} bytes",
+                body.len()
+            ),
+        });
+    }
+
+    deserialize_dynamic_message(descriptor, body)
+}
+
 /// [master_client] module contains code for calling xmlrpc functions on the master
 mod master_client;
 pub use master_client::*;
@@ -162,7 +196,7 @@ pub struct DynamicSubscriber {
 impl DynamicSubscribe for DynamicSubscriber {
     async fn next(&mut self) -> roslibrust_common::Result<DynamicMessage> {
         match self.subscriber.next().await {
-            Some(Ok(bytes)) => deserialize_dynamic_message(self.descriptor, &bytes)
+            Some(Ok(bytes)) => deserialize_framed_dynamic_message(self.descriptor, &bytes)
                 .map_err(|error| Error::SerializationError(error.to_string())),
             Some(Err(error)) => Err(Error::Unexpected(anyhow::anyhow!(error))),
             None => Err(Error::Disconnected),
@@ -290,17 +324,25 @@ mod dynamic_message_tests {
     use super::*;
     use roslibrust_common::{DynamicField, DynamicValue};
 
-    #[test]
-    fn ros1_codec_round_trips_runtime_selected_message() {
-        let descriptor = roslibrust_test::ros1::MESSAGE_REGISTRY
+    fn int16_descriptor() -> &'static MessageDescriptor {
+        roslibrust_test::ros1::MESSAGE_REGISTRY
             .get("std_msgs/Int16")
-            .unwrap();
-        let message = descriptor
+            .unwrap()
+    }
+
+    fn int16_message(value: i16) -> DynamicMessage {
+        int16_descriptor()
             .message(DynamicValue::Message(vec![DynamicField {
                 name: "data".to_owned(),
-                value: DynamicValue::I16(42),
+                value: DynamicValue::I16(value),
             }]))
-            .unwrap();
+            .unwrap()
+    }
+
+    #[test]
+    fn ros1_codec_round_trips_runtime_selected_message() {
+        let descriptor = int16_descriptor();
+        let message = int16_message(42);
 
         let bytes = serialize_dynamic_message(&message).unwrap();
         assert_eq!(bytes, 42_i16.to_le_bytes());
@@ -310,6 +352,42 @@ mod dynamic_message_tests {
                 .value(),
             message.value()
         );
+    }
+
+    #[test]
+    fn ros1_codec_deserializes_tcpros_framed_message() {
+        let message = int16_message(42);
+        let body = serialize_dynamic_message(&message).unwrap();
+        let mut frame = Vec::from((body.len() as u32).to_le_bytes());
+        frame.extend_from_slice(&body);
+
+        assert_eq!(
+            deserialize_framed_dynamic_message(int16_descriptor(), &frame)
+                .unwrap()
+                .value(),
+            message.value()
+        );
+    }
+
+    #[test]
+    fn ros1_codec_rejects_missing_tcpros_length_prefix() {
+        let error = deserialize_framed_dynamic_message(int16_descriptor(), &[0, 0, 0]).unwrap_err();
+
+        assert!(matches!(error, DynamicMessageError::Deserialize { .. }));
+        assert!(error
+            .to_string()
+            .contains("missing its four-byte length prefix"));
+    }
+
+    #[test]
+    fn ros1_codec_rejects_mismatched_tcpros_body_length() {
+        let error = deserialize_framed_dynamic_message(int16_descriptor(), &[3, 0, 0, 0, 42, 0])
+            .unwrap_err();
+
+        assert!(matches!(error, DynamicMessageError::Deserialize { .. }));
+        assert!(error
+            .to_string()
+            .contains("declares a 3-byte body, but received 2 bytes"));
     }
 }
 

@@ -98,7 +98,7 @@ impl SubscriberAny {
     /// Gets the next message from the subscriber.
     /// Uniquely for SubscriberAny, this returns the raw bytes of the message as Bytes.
     /// Note: over the wire ros messages include a 4 byte length header before the message body.
-    /// This function does not return that header, merely the message body.
+    /// This function returns that header followed by the message body.
     /// The returned Bytes is reference counted and cheap to clone.
     pub async fn next(&mut self) -> Option<Result<Bytes, SubscriberError>> {
         let data = match self.receiver.recv().await {
