@@ -68,7 +68,9 @@ mod integration_tests {
         const TOPIC: &str = "self_publish";
         let client = connect().await.expect("Failed to create client in time");
 
-        timeout(TIMEOUT, client.advertise::<Header>(TOPIC))
+        // Keep the publisher alive for the whole round trip. Dropping it immediately sends an
+        // unadvertise command, which races the subsequent publish on slower ROS 2 discovery.
+        let publisher = timeout(TIMEOUT, client.advertise::<Header>(TOPIC))
             .await
             .expect("Failed to advertise in time")
             .unwrap();
@@ -76,10 +78,6 @@ mod integration_tests {
             .await
             .expect("Failed to subscribe in time")
             .unwrap();
-
-        // Delay here to allow subscribe to complete before publishing
-        // Test is flaky without it
-        tokio::time::sleep(TIMEOUT).await;
 
         #[cfg(feature = "ros1_test")]
         let msg_out = Header {
@@ -94,14 +92,30 @@ mod integration_tests {
             frame_id: "self_publish".to_string(),
         };
 
-        timeout(TIMEOUT, client.publish(TOPIC, &msg_out))
-            .await
-            .expect("Failed to publish in time")
-            .unwrap();
-
-        let msg_in = timeout(TIMEOUT, rx.next())
-            .await
-            .expect("Failed to receive in time");
+        // Endpoint discovery is asynchronous, especially with rmw_zenoh. Retry the publication
+        // rather than assuming a fixed delay is sufficient on every runner.
+        let msg_in = {
+            let mut received = None;
+            for attempt in 1..=CONNECTION_ATTEMPTS {
+                timeout(TIMEOUT, publisher.publish(&msg_out))
+                    .await
+                    .expect("Failed to publish in time")
+                    .unwrap();
+                match timeout(TIMEOUT, rx.next()).await {
+                    Ok(message) => {
+                        received = Some(message);
+                        break;
+                    }
+                    Err(_) if attempt < CONNECTION_ATTEMPTS => {
+                        log::warn!(
+                            "Did not receive self-published message on attempt {attempt}/{CONNECTION_ATTEMPTS}"
+                        );
+                    }
+                    Err(error) => panic!("Failed to receive after {attempt} attempts: {error}"),
+                }
+            }
+            received.expect("publication retry loop always returns or panics")
+        };
 
         assert_eq!(msg_in, msg_out);
     }
