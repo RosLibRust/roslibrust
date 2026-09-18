@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `MockRos`. Each backend continues to select its own wire serializer.
 - Added documentation and generic integration tests covering dynamic message lookup, validation,
   publishing, and subscription.
+- Added Base64 serialization/deserialization support for fixed-length uint8 arrays in `roslibrust_codegen`
 
 ### Changed
 
