@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Introduction - RosLibRust Guides</title>
+        <title>Runtime-selected messages - RosLibRust Guides</title>
 
 
         <!-- Custom HTML head -->
@@ -174,175 +174,140 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p>RosLibRust is an alternative to the various existing ROS clients.
-RosLibRust may be a great fit for your project, or you may benefit from one of the other existing clients.</p>
+                        <h1 id="runtime-selected-messages"><a class="header" href="#runtime-selected-messages">Runtime-selected messages</a></h1>
+<p>RosLibRust’s usual topic API chooses a generated Rust message type at compile time. The dynamic
+API is for tools—such as topic inspectors, recorders, bridges, and command-line publishers—that
+only learn a ROS type name at runtime.</p>
+<p>The API has three distinct layers:</p>
 <ul>
-<li><a href="https://github.com/ros2-rust/ros2_rust">ros2-rust</a> is ideal if you want to release ROS2 packages to the community, or want to add Rust to an existing ROS2 project. But requires a full ROS2 installation.</li>
-<li><a href="https://github.com/adnanademovic/rosrust">rosrust</a> is a solid ROS1 option, but doesn’t support <code>async</code> and is un-maintained.</li>
-<li><a href="https://docs.rs/ros2-client/latest/ros2_client/">ros2_client</a> is a pure rust client for ROS2 that supports <code>async</code>. However, it can only talk DDS and not Zenoh that ROS2 is migrating to.</li>
+<li><code>DynamicValue</code> is a transport-neutral value tree. It preserves ROS-relevant scalar widths,
+ordered fields, byte arrays, and non-finite floats, but has no schema by itself.</li>
+<li><code>DynamicMessage</code> pairs a value with a generated <code>MessageDescriptor</code>. Creating one validates and
+canonicalizes the value through the generated Rust type.</li>
+<li><code>DynamicTopicProvider</code> lets a backend advertise or subscribe with a <code>MessageDescriptor</code> chosen
+at runtime. The backend remains responsible for selecting its wire serializer.</li>
 </ul>
-<p>RosLibRust is ideal for systems like facility control systems and cloud tools that need to interact with a variety of ROS systems, and don’t want to “become ROS” themselves.
-RosLibRust has one API that supports a broad range of ROS versions and protocols.</p>
-<h2 id="why-was-roslibrust-created"><a class="header" href="#why-was-roslibrust-created">Why was RosLibRust created?</a></h2>
-<p>RosLibRust was designed to help solve several challenges in the ROS ecosystem:</p>
-<ol>
-<li>The need for <code>async</code> clients. At the time RosLibRust was written there was no <code>async</code> for ROS1 at all.</li>
-<li>The need for pure rust clients.
-<ol>
-<li>RosLibRust nodes can be built on a system with only a rust compiler. Official rust docker images are <a href="https://hub.docker.com/_/rust">~500mb</a>.</li>
-<li>Once compiled a RosLibRust node is a fully statically linked executable that can be run on any system. A RosLibRust ros1 publisher node is &lt;10MB compiled and can be deployed in 5MB alpine docker image. Show me any other ROS node that I can deploy in &lt;15 MB of size.</li>
-</ol>
-</li>
-<li>The ROS1 -&gt; ROS2 migration was painful. While many concepts in ROS remained very similar, the API and build changes were invasive. A API abstraction layer should have made this easier.</li>
-<li>ROS is pretty painful for both Unit and Integration testing.</li>
-</ol>
-<h2 id="how-does-roslibrust-solve-these-problems"><a class="header" href="#how-does-roslibrust-solve-these-problems">How does RosLibRust solve these problems?</a></h2>
-<p>At a high level what RosLibRust provides is:</p>
-<ul>
-<li><a href="#an-abstract-api-for-ros">An abstract API for ROS</a></li>
-<li><a href="#backend-implementations">Implementations of the abstract API for ROS1, ROS2, and rosbridge</a></li>
-<li><a href="#mock-implementation-for-testing">A mock implementation of ROS for testing that allows deterministic “time traveling” tests</a></li>
-<li><a href="#pure-rust-type-generation">Pure rust generation of types from ROS’s .msg/.srv files that is ROS version agnostic</a></li>
-</ul>
-<p>These combine to make RosLibRust a powerful tool for building ROS nodes in rust.</p>
-<h3 id="an-abstract-api-for-ros"><a class="header" href="#an-abstract-api-for-ros">An Abstract API for ROS</a></h3>
-<p>At the heart of RosLibRust is a set of traits that define the API for interacting with ROS.
-These traits are defined in the <a href="https://docs.rs/roslibrust_common/latest/roslibrust_common/">roslibrust_common</a> crate.</p>
-<p>The most core trait is called <a href="https://docs.rs/roslibrust_common/latest/roslibrust_common/traits/trait.Ros.html">Ros</a>:</p>
-<pre><code class="language-rust ignore">/// Represents all "standard" ROS functionality generically supported by roslibrust
-///
-/// Implementors of this trait behave like typical ROS node handles.
-/// Cloning the handle does not create additional underlying connections, but instead simply returns another handle
-/// to interact with the underlying node.
-///
-/// Implementors of this trait are expected to be "self de-registering", when the last node handle for a given
-/// node is dropped, the underlying node is expected to be shut down and clean-up after itself
-pub trait Ros: 'static + Send + Sync + TopicProvider + ServiceProvider + Clone {}</code></pre>
-<p>This trait was designed to mimic how “Node Handles” work.
-Breaking down this trait:</p>
-<ul>
-<li><code>'static</code> - Something implementing this trait holds no references to non-static data. Making its lifetime very safe.</li>
-<li><code>Send</code> + <code>Sync</code> - Something implementing this trait is safe to send and <em>use</em> between threads.</li>
-<li><code>Clone</code> - Something implementing this trait can be cloned, this allows us to make more handles and distribute them amongst our node.</li>
-<li><code>TopicProvider</code> - Is another trait in roslibrust that allows us to create publishers and subscribers.</li>
-<li><code>ServiceProvider</code> - Is another trait in roslibrust that allows us to create service clients and servers.</li>
-</ul>
-<p>Taking a look at the <a href="https://docs.rs/roslibrust_common/latest/roslibrust_common/traits/trait.TopicProvider.html">TopicProvider</a> trait:</p>
-<pre><code class="language-rust ignore">/// This trait generically describes the capability of something to act as an async interface to a set of topics
-///
-/// This trait is largely based on ROS concepts, but could be extended to other protocols / concepts.
-/// Fundamentally, it assumes that topics are uniquely identified by a string name (likely an ASCII assumption is buried in here...).
-/// It assumes topics only carry one data type, but is not expected to enforce that.
-/// It assumes that all actions can fail due to a variety of causes, and by network interruption specifically.
-pub trait TopicProvider {
-    // These associated types makeup the other half of the API
-    // They are expected to be "self-deregistering", where dropping them results in unadvertise or unsubscribe operations as appropriate
-    // We require Publisher and Subscriber types to be Send + 'static so they can be sent into different tokio tasks once created
-    type Publisher&lt;T: RosMessageType&gt;: Publish&lt;T&gt; + Send + Sync + 'static;
-    type Subscriber&lt;T: RosMessageType&gt;: Subscribe&lt;T&gt; + Send + Sync + 'static;
+<h2 id="looking-up-and-validating-a-message"><a class="header" href="#looking-up-and-validating-a-message">Looking up and validating a message</a></h2>
+<p>Code generation emits a <code>MESSAGE_REGISTRY</code> next to the generated modules. It accepts canonical
+ROS 1 names and common ROS 2 spellings:</p>
+<pre><code class="language-rust ignore">use my_messages::MESSAGE_REGISTRY;
 
-    /// Advertises a topic to be published to and returns a type specific publisher to use.
-    ///
-    /// Topic can be any type convertible to a [GlobalTopicName] this includes `&amp;str` and `String`.
-    /// If you pass in these types validation will occur each time advertise is called.
-    /// If you wish to avoid repeated validation you can create a [GlobalTopicName] yourself and pass it in.
-    ///
-    /// The returned publisher is expected to be "self de-registering", where dropping the publisher results in the appropriate unadvertise operation.
-    fn advertise&lt;MsgType: RosMessageType&gt;(
-        &amp;self,
-        topic: impl ToGlobalTopicName,
-    ) -&gt; impl Future&lt;Output = Result&lt;Self::Publisher&lt;MsgType&gt;&gt;&gt; + Send;
+let descriptor = MESSAGE_REGISTRY
+    .get("std_msgs/String")
+    .expect("message type was not generated");
 
-    /// Subscribes to a topic and returns a type specific subscriber to use.
-    ///
-    /// The returned subscriber is expected to be "self de-registering", where dropping the subscriber results in the appropriate unsubscribe operation.
-    fn subscribe&lt;MsgType: RosMessageType&gt;(
-        &amp;self,
-        topic: impl ToGlobalTopicName,
-    ) -&gt; impl Future&lt;Output = Result&lt;Self::Subscriber&lt;MsgType&gt;&gt;&gt; + Send;
-}</code></pre>
-<p>We see a fairly advanced trait by Rust standards, with the following key features:</p>
-<ul>
-<li>We leverage Rust’s <a href="https://blog.logrocket.com/using-rust-gats-improve-code-app-performance/">Generic Associated Types (GATs)</a> to define the Publisher and Subscriber types returned by the trait functions.
-This means that the type (including the size) that a given implementation returns is completely different from other implementations.
-The only requirement is the type implements the <a href="https://docs.rs/roslibrust_common/latest/roslibrust_common/traits/trait.Publish.html">Publish</a> and <a href="https://docs.rs/roslibrust_common/latest/roslibrust_common/traits/trait.Subscribe.html">Subscribe</a> traits.</li>
-<li>While at first glance they might not look like it. The <code>advertise</code> and <code>subscribe</code> functions are actually <code>async fn</code> and return Futures.
-This means we don’t have to block our application on waiting for a connection to be established.</li>
-<li>The advertise and subscribe functions are further generic over the message type. This is familiar to ROS users, but further compounds the complexity of the trait.</li>
-</ul>
-<p>To finish the chain let’s look at one more trait, <a href="https://docs.rs/roslibrust_common/latest/roslibrust_common/traits/trait.Publish.html">Publish</a>:</p>
-<pre><code class="language-rust ignore">/// Indicates that something is a publisher and has our expected publish
-/// Implementors of this trait are expected to auto-cleanup the publisher when dropped
-pub trait Publish&lt;T: RosMessageType&gt; {
-    // Note: this is really just syntactic de-sugared `async fn`
-    // However see: https://blog.rust-lang.org/2023/12/21/async-fn-rpit-in-traits.html
-    // This generates a warning is rust as of writing due to ambiguity around the "Send-ness" of the return type
-    // We only plan to work with multi-threaded work stealing executors (e.g. tokio) so we're manually specifying Send
-    fn publish(&amp;self, data: &amp;T) -&gt; impl Future&lt;Output = Result&lt;()&gt;&gt; + Send;
-}</code></pre>
-<p>Publish finally provides the <code>publish</code> function that we use to send messages on a topic, which is again <code>async</code> and generic over the message type.
-The combination of these traits is fairly complicated, but at the end of the day enables us to write code that is extremely agnostic to the underlying ROS implementation.
-Furthermore, there is <strong>NO PERFORMANCE PENALTY</strong> for this abstraction.
-Due to how monomorphic generics work in rust the compiler is able to completely erase the generic types at compile time, and optimize the code as if we had written it directly for the specific type.</p>
-<p>What’s the catch? Slightly worse compile times, but you only pay for what you use.
-If you create a generic node that uses the <code>Ros</code> trait, and use it with multiple backend implementations,
-there will be separate compilations of the node for each backend.</p>
-<h3 id="backend-implementations"><a class="header" href="#backend-implementations">Backend Implementations</a></h3>
-<p>Okay so RosLibRust has this abstract API? How can we actually use it?</p>
-<p>RosLibRust provides several implementations of the <code>Ros</code> trait:</p>
-<ul>
-<li><a href="https://docs.rs/roslibrust_ros1/latest/roslibrust_ros1/">roslibrust_ros1</a> - Implements the TCPROS protocol that was the backbone of ROS1</li>
-<li><a href="https://docs.rs/roslibrust_zenoh/latest/roslibrust_zenoh/">roslibrust_zenoh</a> - Implements a variant of ROS1 communication used by <a href="https://github.com/eclipse-zenoh/zenoh-plugin-ros1">zenoh-ros1-bridge</a></li>
-<li><a href="https://docs.rs/roslibrust_rosbridge/latest/roslibrust_rosbridge/">roslibrust_rosbridge</a> - Implements the <a href="https://github.com/RobotWebTools/rosbridge_suite">rosbridge_suite</a> websocket protocol</li>
-<li><a href="https://docs.rs/roslibrust_hiroz/latest/roslibrust_hiroz/">roslibrust_hiroz</a> - Implements the Zenoh communication used by <a href="https://github.com/ros2/rmw_zenoh">rmw_zenoh</a> in ROS 2 Kilted and newer</li>
-<li><a href="https://docs.rs/roslibrust_mock/latest/roslibrust_mock/">roslibrust_mock</a> - Implements a mock ROS perfect for testing</li>
-</ul>
-<p>Typically we don’t depend on these crates directly, but instead use them by enabling their corresponding features on <code>roslibrust</code>.</p>
-<pre><code class="language-toml">[dependencies]
-roslibrust = { version = "0.23", features = ["ros1"] }
-</code></pre>
-<p>The full list of features is:</p>
-<ul>
-<li><code>ros1</code> - Enables the <a href="https://docs.rs/roslibrust_ros1/latest/roslibrust_ros1/">roslibrust_ros1</a> backend</li>
-<li><code>zenoh</code> - Enables the <a href="https://docs.rs/roslibrust_zenoh/latest/roslibrust_zenoh/">roslibrust_zenoh</a> backend</li>
-<li><code>rosbridge</code> - Enables the <a href="https://docs.rs/roslibrust_rosbridge/latest/roslibrust_rosbridge/">roslibrust_rosbridge</a> backend</li>
-<li><code>mock</code> - Enables the <a href="https://docs.rs/roslibrust_mock/latest/roslibrust_mock/">roslibrust_mock</a> backend</li>
-<li><code>hiroz</code> - Enables the native ROS 2 <code>roslibrust_hiroz</code> backend via <code>rmw_zenoh</code></li>
-<li><code>codegen</code> - Provides access to the <a href="https://docs.rs/roslibrust_codegen/latest/roslibrust_codegen/">roslibrust_codegen</a> crate for generating ROS message types in build.rs.</li>
-<li><code>macro</code> - Provides access to the <a href="https://docs.rs/roslibrust_codegen_macro/latest/roslibrust_codegen_macro/">roslibrust_codegen_macro</a> crate for generating ROS message types using a proc-macro.</li>
-<li><code>all</code> - Enables all of the above features.</li>
-</ul>
-<h3 id="pure-rust-type-generation"><a class="header" href="#pure-rust-type-generation">Pure Rust Type Generation</a></h3>
-<p>RosLibRust has implemented a full parser and code-generator for ROS message types.
-This allows us to generate Rust types from ROS .msg/.srv files at compile time.
-The generated types are fully compatible with all RosLibRust backends.
-Meaning a ROS1 .msg file can be used with ROS2 and vice versa.</p>
-<p>The rosbridge backend support “generic” types with parsing fallbacks, see <a href="https://github.com/RosLibRust/roslibrust/blob/master/roslibrust/examples/generic_message.rs">generic message example</a></p>
-<p>A <code>build.rs</code> file can be used to automatically generate Rust types at build time from ROS .msg/.srv files.
-See <a href="https://github.com/RosLibRust/roslibrust/tree/master/example_package">example_package</a> for a full example.</p>
-<p>A proc-macro is also provided for generating types at compile time, see <a href="https://github.com/RosLibRust/roslibrust/tree/master/example_package_macro">example_package_macro</a> for an example.</p>
-<p>This breaks tooling free from needing any ROS installation.</p>
-<h3 id="mock-implementation-for-testing"><a class="header" href="#mock-implementation-for-testing">Mock Implementation for Testing</a></h3>
-<p>A major challenge for incorporating ROS into larger systems is testing.
-Traditionally testing ROS nodes involves either:</p>
-<ol>
-<li>Breaking all the “ROS Logic” and other logic apart and indpendently testing them.</li>
-<li>Launching a full ROS system in a testing environment and interacting with it.</li>
-</ol>
-<p>The first approach leads to “extra abstraction” and often causes timing and messaging related bugs to be missed.
-The second approach is brittle, slow, and often a bottle neck for test times.</p>
-<p>RosLibRust provides a mock implementation of ROS for testing that allows deterministic “time traveling” tests.
-See <a href="extended_getting_started.html#writing-tests-for-our-node">extended getting started guide</a> for an example.</p>
+let message = descriptor.message_from(&amp;serde_json::json!({
+    "data": "hello from a runtime-selected type"
+}))?;</code></pre>
+<p>Every generated message also exposes its descriptor through the <code>RosMessageType</code> trait. When the
+concrete type is known, it can be used without a registry lookup:</p>
+<pre><code class="language-rust ignore">use my_messages::std_msgs;
+use roslibrust::RosMessageType;
+
+let descriptor = &amp;std_msgs::String::DESCRIPTION;
+let message = descriptor.message_from(&amp;serde_json::json!({"data": "hello"}))?;</code></pre>
+<p>The generated registry is an array of these associated constants; it does not generate separate
+per-message descriptor definitions.</p>
+<p><code>message_from</code> accepts any Serde <code>Serialize</code> value whose shape represents the selected message.
+Structs and string-keyed maps are supported. The registry offers the same operation when the type
+name is not resolved separately:</p>
+<pre><code class="language-rust ignore">let message = MESSAGE_REGISTRY.message_from(
+    runtime_type_name,
+    &amp;serde_json::json!({"data": "hello"}),
+)?;</code></pre>
+<p>Validation checks required and unknown fields, scalar types and ranges, nested messages, sequence
+elements, and fixed array lengths. The stored value is rebuilt in schema field order with the
+schema’s exact scalar widths. A raw <code>DynamicValue::Sequence</code> can temporarily contain unlike
+elements because it has no element schema; it cannot become a <code>DynamicMessage</code> for a homogeneous
+ROS sequence unless every element validates.</p>
+<h2 id="inspecting-values"><a class="header" href="#inspecting-values">Inspecting values</a></h2>
+<p><code>DynamicValue</code> has <code>serde_json::Value</code>-style accessors for walking values without matching every
+enum variant:</p>
+<pre><code class="language-rust ignore">let message = MESSAGE_REGISTRY.message_from(
+    "geometry_msgs/Point",
+    &amp;serde_json::json!({"x": 1.0, "y": 2.0, "z": 3.0}),
+)?;
+
+assert!(message.value().is_object());
+assert_eq!(message.get("x").and_then(DynamicValue::as_f64), Some(1.0));</code></pre>
+<p>Field names and sequence indices can be passed to <code>get</code>:</p>
+<pre><code class="language-rust ignore">let frame_id = message
+    .get("header")
+    .and_then(|header| header.get("frame_id"))
+    .and_then(DynamicValue::as_str);
+
+let first = message
+    .get("values")
+    .and_then(|values| values.get(0));</code></pre>
+<p>The scalar accessors retain ROS type information: <code>as_i16()</code> only succeeds for <code>I16</code>, rather than
+silently converting another integer width. <code>is_number()</code>, <code>is_integer()</code>, and related category
+checks are available when the exact width is unimportant. Raw <code>DynamicValue</code> also provides
+<code>get_mut</code>, <code>as_array_mut</code>, and <code>as_object_mut</code>. <code>DynamicMessage</code> intentionally exposes only
+read-only access, preserving the guarantee that its contents satisfy its descriptor.</p>
+<pre><code class="language-rust ignore">use roslibrust::{DynamicField, DynamicValue};
+
+let raw = DynamicValue::Message(vec![DynamicField {
+    name: "data".to_owned(),
+    value: DynamicValue::Sequence(vec![
+        DynamicValue::I64(1),
+        DynamicValue::String("not an integer".to_owned()),
+        DynamicValue::I64(3),
+    ]),
+}]);
+
+// Fails if `data` is an integer sequence in the selected generated type.
+let checked = descriptor.message(raw)?;</code></pre>
+<h2 id="dynamic-publishing-and-subscribing"><a class="header" href="#dynamic-publishing-and-subscribing">Dynamic publishing and subscribing</a></h2>
+<p><code>DynamicTopicProvider</code> mirrors <code>TopicProvider</code>, but takes a descriptor instead of a generic Rust
+type:</p>
+<pre><code class="language-rust ignore">use roslibrust::{DynamicPublish, DynamicSubscribe, DynamicTopicProvider};
+
+let descriptor = MESSAGE_REGISTRY
+    .get(runtime_type_name)
+    .expect("message type was not generated");
+
+let mut subscriber = ros.dynamic_subscribe("/chatter", descriptor).await?;
+let publisher = ros.dynamic_advertise("/chatter", descriptor).await?;
+
+let message = descriptor.message_from(&amp;serde_json::json!({"data": "hello"}))?;
+publisher.publish(&amp;message).await?;
+
+let received = subscriber.next().await?;
+println!(
+    "{}: {}",
+    received.descriptor().ros_type_name,
+    serde_json::to_string(received.value())?,
+);</code></pre>
+<p>For one-off values, <code>publish_serializable</code> combines construction, validation, and publishing:</p>
+<pre><code class="language-rust ignore">publisher
+    .publish_serializable(&amp;serde_json::json!({"data": "hello"}))
+    .await?;</code></pre>
+<p>Construct a <code>DynamicMessage</code> once and use <code>publish</code> when sending the same value repeatedly.</p>
+<p><code>DynamicValue</code> implements <code>serde::Serialize</code>, so tools can select their own display or interchange
+format. The selected serializer owns format-specific policies; for example, JSON serializers decide
+how to represent byte arrays and non-finite floating-point values.</p>
+<h2 id="serializer-ownership"><a class="header" href="#serializer-ownership">Serializer ownership</a></h2>
+<p>Generated descriptors provide format-neutral Serde conversion operations. They do not choose JSON,
+ROS 1 wire encoding, or CDR. A backend implementing <code>DynamicTopicProvider</code> chooses its correct
+serializer and deserializer, then calls <code>DynamicMessage::serialize_with</code> or
+<code>MessageDescriptor::deserialize_with</code>. This keeps knowledge of transport encoding in the backend
+while sharing generated-type lookup and schema validation.</p>
+<p><code>MockRos</code>, native ROS 1, rosbridge, the Zenoh ROS 1 bridge backend, and the Hiroz native ROS 2
+backend all implement <code>DynamicTopicProvider</code>. Each implementation selects its native wire format:
+bincode for the mock, ROS serialization for ROS 1 and its Zenoh bridge, JSON for rosbridge, and CDR
+for Hiroz.</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="dynamic_messages.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="extended_getting_started.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
+                            <a rel="next prefetch" href="introduction.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -350,10 +315,13 @@ See <a href="extended_getting_started.html#writing-tests-for-our-node">extended 
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="dynamic_messages.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="extended_getting_started.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
+                    <a rel="next prefetch" href="introduction.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
             </nav>
 
         </div>

@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-53c28328.js";
+            window.path_to_searchindex_js = "searchindex-33fb3c6c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-21e1600e.js"></script>
+        <script src="toc-d41a44ba.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -206,6 +206,7 @@ env_logger = "0.11"
 roslibrust = { path = "../roslibrust", features = ["mock"] }
 # Tests also use test-util to pause time
 tokio = { version = "1", features = ["test-util"] }
+serde_json = "1.0"
 
 # What crates your code needs to run it's build.rs file
 [build-dependencies]
@@ -331,6 +332,66 @@ mod test {
         // Now get second message
         let msg = subscriber.next().await.unwrap();
         assert_eq!(msg.data, 1);
+    }
+
+    #[test]
+    fn generated_registry_round_trips_backend_selected_json() {
+        assert!(MESSAGE_REGISTRY
+            .descriptors()
+            .windows(2)
+            .all(|pair| pair[0].ros_type_name &lt; pair[1].ros_type_name));
+
+        let descriptor = MESSAGE_REGISTRY
+            .get("std_msgs/msg/Int16")
+            .expect("generated registry should accept ROS2 type spelling");
+        assert_eq!(descriptor.ros_type_name, "std_msgs/Int16");
+
+        let message = MESSAGE_REGISTRY
+            .message_from("std_msgs/Int16", &amp;serde_json::json!({ "data": 42 }))
+            .expect("valid dynamic message");
+        let json = roslibrust::rosbridge::serialize_dynamic_message(&amp;message)
+            .expect("rosbridge JSON encoding");
+        assert_eq!(json, br#"{"data":42}"#);
+        let decoded_json = roslibrust::rosbridge::deserialize_dynamic_message(
+            MESSAGE_REGISTRY
+                .get("std_msgs::msg::dds_::Int16_")
+                .expect("generated registry should accept DDS type spelling"),
+            &amp;json,
+        )
+        .expect("rosbridge JSON decoding");
+        assert_eq!(decoded_json.value(), message.value());
+
+        let malformed =
+            roslibrust::rosbridge::deserialize_dynamic_message(descriptor, b"{").unwrap_err();
+        assert!(matches!(
+            malformed,
+            roslibrust::DynamicMessageError::Deserialize { .. }
+        ));
+    }
+
+    #[test]
+    fn generated_registry_reports_lookup_and_validation_errors() {
+        let unknown = MESSAGE_REGISTRY
+            .from_value("not_a_package/Unknown", roslibrust::DynamicValue::Unit)
+            .unwrap_err();
+        assert!(matches!(
+            unknown,
+            roslibrust::DynamicMessageError::UnknownType(_)
+        ));
+
+        let invalid = MESSAGE_REGISTRY
+            .from_value(
+                "std_msgs/Int16",
+                roslibrust::DynamicValue::Message(vec![roslibrust::DynamicField {
+                    name: "data".to_owned(),
+                    value: roslibrust::DynamicValue::String("not an integer".to_owned()),
+                }]),
+            )
+            .unwrap_err();
+        assert!(matches!(
+            invalid,
+            roslibrust::DynamicMessageError::InvalidValue { .. }
+        ));
     }
 }</code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
@@ -757,6 +818,129 @@ test test::test_pub_sub_counter ... ok
 <li>How to write a simple integration test that uses the mock ROS backend to test multiple behaviors together</li>
 </ul>
 <p>After this you should have a good understanding of how to use RosLibRust to build and test ROS nodes in rust.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="runtime-selected-messages"><a class="header" href="#runtime-selected-messages">Runtime-selected messages</a></h1>
+<p>RosLibRust’s usual topic API chooses a generated Rust message type at compile time. The dynamic
+API is for tools—such as topic inspectors, recorders, bridges, and command-line publishers—that
+only learn a ROS type name at runtime.</p>
+<p>The API has three distinct layers:</p>
+<ul>
+<li><code>DynamicValue</code> is a transport-neutral value tree. It preserves ROS-relevant scalar widths,
+ordered fields, byte arrays, and non-finite floats, but has no schema by itself.</li>
+<li><code>DynamicMessage</code> pairs a value with a generated <code>MessageDescriptor</code>. Creating one validates and
+canonicalizes the value through the generated Rust type.</li>
+<li><code>DynamicTopicProvider</code> lets a backend advertise or subscribe with a <code>MessageDescriptor</code> chosen
+at runtime. The backend remains responsible for selecting its wire serializer.</li>
+</ul>
+<h2 id="looking-up-and-validating-a-message"><a class="header" href="#looking-up-and-validating-a-message">Looking up and validating a message</a></h2>
+<p>Code generation emits a <code>MESSAGE_REGISTRY</code> next to the generated modules. It accepts canonical
+ROS 1 names and common ROS 2 spellings:</p>
+<pre><code class="language-rust ignore">use my_messages::MESSAGE_REGISTRY;
+
+let descriptor = MESSAGE_REGISTRY
+    .get("std_msgs/String")
+    .expect("message type was not generated");
+
+let message = descriptor.message_from(&amp;serde_json::json!({
+    "data": "hello from a runtime-selected type"
+}))?;</code></pre>
+<p>Every generated message also exposes its descriptor through the <code>RosMessageType</code> trait. When the
+concrete type is known, it can be used without a registry lookup:</p>
+<pre><code class="language-rust ignore">use my_messages::std_msgs;
+use roslibrust::RosMessageType;
+
+let descriptor = &amp;std_msgs::String::DESCRIPTION;
+let message = descriptor.message_from(&amp;serde_json::json!({"data": "hello"}))?;</code></pre>
+<p>The generated registry is an array of these associated constants; it does not generate separate
+per-message descriptor definitions.</p>
+<p><code>message_from</code> accepts any Serde <code>Serialize</code> value whose shape represents the selected message.
+Structs and string-keyed maps are supported. The registry offers the same operation when the type
+name is not resolved separately:</p>
+<pre><code class="language-rust ignore">let message = MESSAGE_REGISTRY.message_from(
+    runtime_type_name,
+    &amp;serde_json::json!({"data": "hello"}),
+)?;</code></pre>
+<p>Validation checks required and unknown fields, scalar types and ranges, nested messages, sequence
+elements, and fixed array lengths. The stored value is rebuilt in schema field order with the
+schema’s exact scalar widths. A raw <code>DynamicValue::Sequence</code> can temporarily contain unlike
+elements because it has no element schema; it cannot become a <code>DynamicMessage</code> for a homogeneous
+ROS sequence unless every element validates.</p>
+<h2 id="inspecting-values"><a class="header" href="#inspecting-values">Inspecting values</a></h2>
+<p><code>DynamicValue</code> has <code>serde_json::Value</code>-style accessors for walking values without matching every
+enum variant:</p>
+<pre><code class="language-rust ignore">let message = MESSAGE_REGISTRY.message_from(
+    "geometry_msgs/Point",
+    &amp;serde_json::json!({"x": 1.0, "y": 2.0, "z": 3.0}),
+)?;
+
+assert!(message.value().is_object());
+assert_eq!(message.get("x").and_then(DynamicValue::as_f64), Some(1.0));</code></pre>
+<p>Field names and sequence indices can be passed to <code>get</code>:</p>
+<pre><code class="language-rust ignore">let frame_id = message
+    .get("header")
+    .and_then(|header| header.get("frame_id"))
+    .and_then(DynamicValue::as_str);
+
+let first = message
+    .get("values")
+    .and_then(|values| values.get(0));</code></pre>
+<p>The scalar accessors retain ROS type information: <code>as_i16()</code> only succeeds for <code>I16</code>, rather than
+silently converting another integer width. <code>is_number()</code>, <code>is_integer()</code>, and related category
+checks are available when the exact width is unimportant. Raw <code>DynamicValue</code> also provides
+<code>get_mut</code>, <code>as_array_mut</code>, and <code>as_object_mut</code>. <code>DynamicMessage</code> intentionally exposes only
+read-only access, preserving the guarantee that its contents satisfy its descriptor.</p>
+<pre><code class="language-rust ignore">use roslibrust::{DynamicField, DynamicValue};
+
+let raw = DynamicValue::Message(vec![DynamicField {
+    name: "data".to_owned(),
+    value: DynamicValue::Sequence(vec![
+        DynamicValue::I64(1),
+        DynamicValue::String("not an integer".to_owned()),
+        DynamicValue::I64(3),
+    ]),
+}]);
+
+// Fails if `data` is an integer sequence in the selected generated type.
+let checked = descriptor.message(raw)?;</code></pre>
+<h2 id="dynamic-publishing-and-subscribing"><a class="header" href="#dynamic-publishing-and-subscribing">Dynamic publishing and subscribing</a></h2>
+<p><code>DynamicTopicProvider</code> mirrors <code>TopicProvider</code>, but takes a descriptor instead of a generic Rust
+type:</p>
+<pre><code class="language-rust ignore">use roslibrust::{DynamicPublish, DynamicSubscribe, DynamicTopicProvider};
+
+let descriptor = MESSAGE_REGISTRY
+    .get(runtime_type_name)
+    .expect("message type was not generated");
+
+let mut subscriber = ros.dynamic_subscribe("/chatter", descriptor).await?;
+let publisher = ros.dynamic_advertise("/chatter", descriptor).await?;
+
+let message = descriptor.message_from(&amp;serde_json::json!({"data": "hello"}))?;
+publisher.publish(&amp;message).await?;
+
+let received = subscriber.next().await?;
+println!(
+    "{}: {}",
+    received.descriptor().ros_type_name,
+    serde_json::to_string(received.value())?,
+);</code></pre>
+<p>For one-off values, <code>publish_serializable</code> combines construction, validation, and publishing:</p>
+<pre><code class="language-rust ignore">publisher
+    .publish_serializable(&amp;serde_json::json!({"data": "hello"}))
+    .await?;</code></pre>
+<p>Construct a <code>DynamicMessage</code> once and use <code>publish</code> when sending the same value repeatedly.</p>
+<p><code>DynamicValue</code> implements <code>serde::Serialize</code>, so tools can select their own display or interchange
+format. The selected serializer owns format-specific policies; for example, JSON serializers decide
+how to represent byte arrays and non-finite floating-point values.</p>
+<h2 id="serializer-ownership"><a class="header" href="#serializer-ownership">Serializer ownership</a></h2>
+<p>Generated descriptors provide format-neutral Serde conversion operations. They do not choose JSON,
+ROS 1 wire encoding, or CDR. A backend implementing <code>DynamicTopicProvider</code> chooses its correct
+serializer and deserializer, then calls <code>DynamicMessage::serialize_with</code> or
+<code>MessageDescriptor::deserialize_with</code>. This keeps knowledge of transport encoding in the backend
+while sharing generated-type lookup and schema validation.</p>
+<p><code>MockRos</code>, native ROS 1, rosbridge, the Zenoh ROS 1 bridge backend, and the Hiroz native ROS 2
+backend all implement <code>DynamicTopicProvider</code>. Each implementation selects its native wire format:
+bincode for the mock, ROS serialization for ROS 1 and its Zenoh bridge, JSON for rosbridge, and CDR
+for Hiroz.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
 <p>RosLibRust is an alternative to the various existing ROS clients.
