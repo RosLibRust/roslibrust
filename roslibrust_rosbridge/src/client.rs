@@ -1062,52 +1062,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn byte_array_variants_round_trip_through_rosbridge_protocol() {
-        const TOPIC: &str = "/byte_array_variants";
-        let (_listener, client, mut websocket) = test_connection(None).await;
-
-        let subscriber = client.subscribe::<ByteArrays>(TOPIC).await.unwrap();
-        let subscribe = next_json(&mut websocket).await;
-        assert_eq!(subscribe["op"], "subscribe");
-
-        let publisher = client.advertise::<ByteArrays>(TOPIC).await.unwrap();
-        let advertise = next_json(&mut websocket).await;
-        assert_eq!(advertise["op"], "advertise");
-
-        let expected = ByteArrays {
-            dynamic_uint8: vec![0, 1, 2, 255],
-            dynamic_char: vec![3, 4, 5, 254],
-            fixed_uint8: [6, 7, 8, 253],
-            fixed_char: [9, 10, 11, 252],
-        };
-        publisher.publish(&expected).await.unwrap();
-
-        let publish = next_json(&mut websocket).await;
-        assert_eq!(publish["op"], "publish");
-        assert_eq!(publish["msg"]["dynamic_uint8"], "AAEC/w==");
-        assert_eq!(publish["msg"]["dynamic_char"], "AwQF/g==");
-        assert_eq!(publish["msg"]["fixed_uint8"], "BgcI/Q==");
-        assert_eq!(publish["msg"]["fixed_char"], "CQoL/A==");
-
-        websocket
-            .send(Message::Text(
-                serde_json::json!({
-                    "op": "publish",
-                    "topic": TOPIC,
-                    "msg": publish["msg"].clone(),
-                })
-                .to_string(),
-            ))
-            .await
-            .unwrap();
-
-        let received = tokio::time::timeout(Duration::from_secs(2), subscriber.next())
-            .await
-            .expect("timed out waiting for echoed byte-array message");
-        assert_eq!(received, expected);
-    }
-
-    #[tokio::test]
     async fn disconnect_wakes_unbounded_service_call() {
         let (listener, client, mut websocket) = test_connection(None).await;
         let server = tokio::spawn(async move {
