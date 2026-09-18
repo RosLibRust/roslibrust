@@ -40,7 +40,7 @@ impl<T: RosMessageType> Channel<T> {
     /// # use roslibrust_mcap::{McapWriter, Result};
     /// # use roslibrust_common::RosMessageType;
     /// # use std::fs::File;
-    /// # #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+    /// # #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
     /// # struct String { data: std::string::String }
     /// # impl RosMessageType for String {
     /// #     const DESCRIPTION: roslibrust_common::MessageDescriptor =
@@ -114,7 +114,7 @@ impl<W: Write + Seek> McapWriter<W> {
     /// # use roslibrust_mcap::{McapWriter, Result};
     /// # use roslibrust_common::RosMessageType;
     /// # use std::fs::File;
-    /// # #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+    /// # #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
     /// # struct String { data: std::string::String }
     /// # impl RosMessageType for String {
     /// #     const DESCRIPTION: roslibrust_common::MessageDescriptor =

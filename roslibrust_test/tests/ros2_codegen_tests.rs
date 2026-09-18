@@ -1,4 +1,5 @@
 use roslibrust_test::ros2::*;
+use serde_json::json;
 
 #[test]
 fn test_defaults() {
@@ -9,6 +10,24 @@ fn test_defaults() {
     assert_eq!(x.samples, vec![-200, -100, 0, 100, 200]);
     assert_eq!(x.s_vec, vec!["hello", "world"]);
     assert_eq!(x.f_samples, vec![-200.0, -1.0, 0.0]);
+}
+
+#[test]
+fn descriptor_constructs_message_defaults() {
+    let descriptor = MESSAGE_REGISTRY.get("ros2_test_msgs/Defaults").unwrap();
+    let message = descriptor.default_message().unwrap();
+
+    assert_eq!(
+        serde_json::to_value(message.value()).unwrap(),
+        json!({
+            "x": 42,
+            "y": -2000,
+            "full_name": "John Doe",
+            "samples": [-200, -100, 0, 100, 200],
+            "s_vec": ["hello", "world"],
+            "f_samples": [-200.0, -1.0, 0.0]
+        })
+    );
 }
 
 #[test]

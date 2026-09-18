@@ -26,6 +26,12 @@ enum GenericHeader {
     V2(ros2::std_msgs::Header),
 }
 
+impl Default for GenericHeader {
+    fn default() -> Self {
+        Self::V1(Default::default())
+    }
+}
+
 /// We need to manually implement this trait for our custom type, normally this is done
 /// for us by th code generation
 impl RosMessageType for GenericHeader {
