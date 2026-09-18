@@ -15,7 +15,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-roslibrust_transforms = "0.1"
+roslibrust_transforms = "0.24"
 ```
 
 ### Basic Example

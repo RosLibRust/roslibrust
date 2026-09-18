@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.24.0 - September 18th, 2026
+
 ### Added
 
 - Added runtime-selected ROS message support. Code generation now emits a `MESSAGE_REGISTRY` of

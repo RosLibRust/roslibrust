@@ -86,7 +86,7 @@ edition = "2021"
 [dependencies]
 # You will need to specify at least one backend to use with roslibrust. Available options are [ros1, rosbridge, zenoh, hiroz, mock].
 # You will also need to specify the "codegen" feature, as the generated ROS types rely on features from this module
-roslibrust = { version = "0.23", features = ["rosbridge", "codegen"] }
+roslibrust = { version = "0.24", features = ["rosbridge", "codegen"] }
 # RosLibRust is built on tokio, and requires a multi-threaded tokio runtime.
 # You don't need the "full" tokio feature set, but it is a good starting place
 tokio = { version = "1", features = ["full"] }
@@ -94,13 +94,13 @@ tokio = { version = "1", features = ["full"] }
 # What crates your code needs for testing and examples
 [dev-dependencies]
 # For testing you'll want to use the "mock" backend if you specify it here, it won't affect your production builds
-roslibrust = { version = "0.23", features = ["mock"] }
+roslibrust = { version = "0.24", features = ["mock"] }
 tokio = { version = "1", features = ["test-util"] }
 
 # What crates your code needs to run it's build.rs file
 [build-dependencies]
 # In build.rs we'll use roslibrust's codegen features to generate Rust types from ROS .msg/.srv files
-roslibrust = { version = "0.23", features = ["codegen"] }
+roslibrust = { version = "0.24", features = ["codegen"] }
 ```
 
 Once we've modified `Cargo.toml` in this way we can run `cargo build`,

@@ -1,6 +1,6 @@
 [package]
 name = "roslibrust_mcap"
-version = "0.1.1"
+version = "0.24.0"
 edition = "2021"
 authors = ["carter <carterjschultz@gmail.com>"]
 license = "MIT"
@@ -10,7 +10,7 @@ categories = ["science::robotics"]
 keywords = ["ROS", "robotics", "mcap", "logging", "playback"]
 
 [dependencies]
-roslibrust_common = { path = "../roslibrust_common", version = "0.22" }
+roslibrust_common = { path = "../roslibrust_common", version = "0.24" }
 mcap = "0.24"
 log = { workspace = true }
 serde = { workspace = true }
@@ -21,7 +21,7 @@ cdr = "0.2"
 
 [dev-dependencies]
 roslibrust_test = { path = "../roslibrust_test" }
-roslibrust_common = { path = "../roslibrust_common", version = "0.22" }
+roslibrust_common = { path = "../roslibrust_common", version = "0.24" }
 tokio = { workspace = true }
 tempfile = "3.3"
 criterion = { version = "0.5", features = ["html_reports"] }
