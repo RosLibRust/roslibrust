@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `DynamicServiceProvider` trait which provides runtime type select service calling, and
+  is now implemented for all backends.
 - Added `MessageDescriptor::default_message()` for constructing a runtime-selected message using
   its generated `Default` implementation, including defaults declared in ROS 2 message files.
 

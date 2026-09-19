@@ -17828,7 +17828,7 @@ uint8 command_type"####,
         pub const r#ROSLAUNCH: u8 = 2u8;
     }
 }
-use ::roslibrust::RosMessageType as _;
+use ::roslibrust::{RosMessageType as _, RosServiceType as _};
 #[doc = r" Runtime lookup and codecs for all generated ROS message types."]
 #[allow(dead_code)]
 pub static MESSAGE_REGISTRY: ::roslibrust::MessageRegistry = ::roslibrust::MessageRegistry::new(&[
@@ -17972,4 +17972,45 @@ pub static MESSAGE_REGISTRY: ::roslibrust::MessageRegistry = ::roslibrust::Messa
     visualization_msgs::Marker::DESCRIPTION,
     visualization_msgs::MarkerArray::DESCRIPTION,
     visualization_msgs::MenuEntry::DESCRIPTION,
+]);
+#[doc = r" Runtime lookup and codecs for all generated ROS service types."]
+#[allow(dead_code)]
+pub static SERVICE_REGISTRY: ::roslibrust::ServiceRegistry = ::roslibrust::ServiceRegistry::new(&[
+    diagnostic_msgs::AddDiagnostics::DESCRIPTION,
+    diagnostic_msgs::SelfTest::DESCRIPTION,
+    nav_msgs::GetMap::DESCRIPTION,
+    nav_msgs::GetPlan::DESCRIPTION,
+    nav_msgs::LoadMap::DESCRIPTION,
+    nav_msgs::SetMap::DESCRIPTION,
+    rosapi::DeleteParam::DESCRIPTION,
+    rosapi::GetActionServers::DESCRIPTION,
+    rosapi::GetParam::DESCRIPTION,
+    rosapi::GetParamNames::DESCRIPTION,
+    rosapi::GetTime::DESCRIPTION,
+    rosapi::HasParam::DESCRIPTION,
+    rosapi::MessageDetails::DESCRIPTION,
+    rosapi::NodeDetails::DESCRIPTION,
+    rosapi::Nodes::DESCRIPTION,
+    rosapi::Publishers::DESCRIPTION,
+    rosapi::SearchParam::DESCRIPTION,
+    rosapi::ServiceHost::DESCRIPTION,
+    rosapi::ServiceNode::DESCRIPTION,
+    rosapi::ServiceProviders::DESCRIPTION,
+    rosapi::ServiceRequestDetails::DESCRIPTION,
+    rosapi::ServiceResponseDetails::DESCRIPTION,
+    rosapi::ServiceType::DESCRIPTION,
+    rosapi::Services::DESCRIPTION,
+    rosapi::ServicesForType::DESCRIPTION,
+    rosapi::SetParam::DESCRIPTION,
+    rosapi::Subscribers::DESCRIPTION,
+    rosapi::TopicType::DESCRIPTION,
+    rosapi::Topics::DESCRIPTION,
+    rosapi::TopicsAndRawTypes::DESCRIPTION,
+    rosapi::TopicsForType::DESCRIPTION,
+    sensor_msgs::SetCameraInfo::DESCRIPTION,
+    std_srvs::Empty::DESCRIPTION,
+    std_srvs::SetBool::DESCRIPTION,
+    std_srvs::Trigger::DESCRIPTION,
+    test_msgs::AddTwoInts::DESCRIPTION,
+    test_msgs::RoundTripArray::DESCRIPTION,
 ]);

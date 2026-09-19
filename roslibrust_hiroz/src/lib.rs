@@ -5,7 +5,7 @@ use std::result::Result as StdResult;
 
 use hiroz::{
     context::ZContext,
-    msg::{SerdeCdrSerdes, ZMessage, ZService},
+    msg::{SerdeCdrSerdes, ZDeserializer, ZMessage, ZSerializer, ZService},
     pubsub::{ZPub, ZSub},
 };
 
@@ -363,6 +363,93 @@ impl<T: RosServiceType> roslibrust_common::Service<T> for ZenohServiceClient<T> 
     }
 }
 
+struct DynamicWireMessage(Vec<u8>);
+
+struct DynamicWireSerdes;
+
+impl ZSerializer for DynamicWireSerdes {
+    type Input<'a> = &'a DynamicWireMessage;
+
+    fn serialize_to_zbuf(input: &DynamicWireMessage) -> zenoh_buffers::ZBuf {
+        zenoh_buffers::ZBuf::from(input.0.clone())
+    }
+
+    fn serialize_to_zbuf_with_hint(
+        input: &DynamicWireMessage,
+        _capacity_hint: usize,
+    ) -> zenoh_buffers::ZBuf {
+        Self::serialize_to_zbuf(input)
+    }
+
+    fn serialize_to_shm(
+        _input: &DynamicWireMessage,
+        _estimated_size: usize,
+        _provider: &zenoh::shm::ShmProvider<zenoh::shm::PosixShmProviderBackend>,
+    ) -> zenoh::Result<(zenoh_buffers::ZBuf, usize)> {
+        Err(zenoh::Error::from(
+            "shared-memory serialization is unavailable for dynamic service messages",
+        ))
+    }
+
+    fn serialize_to_buf(input: &DynamicWireMessage, buffer: &mut Vec<u8>) {
+        buffer.clear();
+        buffer.extend_from_slice(&input.0);
+    }
+}
+
+impl ZDeserializer for DynamicWireSerdes {
+    type Input<'a> = &'a [u8];
+    type Output = DynamicWireMessage;
+    type Error = std::io::Error;
+
+    fn deserialize(input: &[u8]) -> StdResult<Self::Output, Self::Error> {
+        Ok(DynamicWireMessage(input.to_vec()))
+    }
+}
+
+impl ZMessage for DynamicWireMessage {
+    type Serdes = DynamicWireSerdes;
+}
+
+struct DynamicZService;
+
+impl ZService for DynamicZService {
+    type Request = DynamicWireMessage;
+    type Response = DynamicWireMessage;
+}
+
+/// A native ROS 2 service client using runtime-selected request and response types.
+pub struct DynamicZenohServiceClient {
+    client: hiroz::service::ZClient<DynamicZService>,
+    descriptor: &'static ServiceDescriptor,
+}
+
+impl DynamicService for DynamicZenohServiceClient {
+    fn descriptor(&self) -> &'static ServiceDescriptor {
+        self.descriptor
+    }
+
+    async fn call(&self, request: &DynamicMessage) -> Result<DynamicMessage> {
+        if request.descriptor().ros_type_name != self.descriptor.request.ros_type_name {
+            return Err(Error::SerializationError(format!(
+                "service {} expects request {}, but message is {}",
+                self.descriptor.ros_service_name,
+                self.descriptor.request.ros_type_name,
+                request.descriptor().ros_type_name
+            )));
+        }
+        let bytes = serialize_dynamic_message(request)
+            .map_err(|error| Error::SerializationError(error.to_string()))?;
+        let response = self
+            .client
+            .call(&DynamicWireMessage(bytes))
+            .await
+            .map_err(|error| Error::Unexpected(anyhow::anyhow!(error)))?;
+        deserialize_dynamic_message(self.descriptor.response, &response.0)
+            .map_err(|error| Error::SerializationError(error.to_string()))
+    }
+}
+
 impl roslibrust_common::ServiceProvider for ZenohClient {
     type ServiceClient<T: RosServiceType> = ZenohServiceClient<T>;
     type ServiceServer = ZenohServiceServer;
@@ -461,6 +548,39 @@ impl roslibrust_common::ServiceProvider for ZenohClient {
         });
 
         Ok(ZenohServiceServer { cancellation_token })
+    }
+}
+
+impl DynamicServiceProvider for ZenohClient {
+    type DynamicServiceClient = DynamicZenohServiceClient;
+
+    async fn dynamic_call_service(
+        &self,
+        service: impl roslibrust_common::topic_name::ToGlobalTopicName + Send,
+        descriptor: &'static ServiceDescriptor,
+        request: DynamicMessage,
+    ) -> Result<DynamicMessage> {
+        let client =
+            DynamicServiceProvider::dynamic_service_client(self, service, descriptor).await?;
+        client.call(&request).await
+    }
+
+    async fn dynamic_service_client(
+        &self,
+        service: impl roslibrust_common::topic_name::ToGlobalTopicName + Send,
+        descriptor: &'static ServiceDescriptor,
+    ) -> Result<Self::DynamicServiceClient> {
+        let service: GlobalTopicName = service.to_global_name()?;
+        let type_info = TypeInfo::new(
+            descriptor.ros2_type_name,
+            TypeHash::new(1, *descriptor.ros2_hash),
+        );
+        let client = self
+            .node
+            .create_client_impl::<DynamicZService>(service.as_ref(), Some(type_info))
+            .build()
+            .map_err(|error| Error::Unexpected(anyhow::anyhow!(error)))?;
+        Ok(DynamicZenohServiceClient { client, descriptor })
     }
 }
 

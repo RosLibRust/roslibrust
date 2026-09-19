@@ -159,6 +159,17 @@ impl NodeHandle {
         Ok(sender)
     }
 
+    pub async fn dynamic_service_client(
+        &self,
+        service_name: &str,
+        descriptor: &'static roslibrust_common::ServiceDescriptor,
+    ) -> Result<crate::DynamicServiceClient, NodeError> {
+        let service_name = Name::new(service_name)?;
+        self.inner
+            .register_dynamic_service_client(&service_name, descriptor)
+            .await
+    }
+
     pub async fn advertise_service<T, F>(
         &self,
         service_name: &str,

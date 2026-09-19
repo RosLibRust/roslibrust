@@ -236,6 +236,32 @@ impl NodeServerHandle {
         Ok(ServiceClient::new(service_name, sender, link))
     }
 
+    pub(crate) async fn register_dynamic_service_client(
+        &self,
+        service_name: &Name,
+        descriptor: &'static roslibrust_common::ServiceDescriptor,
+    ) -> Result<crate::DynamicServiceClient, NodeError> {
+        let srv_definition = format!(
+            "{}\n{}",
+            descriptor.request.definition, descriptor.response.definition
+        );
+        let mut node = self.node.lock().await;
+        let link = node
+            .register_service_client(
+                service_name,
+                descriptor.ros_service_name,
+                &srv_definition,
+                descriptor.md5sum,
+            )
+            .await
+            .map_err(|error| {
+                log::error!("Failed to register dynamic service client: {error}");
+                NodeError::IoError(io::Error::from(io::ErrorKind::ConnectionAborted))
+            })?;
+        let sender = link.get_sender();
+        Ok(crate::DynamicServiceClient::new(sender, link, descriptor))
+    }
+
     pub(crate) async fn register_service_server<T, F>(
         &self,
         service_name: &Name,

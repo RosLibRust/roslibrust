@@ -32,9 +32,10 @@
 use roslibrust_common::topic_name::{GlobalTopicName, ToGlobalTopicName};
 use roslibrust_common::Error;
 use roslibrust_common::{
-    DynamicMessage, DynamicMessageError, DynamicMessageResult, DynamicPublish, DynamicSubscribe,
-    DynamicTopicProvider, MessageDescriptor, Publish, RosMessageType, RosServiceType, Service,
-    ServiceFn, ServiceProvider, Subscribe, TopicProvider,
+    DynamicMessage, DynamicMessageError, DynamicMessageResult, DynamicPublish, DynamicService,
+    DynamicServiceProvider, DynamicSubscribe, DynamicTopicProvider, MessageDescriptor, Publish,
+    RosMessageType, RosServiceType, Service, ServiceDescriptor, ServiceFn, ServiceProvider,
+    Subscribe, TopicProvider,
 };
 
 /// Serialize a runtime-selected message as a ROS1 message body.
@@ -45,6 +46,19 @@ pub fn serialize_dynamic_message(message: &DynamicMessage) -> DynamicMessageResu
     let mut serializer = roslibrust_serde_rosmsg::Serializer::new(&mut bytes);
     message.serialize_with(&mut serializer)?;
     Ok(bytes)
+}
+
+/// Serialize a runtime-selected message with its four-byte TCPROS frame length.
+fn serialize_framed_dynamic_message(message: &DynamicMessage) -> DynamicMessageResult<Vec<u8>> {
+    let body = serialize_dynamic_message(message)?;
+    let length = u32::try_from(body.len()).map_err(|_| DynamicMessageError::Serialize {
+        type_name: message.descriptor().ros_type_name,
+        message: "message body exceeds the ROS1 u32 length limit".to_owned(),
+    })?;
+    let mut framed = Vec::with_capacity(body.len() + 4);
+    framed.extend_from_slice(&length.to_le_bytes());
+    framed.extend_from_slice(&body);
+    Ok(framed)
 }
 
 /// Deserialize a ROS1 message body using a runtime-selected message descriptor.
@@ -108,7 +122,7 @@ mod publisher;
 pub use publisher::Publisher;
 pub use publisher::PublisherAny;
 mod service_client;
-pub use service_client::ServiceClient;
+pub use service_client::{DynamicServiceClient, ServiceClient};
 mod subscriber;
 pub use subscriber::Subscriber;
 pub use subscriber::SubscriberAny;
@@ -172,14 +186,8 @@ impl DynamicPublish for DynamicPublisher {
             )));
         }
 
-        let body = serialize_dynamic_message(data)
+        let framed = serialize_framed_dynamic_message(data)
             .map_err(|error| Error::SerializationError(error.to_string()))?;
-        let length = u32::try_from(body.len()).map_err(|_| {
-            Error::SerializationError("message body exceeds the ROS1 u32 length limit".to_owned())
-        })?;
-        let mut framed = Vec::with_capacity(body.len() + 4);
-        framed.extend_from_slice(&length.to_le_bytes());
-        framed.extend_from_slice(&body);
         self.publisher
             .publish(framed)
             .await
@@ -287,6 +295,32 @@ impl ServiceProvider for crate::NodeHandle {
     }
 }
 
+impl DynamicServiceProvider for crate::NodeHandle {
+    type DynamicServiceClient = crate::DynamicServiceClient;
+
+    async fn dynamic_call_service(
+        &self,
+        service: impl ToGlobalTopicName,
+        descriptor: &'static ServiceDescriptor,
+        request: DynamicMessage,
+    ) -> roslibrust_common::Result<DynamicMessage> {
+        let client =
+            DynamicServiceProvider::dynamic_service_client(self, service, descriptor).await?;
+        client.call(&request).await
+    }
+
+    async fn dynamic_service_client(
+        &self,
+        service: impl ToGlobalTopicName,
+        descriptor: &'static ServiceDescriptor,
+    ) -> roslibrust_common::Result<Self::DynamicServiceClient> {
+        let service: GlobalTopicName = service.to_global_name()?;
+        NodeHandle::dynamic_service_client(self, service.as_ref(), descriptor)
+            .await
+            .map_err(Into::into)
+    }
+}
+
 impl<T: RosMessageType> Subscribe<T> for crate::Subscriber<T> {
     async fn next(&mut self) -> roslibrust_common::Result<T> {
         let res = crate::Subscriber::next(self).await;
@@ -365,9 +399,7 @@ mod dynamic_message_tests {
                 value: DynamicValue::String("constructed message".to_owned()),
             }]))
             .unwrap();
-        let body = serialize_dynamic_message(&message).unwrap();
-        let mut frame = Vec::from((body.len() as u32).to_le_bytes());
-        frame.extend_from_slice(&body);
+        let frame = serialize_framed_dynamic_message(&message).unwrap();
 
         assert_eq!(
             deserialize_framed_dynamic_message(descriptor, &frame)

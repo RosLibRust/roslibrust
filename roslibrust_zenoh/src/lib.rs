@@ -677,6 +677,56 @@ impl<T: RosServiceType> Service<T> for ZenohServiceClient<T> {
     }
 }
 
+/// A Zenoh ROS1 bridge service client using runtime-selected types.
+pub struct DynamicZenohServiceClient {
+    session: zenoh::Session,
+    zenoh_query: String,
+    _discovery: DiscoveryDeclaration,
+    descriptor: &'static ServiceDescriptor,
+}
+
+impl DynamicService for DynamicZenohServiceClient {
+    fn descriptor(&self) -> &'static ServiceDescriptor {
+        self.descriptor
+    }
+
+    async fn call(&self, request: &DynamicMessage) -> Result<DynamicMessage> {
+        if request.descriptor().ros_type_name != self.descriptor.request.ros_type_name {
+            return Err(Error::SerializationError(format!(
+                "service {} expects request {}, but message is {}",
+                self.descriptor.ros_service_name,
+                self.descriptor.request.ros_type_name,
+                request.descriptor().ros_type_name
+            )));
+        }
+        let request_bytes = serialize_dynamic_message(request)
+            .map_err(|error| Error::SerializationError(error.to_string()))?;
+        let query = self
+            .session
+            .get(&self.zenoh_query)
+            .payload(request_bytes)
+            .await
+            .map_err(|error| {
+                Error::Unexpected(anyhow::anyhow!(
+                    "Failed to create dynamic service query: {error:?}"
+                ))
+            })?;
+        let response = query.recv_async().await.map_err(|error| {
+            Error::Unexpected(anyhow::anyhow!(
+                "Failed to receive dynamic service response: {error:?}"
+            ))
+        })?;
+        let sample = response.into_result().map_err(|error| {
+            Error::Unexpected(anyhow::anyhow!(
+                "Dynamic service returned an error response: {error:?}"
+            ))
+        })?;
+        let bytes = sample.payload().to_bytes();
+        deserialize_dynamic_message(self.descriptor.response, &bytes)
+            .map_err(|error| Error::SerializationError(error.to_string()))
+    }
+}
+
 /// The type returned by [ServiceProvider::advertise_service] on [ZenohClient].
 /// This type is self de-registering, and dropping the server will automatically un-advertise the service.
 pub struct ZenohServiceServer {
@@ -809,6 +859,48 @@ impl ServiceProvider for ZenohClient {
         Ok(ZenohServiceServer {
             _queryable: x,
             _discovery: discovery,
+        })
+    }
+}
+
+impl DynamicServiceProvider for ZenohClient {
+    type DynamicServiceClient = DynamicZenohServiceClient;
+
+    async fn dynamic_call_service(
+        &self,
+        service: impl ToGlobalTopicName,
+        descriptor: &'static ServiceDescriptor,
+        request: DynamicMessage,
+    ) -> Result<DynamicMessage> {
+        let client =
+            DynamicServiceProvider::dynamic_service_client(self, service, descriptor).await?;
+        client.call(&request).await
+    }
+
+    async fn dynamic_service_client(
+        &self,
+        service: impl ToGlobalTopicName,
+        descriptor: &'static ServiceDescriptor,
+    ) -> Result<Self::DynamicServiceClient> {
+        let service: GlobalTopicName = service.to_global_name()?;
+        let zenoh_query = mangle_topic(
+            service.as_ref(),
+            descriptor.ros_service_name,
+            descriptor.md5sum,
+        );
+        let discovery = DiscoveryDeclaration::new(
+            self.session.clone(),
+            DiscoveryClass::Client,
+            service.as_ref(),
+            descriptor.ros_service_name,
+            descriptor.md5sum,
+        )
+        .await?;
+        Ok(DynamicZenohServiceClient {
+            session: self.session.clone(),
+            zenoh_query,
+            _discovery: discovery,
+            descriptor,
         })
     }
 }

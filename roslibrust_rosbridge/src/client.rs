@@ -462,6 +462,23 @@ impl ClientHandle {
         service: &str,
         req: S::Request,
     ) -> Result<S::Response> {
+        let req = serde_json::to_value(req)
+            .map_err(|error| Error::SerializationError(error.to_string()))?;
+        let msg = self.call_service_value(service, req).await?;
+        match serde_json::from_value(msg.clone()) {
+            Ok(val) => Ok(val),
+            Err(e) => match serde_json::from_value(msg) {
+                Ok(s) => Err(Error::ServerError(s)),
+                Err(_) => Err(Error::SerializationError(e.to_string())),
+            },
+        }
+    }
+
+    pub(crate) async fn call_service_value(
+        &self,
+        service: &str,
+        req: serde_json::Value,
+    ) -> Result<serde_json::Value> {
         self.check_for_disconnect()?;
         let (tx, rx) = tokio::sync::oneshot::channel();
         let rand_string: String = uuid::Uuid::new_v4().to_string();
@@ -479,7 +496,7 @@ impl ClientHandle {
             let mut comm = client.writer.write().await;
             if let Err(e) = timeout(
                 client.opts.timeout,
-                comm.call_service(service, &rand_string, req),
+                comm.call_service_value(service, &rand_string, req),
             )
             .await
             {
@@ -519,21 +536,7 @@ impl ClientHandle {
             }
         };
 
-        // Attempt to convert data to response type
-        match serde_json::from_value(msg.clone()) {
-            Ok(val) => Ok(val),
-            Err(e) => {
-                // We failed to parse the value as an expected type, before just giving up, try to parse as string
-                // if we got a string it indicates a server side error, otherwise we got the wrong datatype back
-                match serde_json::from_value(msg) {
-                    Ok(s) => Err(Error::ServerError(s)),
-                    Err(_) => {
-                        // Return the error from the original parse
-                        Err(Error::SerializationError(e.to_string()))
-                    }
-                }
-            }
-        }
+        Ok(msg)
     }
 
     /// Advertises a service and returns a handle that manages the lifetime of the service.

@@ -4,7 +4,7 @@ use crate::{
 };
 use abort_on_drop::ChildTask;
 use bytes::Bytes;
-use roslibrust_common::{Error, RosServiceType};
+use roslibrust_common::{DynamicMessage, DynamicService, Error, RosServiceType, ServiceDescriptor};
 use std::{marker::PhantomData, sync::Arc};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -80,6 +80,53 @@ impl<T: RosServiceType> ServiceClient<T> {
 pub struct ServiceClientLink {
     call_sender: mpsc::UnboundedSender<CallServiceRequest>,
     _actor_task: ChildTask<()>,
+}
+
+/// A persistent ROS1 service client using runtime-selected request and response types.
+pub struct DynamicServiceClient {
+    sender: mpsc::UnboundedSender<CallServiceRequest>,
+    descriptor: &'static ServiceDescriptor,
+    _link: Arc<ServiceClientLink>,
+}
+
+impl DynamicServiceClient {
+    pub(crate) fn new(
+        sender: mpsc::UnboundedSender<CallServiceRequest>,
+        link: ServiceClientLink,
+        descriptor: &'static ServiceDescriptor,
+    ) -> Self {
+        Self {
+            sender,
+            descriptor,
+            _link: Arc::new(link),
+        }
+    }
+}
+
+impl DynamicService for DynamicServiceClient {
+    fn descriptor(&self) -> &'static ServiceDescriptor {
+        self.descriptor
+    }
+
+    async fn call(&self, request: &DynamicMessage) -> roslibrust_common::Result<DynamicMessage> {
+        if request.descriptor().ros_type_name != self.descriptor.request.ros_type_name {
+            return Err(Error::SerializationError(format!(
+                "service {} expects request {}, but message is {}",
+                self.descriptor.ros_service_name,
+                self.descriptor.request.ros_type_name,
+                request.descriptor().ros_type_name
+            )));
+        }
+        let request_payload = crate::serialize_framed_dynamic_message(request)
+            .map_err(|error| Error::SerializationError(error.to_string()))?;
+        let (response_tx, response_rx) = oneshot::channel();
+        self.sender
+            .send((request_payload, response_tx))
+            .map_err(|_| Error::Disconnected)?;
+        let response = response_rx.await.map_err(|_| Error::Disconnected)??;
+        crate::deserialize_framed_dynamic_message(self.descriptor.response, &response)
+            .map_err(|error| Error::SerializationError(error.to_string()))
+    }
 }
 
 impl ServiceClientLink {

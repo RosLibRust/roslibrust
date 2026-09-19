@@ -330,6 +330,90 @@ impl<T: RosServiceType> Service<T> for MockServiceClient<T> {
     }
 }
 
+/// Runtime-typed service client.
+pub struct MockDynamicServiceClient {
+    handle: std::sync::Weak<ServiceStore>,
+    topic: String,
+    descriptor: &'static ServiceDescriptor,
+}
+
+impl DynamicService for MockDynamicServiceClient {
+    fn descriptor(&self) -> &'static ServiceDescriptor {
+        self.descriptor
+    }
+
+    async fn call(&self, request: &DynamicMessage) -> Result<DynamicMessage> {
+        if request.descriptor().ros_type_name != self.descriptor.request.ros_type_name {
+            return Err(Error::SerializationError(format!(
+                "service {} expects request {}, but message is {}",
+                self.descriptor.ros_service_name,
+                self.descriptor.request.ros_type_name,
+                request.descriptor().ros_type_name
+            )));
+        }
+        let services = self.handle.upgrade().ok_or_else(|| {
+            Error::ServerError("No connection to MockRos backend? Has it been dropped?".to_owned())
+        })?;
+        tokio::task::yield_now().await;
+        let callback = services
+            .read()
+            .await
+            .get(&self.topic)
+            .map(|entry| entry.callback.clone())
+            .ok_or_else(|| {
+                Error::ServerError(format!("No service server found for topic: {}", self.topic))
+            })?;
+
+        let mut bytes = Vec::new();
+        let options = bincode::DefaultOptions::new()
+            .with_fixint_encoding()
+            .allow_trailing_bytes();
+        let mut serializer = bincode::Serializer::new(&mut bytes, options);
+        request
+            .serialize_with(&mut serializer)
+            .map_err(|error| Error::SerializationError(error.to_string()))?;
+        let response = tokio::task::spawn_blocking(move || (callback)(bytes))
+            .await
+            .map_err(|_| Error::Disconnected)?
+            .map_err(|error| Error::SerializationError(error.to_string()))?;
+        let options = bincode::DefaultOptions::new()
+            .with_fixint_encoding()
+            .allow_trailing_bytes();
+        let mut deserializer = bincode::Deserializer::from_slice(&response, options);
+        self.descriptor
+            .response
+            .deserialize_with(&mut deserializer)
+            .map_err(|error| Error::SerializationError(error.to_string()))
+    }
+}
+
+impl DynamicServiceProvider for MockRos {
+    type DynamicServiceClient = MockDynamicServiceClient;
+
+    async fn dynamic_call_service(
+        &self,
+        service: impl ToGlobalTopicName,
+        descriptor: &'static ServiceDescriptor,
+        request: DynamicMessage,
+    ) -> Result<DynamicMessage> {
+        let client = self.dynamic_service_client(service, descriptor).await?;
+        client.call(&request).await
+    }
+
+    async fn dynamic_service_client(
+        &self,
+        service: impl ToGlobalTopicName,
+        descriptor: &'static ServiceDescriptor,
+    ) -> Result<Self::DynamicServiceClient> {
+        let service: GlobalTopicName = service.to_global_name()?;
+        Ok(MockDynamicServiceClient {
+            handle: Arc::downgrade(&self.services),
+            topic: String::from(service),
+            descriptor,
+        })
+    }
+}
+
 impl ServiceProvider for MockRos {
     type ServiceClient<T: RosServiceType> = MockServiceClient<T>;
     type ServiceServer = ();
