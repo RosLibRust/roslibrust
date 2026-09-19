@@ -1,6 +1,6 @@
 [package]
 name = "roslibrust_transforms"
-version = "0.24.0"
+version = "0.25.0"
 edition = "2021"
 authors = ["carter <carterjschultz@gmail.com>"]
 license = "MIT"
@@ -10,9 +10,9 @@ categories = ["science::robotics"]
 keywords = ["ROS", "robotics", "tf2", "transforms", "coordinates"]
 
 [dependencies]
-roslibrust_common = { path = "../roslibrust_common", version = "0.24" }
+roslibrust_common = { path = "../roslibrust_common", version = "0.25" }
 # roslibrust is needed because the macro-generated code references ::roslibrust::
-roslibrust = { path = "../roslibrust", version = "0.24", features = ["macro", "codegen"] }
+roslibrust = { path = "../roslibrust", version = "0.25", features = ["macro", "codegen"] }
 transforms = "2.1"
 tokio = { workspace = true }
 log = { workspace = true }
