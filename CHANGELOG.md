@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- `roslibrust::zenoh` now re-exports `open`, `Config`, and `Session`, allowing users to construct a
+  `ZenohClient` without depending directly on the `zenoh` crate.
+
 ## 0.25.0 - September 19th, 2026
 
 ### Added

@@ -54,7 +54,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Relay messages over a zenoh connection compatible with zenoh-ros1-plugin / zenoh-ros1-bridge
     #[cfg(feature = "zenoh")]
     {
-    let ros = roslibrust::zenoh::ZenohClient::new(zenoh::open(zenoh::Config::default()).await.unwrap());
+    let ros = roslibrust::zenoh::ZenohClient::new(
+        roslibrust::zenoh::open(roslibrust::zenoh::Config::default())
+            .await
+            .unwrap(),
+    );
     relay(ros).await?;
     }
 
