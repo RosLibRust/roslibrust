@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f478a19f.js";
+            window.path_to_searchindex_js = "searchindex-540b4459.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d41a44ba.js"></script>
@@ -218,7 +218,17 @@ These traits are defined in the <a href="https://docs.rs/roslibrust_common/lates
 ///
 /// Implementors of this trait are expected to be "self de-registering", when the last node handle for a given
 /// node is dropped, the underlying node is expected to be shut down and clean-up after itself
-pub trait Ros: 'static + Send + Sync + TopicProvider + ServiceProvider + Clone {}</code></pre>
+pub trait Ros:
+    'static
+    + Send
+    + Sync
+    + TopicProvider
+    + ServiceProvider
+    + DynamicTopicProvider
+    + DynamicServiceProvider
+    + Clone
+{
+}</code></pre>
 <p>This trait was designed to mimic how “Node Handles” work.
 Breaking down this trait:</p>
 <ul>
