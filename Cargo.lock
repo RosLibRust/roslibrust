@@ -3489,7 +3489,6 @@ dependencies = [
  "test-log",
  "tokio",
  "tokio-stream",
- "zenoh",
 ]
 
 [[package]]

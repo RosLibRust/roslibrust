@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- `roslibrust::zenoh` now re-exports `open`, `Config`, and `Session`, allowing users to construct a
+  `ZenohClient` without depending directly on the `zenoh` crate.
+
 ### Fixed
 
 - Zenoh clients no longer continuously subscribe to ROS 1 discovery beacons. Graph queries now

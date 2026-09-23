@@ -12,6 +12,10 @@ use std::{
 };
 use zenoh::bytes::ZBytes;
 
+// Re-export the parts of Zenoh's session API needed to construct a `ZenohClient`, so users of
+// `roslibrust::zenoh` do not also need a direct dependency on the `zenoh` crate.
+pub use zenoh::{open, Config, Session};
+
 /// Serialize a runtime-selected message as the ROS1 message body carried by the Zenoh ROS1
 /// bridge.
 pub fn serialize_dynamic_message(message: &DynamicMessage) -> DynamicMessageResult<Vec<u8>> {
@@ -46,12 +50,12 @@ const DISCOVERY_COLLECTION_WINDOW: Duration = Duration::from_millis(2250);
 /// Should be created via [ZenohClient::new], and then used via the [TopicProvider] and [ServiceProvider] traits.
 #[derive(Clone)]
 pub struct ZenohClient {
-    session: zenoh::Session,
+    session: Session,
 }
 
 impl ZenohClient {
     /// Creates a new client wrapped around a Zenoh session
-    pub fn new(session: zenoh::Session) -> Self {
+    pub fn new(session: Session) -> Self {
         Self { session }
     }
 }
