@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- Zenoh clients no longer continuously subscribe to ROS 1 discovery beacons. Graph queries now
+  collect a fresh snapshot during a bounded subscription, avoiding unnecessary beacon processing
+  in nodes that do not query the graph.
+
 ## 0.25.0 - September 19th, 2026
 
 ### Added

@@ -6,14 +6,10 @@ use roslibrust_common::*;
 
 use log::*;
 use std::{
-    collections::{BTreeMap, HashMap},
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    },
-    time::{Duration, Instant},
+    collections::BTreeMap,
+    sync::atomic::{AtomicUsize, Ordering},
+    time::Duration,
 };
-use tokio::sync::RwLock;
 use zenoh::bytes::ZBytes;
 
 /// Serialize a runtime-selected message as the ROS1 message body carried by the Zenoh ROS1
@@ -42,27 +38,21 @@ const DISCOVERY_NAMESPACE: &str = "*";
 const BRIDGE_NAMESPACE: &str = "*";
 const DISCOVERY_KEYEXPR: &str = "ros1_discovery_info/*/*/*/*/*/**";
 const DISCOVERY_BEACON_PERIOD: Duration = Duration::from_secs(1);
-const DISCOVERY_LOST_AFTER: Duration = Duration::from_secs(3);
+// Listen across two beacon intervals plus a little scheduling slack so a graph query sees
+// periodic announcements regardless of where it lands in their publication cycle.
+const DISCOVERY_COLLECTION_WINDOW: Duration = Duration::from_millis(2250);
 
 /// A wrapper around a normal zenoh session that adds roslibrust specific functionality.
 /// Should be created via [ZenohClient::new], and then used via the [TopicProvider] and [ServiceProvider] traits.
 #[derive(Clone)]
 pub struct ZenohClient {
-    _discovery_monitor: Arc<DiscoveryMonitor>,
     session: zenoh::Session,
-    graph: Arc<RwLock<BTreeMap<String, DiscoveryFact>>>,
 }
 
 impl ZenohClient {
     /// Creates a new client wrapped around a Zenoh session
     pub fn new(session: zenoh::Session) -> Self {
-        let graph = Arc::new(RwLock::new(BTreeMap::new()));
-        let discovery_monitor = Arc::new(spawn_discovery_monitor(session.clone(), graph.clone()));
-        Self {
-            _discovery_monitor: discovery_monitor,
-            session,
-            graph,
-        }
+        Self { session }
     }
 }
 
@@ -107,18 +97,6 @@ struct DiscoveryDeclaration {
     shutdown: Option<tokio::sync::oneshot::Sender<()>>,
 }
 
-struct DiscoveryMonitor {
-    shutdown: Option<tokio::sync::oneshot::Sender<()>>,
-}
-
-impl Drop for DiscoveryMonitor {
-    fn drop(&mut self) {
-        if let Some(shutdown) = self.shutdown.take() {
-            let _ = shutdown.send(());
-        }
-    }
-}
-
 impl Drop for DiscoveryDeclaration {
     fn drop(&mut self) {
         if let Some(shutdown) = self.shutdown.take() {
@@ -160,73 +138,42 @@ impl DiscoveryDeclaration {
     }
 }
 
-fn spawn_discovery_monitor(
-    session: zenoh::Session,
-    graph: Arc<RwLock<BTreeMap<String, DiscoveryFact>>>,
-) -> DiscoveryMonitor {
-    let Ok(handle) = tokio::runtime::Handle::try_current() else {
-        error!("Failed to start Zenoh discovery monitor: no active Tokio runtime");
-        return DiscoveryMonitor { shutdown: None };
-    };
-    let (shutdown_tx, mut shutdown_rx) = tokio::sync::oneshot::channel();
-
-    handle.spawn(async move {
-        let subscriber = tokio::select! {
-            subscriber = session.declare_subscriber(DISCOVERY_KEYEXPR) => {
-                match subscriber {
-                    Ok(subscriber) => subscriber,
-                    Err(e) => {
-                        error!("Failed to subscribe to {DISCOVERY_KEYEXPR}: {e:?}");
-                        return;
-                    }
+/// Collect a fresh graph snapshot only for the lifetime of a graph query. The Zenoh ROS1
+/// bridge and RosLibRust endpoints currently announce themselves with periodic publications,
+/// not queryables, so there is no way to obtain a complete snapshot instantly. Dropping the
+/// subscriber at the deadline prevents ordinary nodes from continuously processing every
+/// endpoint's beacons, and a new query never returns stale cached endpoints.
+async fn collect_discovery_for(
+    session: &zenoh::Session,
+    window: Duration,
+) -> Result<BTreeMap<String, DiscoveryFact>> {
+    let subscriber = session
+        .declare_subscriber(DISCOVERY_KEYEXPR)
+        .await
+        .map_err(|e| {
+            Error::Unexpected(anyhow::anyhow!(
+                "Failed to subscribe to discovery info: {e:?}"
+            ))
+        })?;
+    let deadline = tokio::time::Instant::now() + window;
+    let mut graph = BTreeMap::new();
+    loop {
+        match tokio::time::timeout_at(deadline, subscriber.recv_async()).await {
+            Ok(Ok(sample)) => {
+                let key = sample.key_expr().as_str().to_string();
+                if let Some(fact) = parse_discovery_key(&key) {
+                    graph.insert(key, fact);
                 }
             }
-            _ = &mut shutdown_rx => return,
-        };
-        let mut active_facts: HashMap<String, Instant> = HashMap::new();
-        let mut interval = tokio::time::interval(DISCOVERY_BEACON_PERIOD);
-        loop {
-            tokio::select! {
-                sample = subscriber.recv_async() => {
-                    let sample = match sample {
-                        Ok(sample) => sample,
-                        Err(e) => {
-                            error!("Failed to receive discovery info: {e:?}");
-                            break;
-                        }
-                    };
-                    let key = sample.key_expr().as_str().to_string();
-                    let Some(fact) = parse_discovery_key(&key) else {
-                        continue;
-                    };
-                    active_facts.insert(key.clone(), Instant::now());
-                    graph.write().await.insert(key, fact);
-                }
-                _ = interval.tick() => {
-                    let now = Instant::now();
-                    let lost: Vec<_> = active_facts
-                        .iter()
-                        .filter_map(|(key, last_seen)| {
-                            now.duration_since(*last_seen)
-                                .gt(&DISCOVERY_LOST_AFTER)
-                                .then(|| key.clone())
-                        })
-                        .collect();
-                    if !lost.is_empty() {
-                        let mut graph = graph.write().await;
-                        for key in lost {
-                            active_facts.remove(&key);
-                            graph.remove(&key);
-                        }
-                    }
-                }
-                _ = &mut shutdown_rx => break,
+            Ok(Err(e)) => {
+                return Err(Error::Unexpected(anyhow::anyhow!(
+                    "Failed to receive discovery info: {e:?}"
+                )));
             }
+            Err(_) => break,
         }
-    });
-    DiscoveryMonitor {
-        shutdown: Some(shutdown_tx),
     }
+    Ok(graph)
 }
 
 /// The publisher type returned by [TopicProvider::advertise] on [ZenohClient]
@@ -533,7 +480,7 @@ fn mangle_topic(topic: &str, type_str: &str, md5sum: &str) -> String {
 
 impl GraphProvider for ZenohClient {
     async fn list_topics(&self) -> Result<Vec<TopicInfo>> {
-        let graph = self.graph.read().await;
+        let graph = collect_discovery_for(&self.session, DISCOVERY_COLLECTION_WINDOW).await?;
         let mut topics = BTreeMap::new();
         for fact in graph.values() {
             if matches!(
@@ -555,7 +502,7 @@ impl GraphProvider for ZenohClient {
     }
 
     async fn list_services(&self) -> Result<Vec<ServiceInfo>> {
-        let graph = self.graph.read().await;
+        let graph = collect_discovery_for(&self.session, DISCOVERY_COLLECTION_WINDOW).await?;
         let mut services = BTreeMap::new();
         for fact in graph.values() {
             if fact.class == DiscoveryClass::Service {
@@ -958,6 +905,40 @@ mod tests {
                 md5sum: "09fb03525b03e7ea1fd3992bafd87e16".to_string(),
             })
         );
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn test_discovery_snapshot_does_not_retain_old_beacons() {
+        let session = zenoh::open(zenoh::Config::default()).await.unwrap();
+        let key = make_discovery_key(
+            DiscoveryClass::Publisher,
+            "/roslibrust_test/on_demand_graph",
+            "std_msgs/String",
+            "992ce8a1687cec8c8bd883ec73ca41d1",
+        );
+        let publisher = session.declare_publisher(key.clone()).await.unwrap();
+
+        let query_session = session.clone();
+        let query = tokio::spawn(async move {
+            collect_discovery_for(&query_session, Duration::from_millis(350)).await
+        });
+        // Publish throughout the collection window so this does not rely on a particular
+        // ordering between the subscriber declaration and the first announcement.
+        for _ in 0..8 {
+            publisher.put(ZBytes::default()).await.unwrap();
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+        let graph = query.await.unwrap().unwrap();
+        assert_eq!(
+            graph.get(&key).unwrap().name,
+            "/roslibrust_test/on_demand_graph"
+        );
+
+        drop(publisher);
+        let next_graph = collect_discovery_for(&session, Duration::from_millis(100))
+            .await
+            .unwrap();
+        assert!(!next_graph.contains_key(&key));
     }
 
     #[test]
