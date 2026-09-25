@@ -65,7 +65,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-roslibrust_mcap = "0.25"
+roslibrust_mcap = "0.26"
 ```
 
 ## Usage

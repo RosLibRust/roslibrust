@@ -98,7 +98,7 @@ Typically we don't depend on these crates directly, but instead use them by enab
 
 ```toml
 [dependencies]
-roslibrust = { version = "0.25", features = ["ros1"] }
+roslibrust = { version = "0.26", features = ["ros1"] }
 ```
 
 The full list of features is:

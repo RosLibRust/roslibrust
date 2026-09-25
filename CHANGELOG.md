@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.26.0 - September 25th, 2026
+
 ### Added
 
 - `roslibrust::zenoh` now re-exports `open`, `Config`, and `Session`, allowing users to construct a
