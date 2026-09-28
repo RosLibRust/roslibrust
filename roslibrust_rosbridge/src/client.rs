@@ -140,7 +140,11 @@ impl ClientHandle {
     }
 
     // Internal implementation of subscribe
-    async fn _subscribe<Msg>(&self, topic_name: &str) -> Result<Subscriber<Msg>>
+    async fn _subscribe<Msg>(
+        &self,
+        topic_name: &str,
+        transient_local: bool,
+    ) -> Result<Subscriber<Msg>>
     where
         Msg: RosMessageType,
     {
@@ -157,7 +161,13 @@ impl ClientHandle {
         // TODO Possible bug here? We send a subscribe message each time even if already subscribed
         // Send subscribe message to rosbridge to initiate it sending us messages
         let mut stream = client.writer.write().await;
-        stream.subscribe(topic_name, Msg::ROS_TYPE_NAME).await?;
+        if transient_local {
+            stream
+                .subscribe_transient_local(topic_name, Msg::ROS_TYPE_NAME)
+                .await?;
+        } else {
+            stream.subscribe(topic_name, Msg::ROS_TYPE_NAME).await?;
+        }
 
         // Create a new watch channel for this topic
         let queue = Arc::new(MessageQueue::new(QUEUE_SIZE));
@@ -267,7 +277,19 @@ impl ClientHandle {
         self.check_for_disconnect()?;
         timeout(
             self.inner.read().await.opts.timeout,
-            self._subscribe(topic_name),
+            self._subscribe(topic_name, false),
+        )
+        .await
+    }
+
+    pub async fn subscribe_transient_local<Msg>(&self, topic_name: &str) -> Result<Subscriber<Msg>>
+    where
+        Msg: RosMessageType,
+    {
+        self.check_for_disconnect()?;
+        timeout(
+            self.inner.read().await.opts.timeout,
+            self._subscribe(topic_name, true),
         )
         .await
     }
@@ -398,13 +420,16 @@ impl ClientHandle {
             #[cfg(target_arch = "wasm32")]
             {
                 use futures::future::{select, Either};
-                let timeout_fut = gloo_timers::future::TimeoutFuture::new(timeout.as_millis() as u32);
+                let timeout_fut =
+                    gloo_timers::future::TimeoutFuture::new(timeout.as_millis() as u32);
                 futures::pin_mut!(rx);
                 futures::pin_mut!(timeout_fut);
 
                 match select(rx, timeout_fut).await {
                     Either::Left((res, _)) => res,
-                    Either::Right((_, _)) => return Err(Error::Timeout("Service call timed out".to_string())),
+                    Either::Right((_, _)) => {
+                        return Err(Error::Timeout("Service call timed out".to_string()))
+                    }
                 }
             }
         } else {
@@ -830,7 +855,8 @@ async fn stubborn_spin(
         #[cfg(target_arch = "wasm32")]
         let spin_result = {
             use futures::future::{select, Either};
-            let timeout_fut = gloo_timers::future::TimeoutFuture::new(SPIN_DURATION.as_millis() as u32);
+            let timeout_fut =
+                gloo_timers::future::TimeoutFuture::new(SPIN_DURATION.as_millis() as u32);
             let client_lock = client.read().await;
             let future = client_lock.spin_once();
             futures::pin_mut!(future);

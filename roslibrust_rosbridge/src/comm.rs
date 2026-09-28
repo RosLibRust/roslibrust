@@ -7,10 +7,7 @@ use roslibrust_common::{Error, Result, RosMessageType};
 use serde_json::json;
 use std::{fmt::Display, str::FromStr, string::ToString};
 
-use super::{
-    Message
-};
-
+use super::Message;
 
 /// Describes all documented rosbridge server operations
 pub(crate) enum Ops {
@@ -94,6 +91,7 @@ impl FromStr for Ops {
 /// impls directly into some wrapper around [Writer]
 pub(crate) trait RosBridgeComm {
     async fn subscribe(&mut self, topic: &str, msg_type: &str) -> Result<()>;
+    async fn subscribe_transient_local(&mut self, topic: &str, msg_type: &str) -> Result<()>;
     async fn unsubscribe(&mut self, topic: &str) -> Result<()>;
     async fn publish<T: RosMessageType>(&mut self, topic: &str, msg: &T) -> Result<()>;
     async fn advertise<T: RosMessageType>(&mut self, topic: &str) -> Result<()>;
@@ -127,6 +125,26 @@ impl RosBridgeComm for Writer {
         );
         let msg = Message::Text(msg.to_string());
         debug!("Sending subscribe: {:?}", &msg);
+        self.send(msg).await.map_to_roslibrust()?;
+        Ok(())
+    }
+
+    async fn subscribe_transient_local(&mut self, topic: &str, msg_type: &str) -> Result<()> {
+        let msg = json!(
+        {
+        "op": Ops::Subscribe.to_string(),
+        "topic": topic,
+        "type": msg_type,
+        "qos": {
+            "durability": "transient_local",
+            "reliability": "reliable",
+            "history": "keep_last",
+            "depth": 1,
+        }
+        }
+        );
+        let msg = Message::Text(msg.to_string());
+        debug!("Sending subscribe_transient_local: {:?}", &msg);
         self.send(msg).await.map_to_roslibrust()?;
         Ok(())
     }
