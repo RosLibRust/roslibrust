@@ -109,9 +109,13 @@ impl DynamicService for DynamicServiceClient {
     }
 
     async fn call(&self, request: &DynamicMessage) -> roslibrust_common::Result<DynamicMessage> {
-        if request.descriptor().ros_type_name != self.descriptor.request.ros_type_name {
+        if !self
+            .descriptor
+            .request
+            .is_compatible_with(request.descriptor())
+        {
             return Err(Error::SerializationError(format!(
-                "service {} expects request {}, but message is {}",
+                "incompatible request schema: service {} expects {}, but message declares {}",
                 self.descriptor.ros_service_name,
                 self.descriptor.request.ros_type_name,
                 request.descriptor().ros_type_name
@@ -250,5 +254,42 @@ impl ServiceClientLink {
                 "Failure response from service server: {err_msg}"
             )))
         }
+    }
+}
+
+#[cfg(test)]
+mod schema_tests {
+    use super::*;
+    use roslibrust_common::MessageDescriptor;
+    use roslibrust_test::ros1::std_srvs;
+
+    #[tokio::test]
+    async fn dynamic_service_rejects_same_name_different_schema_before_sending() {
+        let descriptor = &std_srvs::SetBool::DESCRIPTION;
+        let request_descriptor = descriptor.request;
+        let changed = Box::leak(Box::new(
+            MessageDescriptor::new::<std_srvs::SetBoolRequest>(
+                request_descriptor.ros_type_name,
+                request_descriptor.md5sum,
+                "uint8 data",
+                request_descriptor.ros2_type_name,
+                request_descriptor.ros2_hash,
+            ),
+        ));
+        let request = changed
+            .message_from(&std_srvs::SetBoolRequest { data: true })
+            .unwrap();
+        let (sender, mut receiver) = mpsc::unbounded_channel();
+        let link = ServiceClientLink {
+            call_sender: sender.clone(),
+            _actor_task: tokio::spawn(std::future::pending::<()>()).into(),
+        };
+        let client = DynamicServiceClient::new(sender, link, descriptor);
+        let error = client.call(&request).await.unwrap_err();
+        assert!(error.to_string().contains("incompatible request schema"));
+        assert!(matches!(
+            receiver.try_recv(),
+            Err(mpsc::error::TryRecvError::Empty)
+        ));
     }
 }

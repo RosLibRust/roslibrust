@@ -49,6 +49,7 @@ struct TopicEntry {
     sender: Channel::Sender<Vec<u8>>,
     receiver: Channel::Receiver<Vec<u8>>,
     type_name: String,
+    descriptor: &'static MessageDescriptor,
 }
 
 struct ServiceEntry {
@@ -102,9 +103,9 @@ impl TopicProvider for MockRos {
         {
             let topics = self.topics.read().await;
             if let Some(entry) = topics.get(topic_str) {
-                if entry.type_name != MsgType::DESCRIPTION.ros_type_name {
+                if !entry.descriptor.is_compatible_with(&MsgType::DESCRIPTION) {
                     return Err(Error::ServerError(format!(
-                        "Topic {topic_str} already registered with type {}, cannot also use {}",
+                        "Topic {topic_str} already registered with schema {}, incompatible with {}",
                         entry.type_name,
                         MsgType::DESCRIPTION.ros_type_name
                     )));
@@ -126,6 +127,7 @@ impl TopicProvider for MockRos {
                 sender: tx_rx.0,
                 receiver: tx_rx.1,
                 type_name: MsgType::DESCRIPTION.ros_type_name.to_string(),
+                descriptor: &MsgType::DESCRIPTION,
             },
         );
         debug!("Created new publisher and channel for topic {}", topic_str);
@@ -145,9 +147,9 @@ impl TopicProvider for MockRos {
         {
             let topics = self.topics.read().await;
             if let Some(entry) = topics.get(topic_str) {
-                if entry.type_name != MsgType::DESCRIPTION.ros_type_name {
+                if !entry.descriptor.is_compatible_with(&MsgType::DESCRIPTION) {
                     return Err(Error::ServerError(format!(
-                        "Topic {topic_str} already registered with type {}, cannot also use {}",
+                        "Topic {topic_str} already registered with schema {}, incompatible with {}",
                         entry.type_name,
                         MsgType::DESCRIPTION.ros_type_name
                     )));
@@ -169,6 +171,7 @@ impl TopicProvider for MockRos {
                 sender: tx_rx.0,
                 receiver: tx_rx.1,
                 type_name: MsgType::DESCRIPTION.ros_type_name.to_string(),
+                descriptor: &MsgType::DESCRIPTION,
             },
         );
         debug!("Created new subscriber and channel for topic {}", topic_str);
@@ -193,9 +196,9 @@ impl DynamicTopicProvider for MockRos {
         {
             let topics = self.topics.read().await;
             if let Some(entry) = topics.get(topic_str) {
-                if entry.type_name != descriptor.ros_type_name {
+                if !entry.descriptor.is_compatible_with(descriptor) {
                     return Err(Error::ServerError(format!(
-                        "Topic {topic_str} already registered with type {}, cannot also use {}",
+                        "Topic {topic_str} already registered with schema {}, incompatible with {}",
                         entry.type_name, descriptor.ros_type_name
                     )));
                 }
@@ -215,6 +218,7 @@ impl DynamicTopicProvider for MockRos {
                 sender,
                 receiver,
                 type_name: descriptor.ros_type_name.to_owned(),
+                descriptor,
             },
         );
         Ok(MockDynamicPublisher {
@@ -233,9 +237,9 @@ impl DynamicTopicProvider for MockRos {
         {
             let topics = self.topics.read().await;
             if let Some(entry) = topics.get(topic_str) {
-                if entry.type_name != descriptor.ros_type_name {
+                if !entry.descriptor.is_compatible_with(descriptor) {
                     return Err(Error::ServerError(format!(
-                        "Topic {topic_str} already registered with type {}, cannot also use {}",
+                        "Topic {topic_str} already registered with schema {}, incompatible with {}",
                         entry.type_name, descriptor.ros_type_name
                     )));
                 }
@@ -255,6 +259,7 @@ impl DynamicTopicProvider for MockRos {
                 sender,
                 receiver,
                 type_name: descriptor.ros_type_name.to_owned(),
+                descriptor,
             },
         );
         Ok(MockDynamicSubscriber {
@@ -343,9 +348,13 @@ impl DynamicService for MockDynamicServiceClient {
     }
 
     async fn call(&self, request: &DynamicMessage) -> Result<DynamicMessage> {
-        if request.descriptor().ros_type_name != self.descriptor.request.ros_type_name {
+        if !self
+            .descriptor
+            .request
+            .is_compatible_with(request.descriptor())
+        {
             return Err(Error::SerializationError(format!(
-                "service {} expects request {}, but message is {}",
+                "incompatible request schema: service {} expects {}, but message declares {}",
                 self.descriptor.ros_service_name,
                 self.descriptor.request.ros_type_name,
                 request.descriptor().ros_type_name
@@ -561,9 +570,9 @@ impl DynamicPublish for MockDynamicPublisher {
     }
 
     async fn publish(&self, data: &DynamicMessage) -> Result<()> {
-        if data.descriptor().ros_type_name != self.descriptor.ros_type_name {
+        if !self.descriptor.is_compatible_with(data.descriptor()) {
             return Err(Error::SerializationError(format!(
-                "publisher expects {}, but message is {}",
+                "incompatible message schema: publisher expects {}, but message declares {}",
                 self.descriptor.ros_type_name,
                 data.descriptor().ros_type_name
             )));
@@ -705,6 +714,84 @@ mod tests {
             }]))
             .unwrap();
         assert!(publisher.publish(&wrong_message).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn same_name_descriptors_require_matching_schema_metadata() {
+        let mock = MockRos::new();
+        let original = &std_msgs::String::DESCRIPTION;
+        let independent = Box::leak(Box::new(MessageDescriptor::new::<std_msgs::String>(
+            original.ros_type_name,
+            original.md5sum,
+            original.definition,
+            original.ros2_type_name,
+            original.ros2_hash,
+        )));
+        let changed = Box::leak(Box::new(MessageDescriptor::new::<std_msgs::String>(
+            original.ros_type_name,
+            original.md5sum,
+            "uint8 data",
+            original.ros2_type_name,
+            original.ros2_hash,
+        )));
+        let publisher = mock.dynamic_advertise("/schema", original).await.unwrap();
+        let mut subscriber = mock
+            .dynamic_subscribe("/schema", independent)
+            .await
+            .unwrap();
+        assert!(mock.dynamic_advertise("/schema", changed).await.is_err());
+        assert!(mock.dynamic_subscribe("/schema", changed).await.is_err());
+        let message = independent
+            .message_from(&std_msgs::String {
+                data: "hello".into(),
+            })
+            .unwrap();
+        publisher.publish(&message).await.unwrap();
+        assert_eq!(
+            subscriber
+                .next()
+                .await
+                .unwrap()
+                .get("data")
+                .unwrap()
+                .as_str(),
+            Some("hello")
+        );
+        let invalid = changed
+            .message_from(&std_msgs::String {
+                data: "hello".into(),
+            })
+            .unwrap();
+        assert!(publisher
+            .publish(&invalid)
+            .await
+            .unwrap_err()
+            .to_string()
+            .contains("incompatible message schema"));
+
+        let service = &std_srvs::SetBool::DESCRIPTION;
+        let changed_request = Box::leak(Box::new(
+            MessageDescriptor::new::<std_srvs::SetBoolRequest>(
+                service.request.ros_type_name,
+                service.request.md5sum,
+                "uint8 data",
+                service.request.ros2_type_name,
+                service.request.ros2_hash,
+            ),
+        ));
+        let client = mock
+            .dynamic_service_client("/service_schema", service)
+            .await
+            .unwrap();
+        let request = changed_request
+            .message_from(&std_srvs::SetBoolRequest { data: true })
+            .unwrap();
+        assert!(client
+            .call(&request)
+            .await
+            .unwrap_err()
+            .to_string()
+            .contains("incompatible request schema"));
     }
 
     #[tokio::test(flavor = "multi_thread")]

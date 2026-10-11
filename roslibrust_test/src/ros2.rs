@@ -5652,7 +5652,10 @@ pub mod ros2_test_msgs {
     #[serde(crate = "::roslibrust::codegen::serde")]
     #[serde(deny_unknown_fields)]
     pub struct BoundedInt {
-        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
+        #[serde(
+            serialize_with = "BoundedInt::__roslibrust_serialize_data",
+            deserialize_with = "BoundedInt::__roslibrust_deserialize_data"
+        )]
         pub r#data: ::std::vec::Vec<u8>,
     }
     ::roslibrust::impl_ros_message_type!(
@@ -5668,6 +5671,41 @@ uint8[<=5] data"####,
             0xbf, 0x90, 0x2d, 0x6c,
         ],
     );
+    #[allow(dead_code, non_snake_case)]
+    impl BoundedInt {
+        fn __roslibrust_check_data<E: ::roslibrust::codegen::serde::ser::Error>(
+            value: &::std::vec::Vec<u8>,
+        ) -> Result<(), E> {
+            if value.len() > 5usize {
+                return Err(E::custom(format!(
+                    "field `{}` exceeds maximum sequence length {} (got {})",
+                    "data",
+                    5usize,
+                    value.len()
+                )));
+            }
+            Ok(())
+        }
+        fn __roslibrust_serialize_data<S: ::roslibrust::codegen::serde::Serializer>(
+            value: &::std::vec::Vec<u8>,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            Self::__roslibrust_check_data::<S::Error>(value)?;
+            ::roslibrust::codegen::serde_rosmsg_bytes::serialize(value, serializer)
+        }
+        fn __roslibrust_deserialize_data<
+            'de,
+            D: ::roslibrust::codegen::serde::Deserializer<'de>,
+        >(
+            deserializer: D,
+        ) -> Result<::std::vec::Vec<u8>, D::Error> {
+            let value: ::std::vec::Vec<u8> =
+                ::roslibrust::codegen::serde_rosmsg_bytes::deserialize(deserializer)?;
+            Self::__roslibrust_check_data::<::roslibrust::codegen::serde::de::value::Error>(&value)
+                .map_err(<D::Error as ::roslibrust::codegen::serde::de::Error>::custom)?;
+            Ok(value)
+        }
+    }
     #[allow(non_snake_case)]
     #[allow(dead_code)]
     #[derive(
@@ -5681,6 +5719,10 @@ uint8[<=5] data"####,
     #[serde(crate = "::roslibrust::codegen::serde")]
     #[serde(deny_unknown_fields)]
     pub struct BoundedReferenced {
+        #[serde(
+            serialize_with = "BoundedReferenced::__roslibrust_serialize_data",
+            deserialize_with = "BoundedReferenced::__roslibrust_deserialize_data"
+        )]
         pub r#data: ::std::vec::Vec<self::BoundedInt>,
     }
     ::roslibrust::impl_ros_message_type!(
@@ -5700,6 +5742,41 @@ uint8[<=5] data"####,
             0x05, 0x4c, 0x39, 0x75,
         ],
     );
+    #[allow(dead_code, non_snake_case)]
+    impl BoundedReferenced {
+        fn __roslibrust_check_data<E: ::roslibrust::codegen::serde::ser::Error>(
+            value: &::std::vec::Vec<self::BoundedInt>,
+        ) -> Result<(), E> {
+            if value.len() > 3usize {
+                return Err(E::custom(format!(
+                    "field `{}` exceeds maximum sequence length {} (got {})",
+                    "data",
+                    3usize,
+                    value.len()
+                )));
+            }
+            Ok(())
+        }
+        fn __roslibrust_serialize_data<S: ::roslibrust::codegen::serde::Serializer>(
+            value: &::std::vec::Vec<self::BoundedInt>,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            Self::__roslibrust_check_data::<S::Error>(value)?;
+            ::roslibrust::codegen::serde::Serialize::serialize(value, serializer)
+        }
+        fn __roslibrust_deserialize_data<
+            'de,
+            D: ::roslibrust::codegen::serde::Deserializer<'de>,
+        >(
+            deserializer: D,
+        ) -> Result<::std::vec::Vec<self::BoundedInt>, D::Error> {
+            let value: ::std::vec::Vec<self::BoundedInt> =
+                ::roslibrust::codegen::serde::Deserialize::deserialize(deserializer)?;
+            Self::__roslibrust_check_data::<::roslibrust::codegen::serde::de::value::Error>(&value)
+                .map_err(<D::Error as ::roslibrust::codegen::serde::de::Error>::custom)?;
+            Ok(value)
+        }
+    }
     #[allow(non_snake_case)]
     #[allow(dead_code)]
     #[derive(
@@ -5713,8 +5790,20 @@ uint8[<=5] data"####,
     #[serde(crate = "::roslibrust::codegen::serde")]
     #[serde(deny_unknown_fields)]
     pub struct BoundedString {
+        #[serde(
+            serialize_with = "BoundedString::__roslibrust_serialize_data",
+            deserialize_with = "BoundedString::__roslibrust_deserialize_data"
+        )]
         pub r#data: ::std::string::String,
+        #[serde(
+            serialize_with = "BoundedString::__roslibrust_serialize_data_list",
+            deserialize_with = "BoundedString::__roslibrust_deserialize_data_list"
+        )]
         pub r#data_list: ::std::vec::Vec<::std::string::String>,
+        #[serde(
+            serialize_with = "BoundedString::__roslibrust_serialize_data_matrix",
+            deserialize_with = "BoundedString::__roslibrust_deserialize_data_matrix"
+        )]
         pub r#data_matrix: ::std::vec::Vec<::std::string::String>,
     }
     ::roslibrust::impl_ros_message_type!(
@@ -5732,6 +5821,335 @@ string<=5[<=3] data_matrix"####,
             0xd3, 0xc8, 0x5b, 0x70,
         ],
     );
+    #[allow(dead_code, non_snake_case)]
+    impl BoundedString {
+        fn __roslibrust_check_data<E: ::roslibrust::codegen::serde::ser::Error>(
+            value: &::std::string::String,
+        ) -> Result<(), E> {
+            if value.len() > 5usize {
+                return Err(E::custom(format!(
+                    "field `{}` exceeds maximum string length {} bytes (got {})",
+                    "data",
+                    5usize,
+                    value.len()
+                )));
+            }
+            Ok(())
+        }
+        fn __roslibrust_serialize_data<S: ::roslibrust::codegen::serde::Serializer>(
+            value: &::std::string::String,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            Self::__roslibrust_check_data::<S::Error>(value)?;
+            ::roslibrust::codegen::serde::Serialize::serialize(value, serializer)
+        }
+        fn __roslibrust_deserialize_data<
+            'de,
+            D: ::roslibrust::codegen::serde::Deserializer<'de>,
+        >(
+            deserializer: D,
+        ) -> Result<::std::string::String, D::Error> {
+            let value: ::std::string::String =
+                ::roslibrust::codegen::serde::Deserialize::deserialize(deserializer)?;
+            Self::__roslibrust_check_data::<::roslibrust::codegen::serde::de::value::Error>(&value)
+                .map_err(<D::Error as ::roslibrust::codegen::serde::de::Error>::custom)?;
+            Ok(value)
+        }
+        fn __roslibrust_check_data_list<E: ::roslibrust::codegen::serde::ser::Error>(
+            value: &::std::vec::Vec<::std::string::String>,
+        ) -> Result<(), E> {
+            for (index, string) in value.iter().enumerate() {
+                if string.len() > 5usize {
+                    return Err(E::custom(format!(
+                        "field `{}[{}]` exceeds maximum string length {} bytes (got {})",
+                        "data_list",
+                        index,
+                        5usize,
+                        string.len()
+                    )));
+                }
+            }
+            Ok(())
+        }
+        fn __roslibrust_serialize_data_list<S: ::roslibrust::codegen::serde::Serializer>(
+            value: &::std::vec::Vec<::std::string::String>,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            Self::__roslibrust_check_data_list::<S::Error>(value)?;
+            ::roslibrust::codegen::serde::Serialize::serialize(value, serializer)
+        }
+        fn __roslibrust_deserialize_data_list<
+            'de,
+            D: ::roslibrust::codegen::serde::Deserializer<'de>,
+        >(
+            deserializer: D,
+        ) -> Result<::std::vec::Vec<::std::string::String>, D::Error> {
+            let value: ::std::vec::Vec<::std::string::String> =
+                ::roslibrust::codegen::serde::Deserialize::deserialize(deserializer)?;
+            Self::__roslibrust_check_data_list::<::roslibrust::codegen::serde::de::value::Error>(
+                &value,
+            )
+            .map_err(<D::Error as ::roslibrust::codegen::serde::de::Error>::custom)?;
+            Ok(value)
+        }
+        fn __roslibrust_check_data_matrix<E: ::roslibrust::codegen::serde::ser::Error>(
+            value: &::std::vec::Vec<::std::string::String>,
+        ) -> Result<(), E> {
+            if value.len() > 3usize {
+                return Err(E::custom(format!(
+                    "field `{}` exceeds maximum sequence length {} (got {})",
+                    "data_matrix",
+                    3usize,
+                    value.len()
+                )));
+            }
+            for (index, string) in value.iter().enumerate() {
+                if string.len() > 5usize {
+                    return Err(E::custom(format!(
+                        "field `{}[{}]` exceeds maximum string length {} bytes (got {})",
+                        "data_matrix",
+                        index,
+                        5usize,
+                        string.len()
+                    )));
+                }
+            }
+            Ok(())
+        }
+        fn __roslibrust_serialize_data_matrix<S: ::roslibrust::codegen::serde::Serializer>(
+            value: &::std::vec::Vec<::std::string::String>,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            Self::__roslibrust_check_data_matrix::<S::Error>(value)?;
+            ::roslibrust::codegen::serde::Serialize::serialize(value, serializer)
+        }
+        fn __roslibrust_deserialize_data_matrix<
+            'de,
+            D: ::roslibrust::codegen::serde::Deserializer<'de>,
+        >(
+            deserializer: D,
+        ) -> Result<::std::vec::Vec<::std::string::String>, D::Error> {
+            let value: ::std::vec::Vec<::std::string::String> =
+                ::roslibrust::codegen::serde::Deserialize::deserialize(deserializer)?;
+            Self::__roslibrust_check_data_matrix::<::roslibrust::codegen::serde::de::value::Error>(
+                &value,
+            )
+            .map_err(<D::Error as ::roslibrust::codegen::serde::de::Error>::custom)?;
+            Ok(value)
+        }
+    }
+    #[allow(non_snake_case)]
+    #[allow(dead_code)]
+    #[derive(
+        :: roslibrust :: codegen :: Deserialize,
+        :: roslibrust :: codegen :: Serialize,
+        :: roslibrust :: codegen :: SmartDefault,
+        Debug,
+        Clone,
+        PartialEq,
+    )]
+    #[serde(crate = "::roslibrust::codegen::serde")]
+    #[serde(deny_unknown_fields)]
+    pub struct BoundedStrings {
+        #[serde(
+            serialize_with = "BoundedStrings::__roslibrust_serialize_fixed",
+            deserialize_with = "BoundedStrings::__roslibrust_deserialize_fixed"
+        )]
+        pub r#fixed: [::std::string::String; 2],
+        #[serde(
+            serialize_with = "BoundedStrings::__roslibrust_serialize_unbounded",
+            deserialize_with = "BoundedStrings::__roslibrust_deserialize_unbounded"
+        )]
+        pub r#unbounded: ::std::vec::Vec<::std::string::String>,
+        #[default(_code = "[\"abc\"].iter().map(|x| x.to_string()).collect()")]
+        #[serde(
+            serialize_with = "BoundedStrings::__roslibrust_serialize_bounded",
+            deserialize_with = "BoundedStrings::__roslibrust_deserialize_bounded"
+        )]
+        pub r#bounded: ::std::vec::Vec<::std::string::String>,
+        #[serde(
+            serialize_with = "BoundedStrings::__roslibrust_serialize_nested",
+            deserialize_with = "BoundedStrings::__roslibrust_deserialize_nested"
+        )]
+        pub r#nested: ::std::vec::Vec<self::BoundedString>,
+    }
+    ::roslibrust::impl_ros_message_type!(
+        BoundedStrings,
+        "ros2_test_msgs/BoundedStrings",
+        "1c405c37e027ac363fa44801e6a08ae6",
+        r####"string<=5[2] fixed
+string<=5[] unbounded
+string<=5[<=3] bounded ["abc"]
+BoundedString[<=2] nested
+================================================================================
+MSG: ros2_test_msgs/BoundedString
+# Proving bounding works on strings
+string<=5 data
+string<=5[] data_list
+string<=5[<=3] data_matrix"####,
+        "ros2_test_msgs::msg::dds_::BoundedStrings_",
+        &[
+            0x4a, 0x8d, 0xbb, 0x8f, 0xbc, 0x89, 0x5d, 0x19, 0xd5, 0xac, 0x40, 0x5b, 0x77, 0x5b,
+            0x50, 0xf6, 0x3b, 0x8e, 0x99, 0x41, 0xa1, 0x56, 0x20, 0x59, 0x1b, 0xf6, 0x5d, 0xb1,
+            0x56, 0x95, 0x4d, 0xa6,
+        ],
+    );
+    #[allow(dead_code, non_snake_case)]
+    impl BoundedStrings {
+        fn __roslibrust_check_fixed<E: ::roslibrust::codegen::serde::ser::Error>(
+            value: &[::std::string::String; 2],
+        ) -> Result<(), E> {
+            for (index, string) in value.iter().enumerate() {
+                if string.len() > 5usize {
+                    return Err(E::custom(format!(
+                        "field `{}[{}]` exceeds maximum string length {} bytes (got {})",
+                        "fixed",
+                        index,
+                        5usize,
+                        string.len()
+                    )));
+                }
+            }
+            Ok(())
+        }
+        fn __roslibrust_serialize_fixed<S: ::roslibrust::codegen::serde::Serializer>(
+            value: &[::std::string::String; 2],
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            Self::__roslibrust_check_fixed::<S::Error>(value)?;
+            ::roslibrust::codegen::serde::Serialize::serialize(value, serializer)
+        }
+        fn __roslibrust_deserialize_fixed<
+            'de,
+            D: ::roslibrust::codegen::serde::Deserializer<'de>,
+        >(
+            deserializer: D,
+        ) -> Result<[::std::string::String; 2], D::Error> {
+            let value: [::std::string::String; 2] =
+                ::roslibrust::codegen::serde::Deserialize::deserialize(deserializer)?;
+            Self::__roslibrust_check_fixed::<::roslibrust::codegen::serde::de::value::Error>(
+                &value,
+            )
+            .map_err(<D::Error as ::roslibrust::codegen::serde::de::Error>::custom)?;
+            Ok(value)
+        }
+        fn __roslibrust_check_unbounded<E: ::roslibrust::codegen::serde::ser::Error>(
+            value: &::std::vec::Vec<::std::string::String>,
+        ) -> Result<(), E> {
+            for (index, string) in value.iter().enumerate() {
+                if string.len() > 5usize {
+                    return Err(E::custom(format!(
+                        "field `{}[{}]` exceeds maximum string length {} bytes (got {})",
+                        "unbounded",
+                        index,
+                        5usize,
+                        string.len()
+                    )));
+                }
+            }
+            Ok(())
+        }
+        fn __roslibrust_serialize_unbounded<S: ::roslibrust::codegen::serde::Serializer>(
+            value: &::std::vec::Vec<::std::string::String>,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            Self::__roslibrust_check_unbounded::<S::Error>(value)?;
+            ::roslibrust::codegen::serde::Serialize::serialize(value, serializer)
+        }
+        fn __roslibrust_deserialize_unbounded<
+            'de,
+            D: ::roslibrust::codegen::serde::Deserializer<'de>,
+        >(
+            deserializer: D,
+        ) -> Result<::std::vec::Vec<::std::string::String>, D::Error> {
+            let value: ::std::vec::Vec<::std::string::String> =
+                ::roslibrust::codegen::serde::Deserialize::deserialize(deserializer)?;
+            Self::__roslibrust_check_unbounded::<::roslibrust::codegen::serde::de::value::Error>(
+                &value,
+            )
+            .map_err(<D::Error as ::roslibrust::codegen::serde::de::Error>::custom)?;
+            Ok(value)
+        }
+        fn __roslibrust_check_bounded<E: ::roslibrust::codegen::serde::ser::Error>(
+            value: &::std::vec::Vec<::std::string::String>,
+        ) -> Result<(), E> {
+            if value.len() > 3usize {
+                return Err(E::custom(format!(
+                    "field `{}` exceeds maximum sequence length {} (got {})",
+                    "bounded",
+                    3usize,
+                    value.len()
+                )));
+            }
+            for (index, string) in value.iter().enumerate() {
+                if string.len() > 5usize {
+                    return Err(E::custom(format!(
+                        "field `{}[{}]` exceeds maximum string length {} bytes (got {})",
+                        "bounded",
+                        index,
+                        5usize,
+                        string.len()
+                    )));
+                }
+            }
+            Ok(())
+        }
+        fn __roslibrust_serialize_bounded<S: ::roslibrust::codegen::serde::Serializer>(
+            value: &::std::vec::Vec<::std::string::String>,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            Self::__roslibrust_check_bounded::<S::Error>(value)?;
+            ::roslibrust::codegen::serde::Serialize::serialize(value, serializer)
+        }
+        fn __roslibrust_deserialize_bounded<
+            'de,
+            D: ::roslibrust::codegen::serde::Deserializer<'de>,
+        >(
+            deserializer: D,
+        ) -> Result<::std::vec::Vec<::std::string::String>, D::Error> {
+            let value: ::std::vec::Vec<::std::string::String> =
+                ::roslibrust::codegen::serde::Deserialize::deserialize(deserializer)?;
+            Self::__roslibrust_check_bounded::<::roslibrust::codegen::serde::de::value::Error>(
+                &value,
+            )
+            .map_err(<D::Error as ::roslibrust::codegen::serde::de::Error>::custom)?;
+            Ok(value)
+        }
+        fn __roslibrust_check_nested<E: ::roslibrust::codegen::serde::ser::Error>(
+            value: &::std::vec::Vec<self::BoundedString>,
+        ) -> Result<(), E> {
+            if value.len() > 2usize {
+                return Err(E::custom(format!(
+                    "field `{}` exceeds maximum sequence length {} (got {})",
+                    "nested",
+                    2usize,
+                    value.len()
+                )));
+            }
+            Ok(())
+        }
+        fn __roslibrust_serialize_nested<S: ::roslibrust::codegen::serde::Serializer>(
+            value: &::std::vec::Vec<self::BoundedString>,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            Self::__roslibrust_check_nested::<S::Error>(value)?;
+            ::roslibrust::codegen::serde::Serialize::serialize(value, serializer)
+        }
+        fn __roslibrust_deserialize_nested<
+            'de,
+            D: ::roslibrust::codegen::serde::Deserializer<'de>,
+        >(
+            deserializer: D,
+        ) -> Result<::std::vec::Vec<self::BoundedString>, D::Error> {
+            let value: ::std::vec::Vec<self::BoundedString> =
+                ::roslibrust::codegen::serde::Deserialize::deserialize(deserializer)?;
+            Self::__roslibrust_check_nested::<::roslibrust::codegen::serde::de::value::Error>(
+                &value,
+            )
+            .map_err(<D::Error as ::roslibrust::codegen::serde::de::Error>::custom)?;
+            Ok(value)
+        }
+    }
     #[allow(non_snake_case)]
     #[allow(dead_code)]
     #[derive(
@@ -5785,7 +6203,10 @@ char[4] fixed_char"####,
         pub r#data: u8,
         #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
         pub r#data_array: ::std::vec::Vec<u8>,
-        #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")]
+        #[serde(
+            serialize_with = "Char::__roslibrust_serialize_data_bounded_array",
+            deserialize_with = "Char::__roslibrust_deserialize_data_bounded_array"
+        )]
         pub r#data_bounded_array: ::std::vec::Vec<u8>,
     }
     ::roslibrust::impl_ros_message_type!(
@@ -5803,6 +6224,45 @@ char[<=11] data_bounded_array"####,
             0xde, 0x4e, 0x67, 0x8a,
         ],
     );
+    #[allow(dead_code, non_snake_case)]
+    impl Char {
+        fn __roslibrust_check_data_bounded_array<E: ::roslibrust::codegen::serde::ser::Error>(
+            value: &::std::vec::Vec<u8>,
+        ) -> Result<(), E> {
+            if value.len() > 11usize {
+                return Err(E::custom(format!(
+                    "field `{}` exceeds maximum sequence length {} (got {})",
+                    "data_bounded_array",
+                    11usize,
+                    value.len()
+                )));
+            }
+            Ok(())
+        }
+        fn __roslibrust_serialize_data_bounded_array<
+            S: ::roslibrust::codegen::serde::Serializer,
+        >(
+            value: &::std::vec::Vec<u8>,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            Self::__roslibrust_check_data_bounded_array::<S::Error>(value)?;
+            ::roslibrust::codegen::serde_rosmsg_bytes::serialize(value, serializer)
+        }
+        fn __roslibrust_deserialize_data_bounded_array<
+            'de,
+            D: ::roslibrust::codegen::serde::Deserializer<'de>,
+        >(
+            deserializer: D,
+        ) -> Result<::std::vec::Vec<u8>, D::Error> {
+            let value: ::std::vec::Vec<u8> =
+                ::roslibrust::codegen::serde_rosmsg_bytes::deserialize(deserializer)?;
+            Self::__roslibrust_check_data_bounded_array::<
+                ::roslibrust::codegen::serde::de::value::Error,
+            >(&value)
+            .map_err(<D::Error as ::roslibrust::codegen::serde::de::Error>::custom)?;
+            Ok(value)
+        }
+    }
     #[allow(non_snake_case)]
     #[allow(dead_code)]
     #[derive(
@@ -9085,6 +9545,10 @@ float64[4] coef"####,
     #[serde(deny_unknown_fields)]
     pub struct SolidPrimitive {
         pub r#type: u8,
+        #[serde(
+            serialize_with = "SolidPrimitive::__roslibrust_serialize_dimensions",
+            deserialize_with = "SolidPrimitive::__roslibrust_deserialize_dimensions"
+        )]
         pub r#dimensions: ::std::vec::Vec<f64>,
         pub r#polygon: geometry_msgs::Polygon,
     }
@@ -9180,6 +9644,43 @@ float32 z"####,
             0x4d, 0xda, 0x38, 0xac,
         ],
     );
+    #[allow(dead_code, non_snake_case)]
+    impl SolidPrimitive {
+        fn __roslibrust_check_dimensions<E: ::roslibrust::codegen::serde::ser::Error>(
+            value: &::std::vec::Vec<f64>,
+        ) -> Result<(), E> {
+            if value.len() > 3usize {
+                return Err(E::custom(format!(
+                    "field `{}` exceeds maximum sequence length {} (got {})",
+                    "dimensions",
+                    3usize,
+                    value.len()
+                )));
+            }
+            Ok(())
+        }
+        fn __roslibrust_serialize_dimensions<S: ::roslibrust::codegen::serde::Serializer>(
+            value: &::std::vec::Vec<f64>,
+            serializer: S,
+        ) -> Result<S::Ok, S::Error> {
+            Self::__roslibrust_check_dimensions::<S::Error>(value)?;
+            ::roslibrust::codegen::serde::Serialize::serialize(value, serializer)
+        }
+        fn __roslibrust_deserialize_dimensions<
+            'de,
+            D: ::roslibrust::codegen::serde::Deserializer<'de>,
+        >(
+            deserializer: D,
+        ) -> Result<::std::vec::Vec<f64>, D::Error> {
+            let value: ::std::vec::Vec<f64> =
+                ::roslibrust::codegen::serde::Deserialize::deserialize(deserializer)?;
+            Self::__roslibrust_check_dimensions::<::roslibrust::codegen::serde::de::value::Error>(
+                &value,
+            )
+            .map_err(<D::Error as ::roslibrust::codegen::serde::de::Error>::custom)?;
+            Ok(value)
+        }
+    }
     #[allow(unused)]
     impl SolidPrimitive {
         pub const r#BOX: u8 = 1u8;
@@ -21148,6 +21649,7 @@ pub static MESSAGE_REGISTRY: ::roslibrust::MessageRegistry = ::roslibrust::Messa
     ros2_test_msgs::BoundedInt::DESCRIPTION,
     ros2_test_msgs::BoundedReferenced::DESCRIPTION,
     ros2_test_msgs::BoundedString::DESCRIPTION,
+    ros2_test_msgs::BoundedStrings::DESCRIPTION,
     ros2_test_msgs::ByteArrays::DESCRIPTION,
     ros2_test_msgs::Char::DESCRIPTION,
     ros2_test_msgs::Defaults::DESCRIPTION,

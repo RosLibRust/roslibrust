@@ -4,6 +4,18 @@
 //!
 //! This library is a pure rust implementation from scratch and requires no ROS installation.
 //!
+//! ROS 2 bounded sequences and bounded strings retain public `Vec<T>` and `String` fields.
+//! Generated Serde codecs reject values above the declared limits on serialization and
+//! deserialization, including each bounded string in an array and nested message fields.
+//! Oversized declared defaults are rejected during generation. Regenerate previously generated
+//! source to enable these checks; direct field mutation remains possible but invalid values cannot
+//! be serialized or normalized into a dynamic message.
+//!
+//! String limits count UTF-8 bytes, excluding the wire terminator. This follows the
+//! [ROS 2 IDL representation](https://design.ros2.org/articles/idl_interface_definition.html):
+//! `string` is a sequence of 8-bit `char` elements. For example, `é` occupies two bytes.
+//! Byte-sequence checks compose with the existing rosbridge base64 and native binary adapters.
+//!
 //! See [example_package](https://github.com/RosLibRust/roslibrust/tree/master/example_package) for how best to integrate this crate with build.rs
 //!
 //! Directly depending on this crate is not recommended. Instead access it via roslibrust with the `codegen` feature enabled.

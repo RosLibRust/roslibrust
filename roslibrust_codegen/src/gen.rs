@@ -123,6 +123,7 @@ pub fn generate_struct(
     );
 
     let attrs = derive_attrs(options, has_large_array);
+    let struct_name = format_ident!("{}", msg.parsed.name);
     let fields = msg
         .parsed
         .fields
@@ -133,9 +134,11 @@ pub fn generate_struct(
                 &msg.parsed.package,
                 msg.parsed.version.unwrap_or(RosVersion::ROS1),
                 options,
+                &struct_name,
             )
         })
-        .collect::<Result<Vec<TokenStream>, _>>()?;
+        .collect::<Result<Vec<_>, _>>()?;
+    let (fields, field_helpers): (Vec<_>, Vec<_>) = fields.into_iter().unzip();
 
     let constants = msg
         .parsed
@@ -171,6 +174,11 @@ pub fn generate_struct(
         );
     };
 
+    let field_helpers = if field_helpers.iter().any(|tokens| !tokens.is_empty()) {
+        quote! { #[allow(dead_code, non_snake_case)] impl #struct_name { #(#field_helpers)* } }
+    } else {
+        quote! {}
+    };
     let mut base = quote! {
         #[allow(non_snake_case)]
         #[allow(dead_code)]
@@ -180,6 +188,8 @@ pub fn generate_struct(
         }
 
         #trait_impl
+
+        #field_helpers
     };
 
     // Only if we have constants append the impl
@@ -199,7 +209,9 @@ fn generate_field_definition(
     msg_pkg: &str,
     version: RosVersion,
     options: &CodegenOptions,
-) -> Result<TokenStream, Error> {
+    struct_name: &syn::Ident,
+) -> Result<(TokenStream, TokenStream), Error> {
+    validate_field_default(&field)?;
     let rust_field_type = match field.field_type.package_name {
         Some(ref pkg) => {
             if pkg.as_str() == msg_pkg {
@@ -275,7 +287,7 @@ fn generate_field_definition(
         "uint8" | "byte" | "char"
     );
 
-    let serde_line = match &field.field_type.array_info {
+    let mut serde_line = match &field.field_type.array_info {
         // Dynamic-length arrays (Vec<T>)
         ArrayType::Unbounded | ArrayType::Bounded(_) => {
             if is_byte_field {
@@ -313,11 +325,155 @@ fn generate_field_definition(
         // Non-array types need no special serde attributes
         ArrayType::NotArray => quote! {},
     };
-    Ok(quote! {
-        #default_line
-        #serde_line
-        #property_line
-    })
+    let mut helpers = quote! {};
+    if matches!(field.field_type.array_info, ArrayType::Bounded(_))
+        || field.field_type.string_capacity.is_some()
+    {
+        let serde = if options.roslibrust_serde {
+            quote! { ::roslibrust::codegen::serde }
+        } else {
+            quote! { ::serde }
+        };
+        let serialize_name = format_ident!("__roslibrust_serialize_{}", field.field_name);
+        let deserialize_name = format_ident!("__roslibrust_deserialize_{}", field.field_name);
+        let serialize_path = format!("{struct_name}::{serialize_name}");
+        let deserialize_path = format!("{struct_name}::{deserialize_name}");
+        serde_line = quote! {
+            #[serde(serialize_with = #serialize_path, deserialize_with = #deserialize_path)]
+        };
+        let label = &field.field_name;
+        let array_check = if let ArrayType::Bounded(limit) = field.field_type.array_info {
+            quote! {
+                if value.len() > #limit {
+                    return Err(E::custom(format!("field `{}` exceeds maximum sequence length {} (got {})", #label, #limit, value.len())));
+                }
+            }
+        } else {
+            quote! {}
+        };
+        let string_check = if let Some(limit) = field.field_type.string_capacity {
+            if matches!(field.field_type.array_info, ArrayType::NotArray) {
+                quote! {
+                    if value.len() > #limit {
+                        return Err(E::custom(format!("field `{}` exceeds maximum string length {} bytes (got {})", #label, #limit, value.len())));
+                    }
+                }
+            } else {
+                quote! {
+                    for (index, string) in value.iter().enumerate() {
+                        if string.len() > #limit {
+                            return Err(E::custom(format!("field `{}[{}]` exceeds maximum string length {} bytes (got {})", #label, index, #limit, string.len())));
+                        }
+                    }
+                }
+            }
+        } else {
+            quote! {}
+        };
+        let check_name = format_ident!("__roslibrust_check_{}", field.field_name);
+        // Compose validation with the original adapter so byte vectors retain their length
+        // prefix, fixed arrays retain tuple framing, and rosbridge still uses base64.
+        let (serialize, deserialize) = if is_byte_field {
+            let adapter = if options.roslibrust_serde {
+                quote! { ::roslibrust::codegen::serde_rosmsg_bytes }
+            } else {
+                quote! { ::serde_bytes }
+            };
+            (
+                quote! { #adapter::serialize(value, serializer) },
+                quote! { #adapter::deserialize(deserializer) },
+            )
+        } else if matches!(field.field_type.array_info, ArrayType::FixedLength(n) if n > MAX_FIXED_ARRAY_LEN)
+        {
+            (
+                quote! { ::roslibrust::codegen::BigArray::serialize(value, serializer) },
+                quote! { ::roslibrust::codegen::BigArray::deserialize(deserializer) },
+            )
+        } else {
+            (
+                quote! { #serde::Serialize::serialize(value, serializer) },
+                quote! { #serde::Deserialize::deserialize(deserializer) },
+            )
+        };
+        helpers = quote! {
+            fn #check_name<E: #serde::ser::Error>(value: &#rust_field_type) -> Result<(), E> {
+                #array_check
+                #string_check
+                Ok(())
+            }
+            fn #serialize_name<S: #serde::Serializer>(value: &#rust_field_type, serializer: S) -> Result<S::Ok, S::Error> {
+                Self::#check_name::<S::Error>(value)?;
+                #serialize
+            }
+            fn #deserialize_name<'de, D: #serde::Deserializer<'de>>(deserializer: D) -> Result<#rust_field_type, D::Error> {
+                let value: #rust_field_type = #deserialize?;
+                // Deserialize errors do not implement ser::Error; reuse the same validator
+                // with a neutral error and translate it into the caller's error type.
+                Self::#check_name::<#serde::de::value::Error>(&value)
+                    .map_err(<D::Error as #serde::de::Error>::custom)?;
+                Ok(value)
+            }
+        };
+    }
+    Ok((
+        quote! {
+            #default_line
+            #serde_line
+            #property_line
+        },
+        helpers,
+    ))
+}
+
+/// Reject invalid declared bounds before they can become a generated Default implementation.
+fn validate_field_default(field: &FieldInfo) -> Result<(), Error> {
+    if !matches!(field.field_type.array_info, ArrayType::Bounded(_))
+        && field.field_type.string_capacity.is_none()
+    {
+        return Ok(());
+    }
+    let Some(default) = &field.default else {
+        return Ok(());
+    };
+    let is_array = !matches!(field.field_type.array_info, ArrayType::NotArray);
+    if is_array {
+        let literal = if field.field_type.field_type == "bool" {
+            default.inner.to_lowercase()
+        } else {
+            default.inner.clone()
+        };
+        let values: Vec<serde_json::Value> = serde_json::from_str(&literal)
+            .map_err(|error| Error::with("invalid array default", error))?;
+        if let ArrayType::Bounded(limit) = field.field_type.array_info {
+            if values.len() > limit {
+                bail!(
+                    "default for field `{}` exceeds maximum sequence length {limit}",
+                    field.field_name
+                );
+            }
+        }
+        if let Some(limit) = field.field_type.string_capacity {
+            for (index, value) in values.iter().enumerate() {
+                if value.as_str().is_some_and(|value| value.len() > limit) {
+                    bail!("default for field `{}[{index}]` exceeds maximum string length {limit} bytes", field.field_name);
+                }
+            }
+        }
+    } else if let Some(limit) = field.field_type.string_capacity {
+        let value = default.inner.trim();
+        // The literal parser below validates the matching quotation marks.
+        if value.len() >= 2
+            && value
+                .get(1..value.len() - 1)
+                .is_some_and(|value| value.len() > limit)
+        {
+            bail!(
+                "default for field `{}` exceeds maximum string length {limit} bytes",
+                field.field_name
+            );
+        }
+    }
+    Ok(())
 }
 
 fn generate_constant_field_definition(
@@ -541,6 +697,95 @@ mod tests {
             )
             .unwrap_err();
             assert!(error.to_string().contains("expected 2"));
+        }
+    }
+
+    #[test]
+    fn defaults_respect_sequence_and_decoded_string_bounds() {
+        let field = |array_info, string_capacity, default: &str| FieldInfo {
+            field_type: crate::FieldType {
+                field_type: "string".into(),
+                package_name: None,
+                source_package: "test".into(),
+                array_info,
+                string_capacity,
+            },
+            field_name: "labels".into(),
+            default: Some(RosLiteral::from(default.to_owned())),
+        };
+        assert!(
+            validate_field_default(&field(ArrayType::Bounded(1), None, r#"["a", "b"]"#)).is_err()
+        );
+        assert!(
+            validate_field_default(&field(ArrayType::Bounded(2), Some(2), r#"["a", "é"]"#)).is_ok()
+        );
+        assert!(validate_field_default(&field(ArrayType::Unbounded, Some(1), r#"["é"]"#)).is_err());
+        assert!(validate_field_default(&field(
+            ArrayType::FixedLength(1),
+            Some(1),
+            r#"["\u0061"]"#
+        ))
+        .is_ok());
+        assert!(validate_field_default(&field(ArrayType::NotArray, Some(5), "'12345'")).is_ok());
+        assert!(validate_field_default(&field(ArrayType::NotArray, Some(5), "'123456'")).is_err());
+    }
+
+    #[test]
+    fn bounded_boolean_defaults_keep_case_normalization() {
+        let field = FieldInfo {
+            field_type: crate::FieldType {
+                field_type: "bool".into(),
+                package_name: None,
+                source_package: "test".into(),
+                array_info: ArrayType::Bounded(2),
+                string_capacity: None,
+            },
+            field_name: "flags".into(),
+            default: Some(RosLiteral::from("[TRUE,False]".to_owned())),
+        };
+        assert!(generate_field_definition(
+            field,
+            "test",
+            RosVersion::ROS2,
+            &CodegenOptions::default(),
+            &format_ident!("Flags")
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn bounds_helpers_follow_selected_serde_import_mode() {
+        for roslibrust_serde in [true, false] {
+            let options = CodegenOptions {
+                roslibrust_serde,
+                ..Default::default()
+            };
+            let field = FieldInfo {
+                field_type: crate::FieldType {
+                    field_type: "string".into(),
+                    package_name: None,
+                    source_package: "test".into(),
+                    array_info: ArrayType::Bounded(3),
+                    string_capacity: Some(5),
+                },
+                field_name: "labels".into(),
+                default: None,
+            };
+            let (_, helpers) = generate_field_definition(
+                field,
+                "test",
+                RosVersion::ROS2,
+                &options,
+                &format_ident!("Bounds"),
+            )
+            .unwrap();
+            let helpers = helpers.to_string();
+            if roslibrust_serde {
+                assert!(helpers.contains("roslibrust :: codegen :: serde"));
+            } else {
+                assert!(!helpers.contains(":: roslibrust ::"));
+                assert!(helpers.contains(":: serde :: de :: value :: Error"));
+            }
         }
     }
 

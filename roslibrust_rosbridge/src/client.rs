@@ -328,9 +328,9 @@ impl ClientHandle {
         descriptor: &'static MessageDescriptor,
         message: &DynamicMessage,
     ) -> Result<()> {
-        if message.descriptor().ros_type_name != descriptor.ros_type_name {
+        if !descriptor.is_compatible_with(message.descriptor()) {
             return Err(Error::SerializationError(format!(
-                "publisher expects {}, but message is {}",
+                "incompatible message schema: publisher expects {}, but message declares {}",
                 descriptor.ros_type_name,
                 message.descriptor().ros_type_name
             )));

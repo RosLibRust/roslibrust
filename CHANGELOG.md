@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metadata, and propagate malformed-file and CRC errors during construction.
 - Generated ROS 2 fixed-array defaults now initialize arrays rather than vectors. Fixed arrays
   longer than 32 also support defaults for strings and nested messages without requiring `Copy`.
+- Generated ROS 2 fields enforce bounded sequence and string lengths during serialization and
+  deserialization, including dynamic construction, nested fields, and declared defaults. String
+  bounds count UTF-8 bytes; public `Vec` and `String` field types and byte-array framing are retained.
+- Dynamic publishers and service clients reject incompatible descriptors even when ROS type names
+  match. `MessageDescriptor::is_compatible_with` compares schema metadata by value so independent
+  copies of an identical descriptor remain compatible.
 
 ### Changed
 

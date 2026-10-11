@@ -154,3 +154,174 @@ fn ros2_hash_checks() {
         parse("RIHS01_a10cca5d33dc637c8d49db50ab288701a3592bb9cd854f2f16a0659613b68984")
     );
 }
+
+#[test]
+fn bounded_bytes_validate_all_entry_points_and_preserve_framing() {
+    use roslibrust::{DynamicValue, RosMessageType};
+    use roslibrust_test::ros2::ros2_test_msgs::BoundedInt;
+    let descriptor = &BoundedInt::DESCRIPTION;
+    for len in [0, 5, 6] {
+        let typed = BoundedInt { data: vec![7; len] };
+        let valid = len <= 5;
+        assert_eq!(serde_json::to_value(&typed).is_ok(), valid);
+        assert_eq!(
+            serde_json::from_value::<BoundedInt>(json!({"data": vec![7; len]})).is_ok(),
+            valid
+        );
+        assert_eq!(
+            descriptor
+                .message_from(&json!({"data": vec![7; len]}))
+                .is_ok(),
+            valid
+        );
+        let bytes = vec![7; len];
+        let value = DynamicValue::Message(vec![roslibrust::DynamicField {
+            name: "data".into(),
+            value: DynamicValue::Bytes(bytes),
+        }]);
+        assert_eq!(descriptor.message(value).is_ok(), valid);
+        let binary = roslibrust_serde_rosmsg::to_vec(&typed);
+        assert_eq!(binary.is_ok(), valid);
+        if valid {
+            let binary = binary.unwrap();
+            assert_eq!(&binary[..4], &((len + 4) as u32).to_le_bytes());
+            assert_eq!(&binary[4..8], &(len as u32).to_le_bytes());
+            assert_eq!(binary.len(), len + 8);
+            assert_eq!(
+                roslibrust_serde_rosmsg::from_slice::<BoundedInt>(&binary).unwrap(),
+                typed
+            );
+        }
+    }
+    assert_eq!(
+        serde_json::to_value(BoundedInt {
+            data: vec![1, 2, 3, 4, 5]
+        })
+        .unwrap(),
+        json!({"data":"AQIDBAU="})
+    );
+    let err = serde_json::from_value::<BoundedInt>(json!({"data":"AQIDBAUG"})).unwrap_err();
+    assert!(err.to_string().contains("field `data`"));
+    let mut wire = 10u32.to_le_bytes().to_vec();
+    wire.extend(6u32.to_le_bytes());
+    wire.extend([1, 2, 3, 4, 5, 6]);
+    assert!(roslibrust_serde_rosmsg::from_slice::<BoundedInt>(&wire)
+        .unwrap_err()
+        .to_string()
+        .contains("field `data`"));
+}
+
+#[test]
+fn bounded_strings_count_utf8_bytes() {
+    use roslibrust::RosMessageType;
+    use roslibrust_test::ros2::ros2_test_msgs::BoundedString;
+    for text in ["", "12345", "123456", "éé", "ééé"] {
+        let valid = text.len() <= 5;
+        let typed = BoundedString {
+            data: text.into(),
+            ..Default::default()
+        };
+        assert_eq!(serde_json::to_value(&typed).is_ok(), valid);
+        assert_eq!(
+            serde_json::from_value::<BoundedString>(
+                json!({"data":text,"data_list":[],"data_matrix":[]})
+            )
+            .is_ok(),
+            valid
+        );
+        assert_eq!(
+            BoundedString::DESCRIPTION
+                .message_from(&json!({"data":text,"data_list":[],"data_matrix":[]}))
+                .is_ok(),
+            valid
+        );
+        assert_eq!(roslibrust_serde_rosmsg::to_vec(&typed).is_ok(), valid);
+    }
+}
+
+#[test]
+fn bounded_string_arrays_and_nested_messages_validate_recursively() {
+    use roslibrust::RosMessageType;
+    use roslibrust_test::ros2::ros2_test_msgs::{BoundedInt, BoundedReferenced, BoundedStrings};
+    let valid = json!({"fixed":["a","12345"], "unbounded":["éé"], "bounded":["abc"], "nested":[{"data":"abc","data_list":[],"data_matrix":[]}]});
+    let typed: BoundedStrings = serde_json::from_value(valid.clone()).unwrap();
+    let default = BoundedStrings::DESCRIPTION.default_message().unwrap();
+    assert_eq!(
+        default.get("bounded").unwrap().as_sequence().unwrap()[0].as_str(),
+        Some("abc")
+    );
+    assert!(BoundedStrings::DESCRIPTION.message_from(&valid).is_ok());
+    let binary = roslibrust_serde_rosmsg::to_vec(&typed).unwrap();
+    assert_eq!(
+        roslibrust_serde_rosmsg::from_slice::<BoundedStrings>(&binary).unwrap(),
+        typed
+    );
+    for (field, invalid) in [
+        ("fixed", json!(["a", "123456"])),
+        ("fixed", json!(["a"])),
+        ("unbounded", json!(["123456"])),
+        ("bounded", json!(["a", "b", "c", "d"])),
+        ("bounded", json!(["123456"])),
+        (
+            "nested",
+            json!([{"data":"123456","data_list":[],"data_matrix":[]}]),
+        ),
+        (
+            "nested",
+            json!([{"data":"a","data_list":[],"data_matrix":[]},{"data":"b","data_list":[],"data_matrix":[]},{"data":"c","data_list":[],"data_matrix":[]}]),
+        ),
+    ] {
+        let mut value = valid.clone();
+        value[field] = invalid;
+        assert!(
+            serde_json::from_value::<BoundedStrings>(value.clone()).is_err(),
+            "{field}"
+        );
+        assert!(
+            BoundedStrings::DESCRIPTION.message_from(&value).is_err(),
+            "{field}"
+        );
+    }
+    let mut bad = typed;
+    bad.fixed[1] = "123456".into();
+    assert!(serde_json::to_value(&bad)
+        .unwrap_err()
+        .to_string()
+        .contains("fixed[1]"));
+    assert!(roslibrust_serde_rosmsg::to_vec(&bad).is_err());
+    for value in [
+        json!({"data":[{"data":[1,2,3,4,5,6]}]}),
+        json!({"data":[{"data":[]},{"data":[]},{"data":[]},{"data":[]}]}),
+    ] {
+        assert!(BoundedReferenced::DESCRIPTION.message_from(&value).is_err());
+    }
+    let bad = BoundedReferenced {
+        data: vec![BoundedInt { data: vec![0; 6] }],
+    };
+    assert!(serde_json::to_value(&bad).is_err());
+}
+
+#[test]
+fn descriptor_compatibility_uses_metadata_values() {
+    use roslibrust::RosMessageType;
+    let original = roslibrust_test::ros2::std_msgs::String::DESCRIPTION;
+    let duplicate = original;
+    assert!(original.is_compatible_with(&duplicate));
+    let changed = roslibrust::MessageDescriptor::new::<std_msgs::String>(
+        original.ros_type_name,
+        original.md5sum,
+        "uint8 data",
+        original.ros2_type_name,
+        original.ros2_hash,
+    );
+    assert!(!original.is_compatible_with(&changed));
+    let changed_hash = roslibrust::MessageDescriptor::new::<std_msgs::String>(
+        original.ros_type_name,
+        original.md5sum,
+        original.definition,
+        original.ros2_type_name,
+        &[1; 32],
+    );
+    assert!(!original.is_compatible_with(&changed_hash));
+    assert!(!original.is_compatible_with(&roslibrust_test::ros1::std_msgs::String::DESCRIPTION));
+}

@@ -260,9 +260,9 @@ impl DynamicPublish for DynamicZenohPublisher {
     }
 
     async fn publish(&self, data: &DynamicMessage) -> Result<()> {
-        if data.descriptor().ros_type_name != self.descriptor.ros_type_name {
+        if !self.descriptor.is_compatible_with(data.descriptor()) {
             return Err(Error::SerializationError(format!(
-                "publisher expects {}, but message is {}",
+                "incompatible message schema: publisher expects {}, but message declares {}",
                 self.descriptor.ros_type_name,
                 data.descriptor().ros_type_name
             )));
@@ -642,9 +642,13 @@ impl DynamicService for DynamicZenohServiceClient {
     }
 
     async fn call(&self, request: &DynamicMessage) -> Result<DynamicMessage> {
-        if request.descriptor().ros_type_name != self.descriptor.request.ros_type_name {
+        if !self
+            .descriptor
+            .request
+            .is_compatible_with(request.descriptor())
+        {
             return Err(Error::SerializationError(format!(
-                "service {} expects request {}, but message is {}",
+                "incompatible request schema: service {} expects {}, but message declares {}",
                 self.descriptor.ros_service_name,
                 self.descriptor.request.ros_type_name,
                 request.descriptor().ros_type_name

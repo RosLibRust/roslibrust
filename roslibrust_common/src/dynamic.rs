@@ -421,6 +421,20 @@ impl MessageDescriptor {
         }
     }
 
+    /// Whether two descriptors declare the same message schema and wire identity.
+    ///
+    /// Compares metadata by value, including expanded definitions and both ROS versions' hashes.
+    /// Codec function addresses and descriptor addresses are intentionally ignored: independently
+    /// generated copies of the same schema are compatible. Descriptors generated with different
+    /// definition-retention settings are conservatively incompatible.
+    pub fn is_compatible_with(&self, other: &Self) -> bool {
+        self.ros_type_name == other.ros_type_name
+            && self.md5sum == other.md5sum
+            && self.definition == other.definition
+            && self.ros2_type_name == other.ros2_type_name
+            && self.ros2_hash == other.ros2_hash
+    }
+
     /// Validate a dynamic value against this generated message type.
     pub fn validate(&self, value: &DynamicValue) -> DynamicMessageResult<()> {
         (self.operations.normalize)(value).map(|_| ())
@@ -490,7 +504,8 @@ impl MessageDescriptor {
 ///
 /// Unlike a raw [`DynamicValue`], values reachable through this type have been round-tripped
 /// through their generated Rust message type. Required fields, field types, nested messages,
-/// sequence element types, numeric ranges, and fixed array lengths have therefore been checked.
+/// sequence element types, numeric ranges, fixed array lengths, and generated ROS 2 sequence and
+/// string bounds have therefore been checked. String bounds count UTF-8 bytes.
 #[derive(Clone, Debug)]
 pub struct DynamicMessage {
     descriptor: &'static MessageDescriptor,

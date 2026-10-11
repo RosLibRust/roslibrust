@@ -178,9 +178,9 @@ impl DynamicPublish for DynamicPublisher {
     }
 
     async fn publish(&self, data: &DynamicMessage) -> roslibrust_common::Result<()> {
-        if data.descriptor().ros_type_name != self.descriptor.ros_type_name {
+        if !self.descriptor.is_compatible_with(data.descriptor()) {
             return Err(Error::SerializationError(format!(
-                "publisher expects {}, but message is {}",
+                "incompatible message schema: publisher expects {}, but message declares {}",
                 self.descriptor.ros_type_name,
                 data.descriptor().ros_type_name
             )));
@@ -371,6 +371,41 @@ mod dynamic_message_tests {
                 value: DynamicValue::I16(value),
             }]))
             .unwrap()
+    }
+
+    #[tokio::test]
+    async fn dynamic_publisher_rejects_same_name_different_schema_before_sending() {
+        let descriptor = int16_descriptor();
+        let changed = Box::leak(Box::new(MessageDescriptor::new::<
+            roslibrust_test::ros1::std_msgs::Int16,
+        >(
+            descriptor.ros_type_name,
+            descriptor.md5sum,
+            "int32 data",
+            descriptor.ros2_type_name,
+            descriptor.ros2_hash,
+        )));
+        let message = changed
+            .message_from(&roslibrust_test::ros1::std_msgs::Int16 { data: 42 })
+            .unwrap();
+        let (sender, mut receiver) = tokio::sync::broadcast::channel(1);
+        let (shutdown, _shutdown_rx) = tokio::sync::mpsc::channel(1);
+        let publisher = DynamicPublisher {
+            publisher: PublisherAny::new("/schema", sender, shutdown),
+            descriptor,
+        };
+        assert!(publisher
+            .publish(&message)
+            .await
+            .unwrap_err()
+            .to_string()
+            .contains("incompatible message schema"));
+        assert!(matches!(
+            receiver.try_recv(),
+            Err(tokio::sync::broadcast::error::TryRecvError::Empty)
+        ));
+        publisher.publish(&int16_message(42)).await.unwrap();
+        assert!(receiver.try_recv().is_ok());
     }
 
     #[test]

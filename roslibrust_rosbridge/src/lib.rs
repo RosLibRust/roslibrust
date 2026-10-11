@@ -175,9 +175,13 @@ impl DynamicService for DynamicServiceClient {
     }
 
     async fn call(&self, request: &DynamicMessage) -> Result<DynamicMessage> {
-        if request.descriptor().ros_type_name != self.descriptor.request.ros_type_name {
+        if !self
+            .descriptor
+            .request
+            .is_compatible_with(request.descriptor())
+        {
             return Err(Error::SerializationError(format!(
-                "service {} expects request {}, but message is {}",
+                "incompatible request schema: service {} expects {}, but message declares {}",
                 self.descriptor.ros_service_name,
                 self.descriptor.request.ros_type_name,
                 request.descriptor().ros_type_name
