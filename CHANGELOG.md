@@ -24,12 +24,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dynamic publishers and service clients reject incompatible descriptors even when ROS type names
   match. `MessageDescriptor::is_compatible_with` compares schema metadata by value so independent
   copies of an identical descriptor remain compatible.
+- Mock topic registrations now disappear when their last publisher or subscriber handle is dropped,
+  allowing the name to be reused with a different type. Typed and dynamic handles share ownership.
+- Concurrent mock topic creation now atomically checks and reuses registrations, preventing
+  disconnected channels or conflicting types from overwriting each other.
 
 ### Changed
 
 - `McapReader::new` now scans and decompresses records to validate the file before returning,
   adding a validation pass before message iteration. Empty input is rejected; finished MCAP
   files with no messages remain supported.
+- **Breaking:** `MockRos::ServiceServer` is now an owning `MockServiceServer` instead of `()`.
+  Retain the returned handle while serving requests. Clones keep the same registration alive;
+  dropping the last handle immediately removes it from the graph and disables future calls.
+  Duplicate advertisements of an active service now return an error.
 
 ## 0.26.0 - September 25th, 2026
 

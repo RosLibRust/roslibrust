@@ -141,3 +141,9 @@ The second approach is brittle, slow, and often a bottle neck for test times.
 
 RosLibRust provides a mock implementation of ROS for testing that allows deterministic "time traveling" tests.
 See [extended getting started guide](extended_getting_started.md#writing-tests-for-our-node) for an example.
+
+When testing with `MockRos`, keep publisher, subscriber, and service server handles alive for as
+long as their registrations are needed. Dropping the last handle removes the registration from
+the mock graph. For services, bind the result of `advertise_service` to a variable such as
+`let _server = ...;`; `let _ = ...;` discards it immediately. Service server clones share the same
+registration, and advertising the same service again while a handle is alive returns an error.
