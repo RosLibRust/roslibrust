@@ -59,3 +59,33 @@ fn generated_large_arrays_round_trip_through_serde() {
     let decoded: array_defaults::Defaults = serde_json::from_value(json).unwrap();
     assert_eq!(decoded, defaults);
 }
+
+#[test]
+fn large_non_copy_arrays_preserve_string_bounds() {
+    use roslibrust::RosMessageType;
+
+    let mut message = array_defaults::BoundedArrays::default();
+    assert!(message.labels.iter().all(String::is_empty));
+    assert_eq!(message.flags, [true, false]);
+    message.labels[39] = "12345".into();
+    let json = serde_json::to_value(&message).unwrap();
+    assert_eq!(
+        serde_json::from_value::<array_defaults::BoundedArrays>(json.clone()).unwrap(),
+        message
+    );
+    assert!(array_defaults::BoundedArrays::DESCRIPTION
+        .message_from(&message)
+        .is_ok());
+
+    message.labels[39].push('6');
+    assert!(serde_json::to_value(&message)
+        .unwrap_err()
+        .to_string()
+        .contains("labels[39]"));
+    assert!(array_defaults::BoundedArrays::DESCRIPTION
+        .message_from(&message)
+        .is_err());
+    let mut invalid = json;
+    invalid["labels"][39] = "123456".into();
+    assert!(serde_json::from_value::<array_defaults::BoundedArrays>(invalid).is_err());
+}

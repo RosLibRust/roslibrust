@@ -228,7 +228,7 @@ string frame_id"####,
         #[serde(deny_unknown_fields)]
         pub struct AccelWithCovariance {
             pub r#accel: self::Accel,
-            #[default(_code = "[Default::default(); 36]")]
+            #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
             #[serde(with = "::roslibrust::codegen::BigArray")]
             pub r#covariance: [f64; 36],
         }
@@ -1037,7 +1037,7 @@ string frame_id"####,
         #[serde(deny_unknown_fields)]
         pub struct PoseWithCovariance {
             pub r#pose: self::Pose,
-            #[default(_code = "[Default::default(); 36]")]
+            #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
             #[serde(with = "::roslibrust::codegen::BigArray")]
             pub r#covariance: [f64; 36],
         }
@@ -1586,7 +1586,7 @@ string frame_id"####,
         #[serde(deny_unknown_fields)]
         pub struct TwistWithCovariance {
             pub r#twist: self::Twist,
-            #[default(_code = "[Default::default(); 36]")]
+            #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
             #[serde(with = "::roslibrust::codegen::BigArray")]
             pub r#covariance: [f64; 36],
         }
@@ -3788,7 +3788,7 @@ uint32 nanosec"####,
         #[serde(deny_unknown_fields)]
         pub struct AccelWithCovariance {
             pub r#accel: self::Accel,
-            #[default(_code = "[Default::default(); 36]")]
+            #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
             #[serde(with = "::roslibrust::codegen::BigArray")]
             pub r#covariance: [f64; 36],
         }
@@ -4727,7 +4727,7 @@ uint32 nanosec"####,
         #[serde(deny_unknown_fields)]
         pub struct PoseWithCovariance {
             pub r#pose: self::Pose,
-            #[default(_code = "[Default::default(); 36]")]
+            #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
             #[serde(with = "::roslibrust::codegen::BigArray")]
             pub r#covariance: [f64; 36],
         }
@@ -5377,7 +5377,7 @@ uint32 nanosec"####,
         #[serde(deny_unknown_fields)]
         pub struct TwistWithCovariance {
             pub r#twist: self::Twist,
-            #[default(_code = "[Default::default(); 36]")]
+            #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
             #[serde(with = "::roslibrust::codegen::BigArray")]
             pub r#covariance: [f64; 36],
         }

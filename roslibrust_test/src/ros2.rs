@@ -980,7 +980,7 @@ uint32 nanosec"####,
     #[serde(deny_unknown_fields)]
     pub struct AccelWithCovariance {
         pub r#accel: self::Accel,
-        #[default(_code = "[Default::default(); 36]")]
+        #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
         #[serde(with = "::roslibrust::codegen::BigArray")]
         pub r#covariance: [f64; 36],
     }
@@ -1919,7 +1919,7 @@ uint32 nanosec"####,
     #[serde(deny_unknown_fields)]
     pub struct PoseWithCovariance {
         pub r#pose: self::Pose,
-        #[default(_code = "[Default::default(); 36]")]
+        #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
         #[serde(with = "::roslibrust::codegen::BigArray")]
         pub r#covariance: [f64; 36],
     }
@@ -2569,7 +2569,7 @@ uint32 nanosec"####,
     #[serde(deny_unknown_fields)]
     pub struct TwistWithCovariance {
         pub r#twist: self::Twist,
-        #[default(_code = "[Default::default(); 36]")]
+        #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
         #[serde(with = "::roslibrust::codegen::BigArray")]
         pub r#covariance: [f64; 36],
     }
@@ -5961,7 +5961,7 @@ string<=5[<=3] data_matrix"####,
             deserialize_with = "BoundedStrings::__roslibrust_deserialize_unbounded"
         )]
         pub r#unbounded: ::std::vec::Vec<::std::string::String>,
-        #[default(_code = "[\"abc\"].iter().map(|x| x.to_string()).collect()")]
+        #[default(_code = ":: std :: vec ! [:: std :: string :: String :: from (\"abc\")]")]
         #[serde(
             serialize_with = "BoundedStrings::__roslibrust_serialize_bounded",
             deserialize_with = "BoundedStrings::__roslibrust_deserialize_bounded"
@@ -6282,11 +6282,13 @@ char[<=11] data_bounded_array"####,
         pub r#y: i16,
         #[default("John Doe")]
         pub r#full_name: ::std::string::String,
-        #[default(_code = "vec![-200, -100, 0, 100, 200]")]
+        #[default(_code = ":: std :: vec ! [- 200i32 , - 100i32 , 0i32 , 100i32 , 200i32]")]
         pub r#samples: ::std::vec::Vec<i32>,
-        #[default(_code = "vec![-200.0, -1.0, 0.0]")]
+        #[default(_code = ":: std :: vec ! [- 200f32 , - 1f32 , 0f32]")]
         pub r#f_samples: ::std::vec::Vec<f32>,
-        #[default(_code = "[\"hello\", \"world\"].iter().map(|x| x.to_string()).collect()")]
+        #[default(
+            _code = ":: std :: vec ! [:: std :: string :: String :: from (\"hello\") , :: std :: string :: String :: from (\"world\")]"
+        )]
         pub r#s_vec: ::std::vec::Vec<::std::string::String>,
     }
     ::roslibrust::impl_ros_message_type!(
