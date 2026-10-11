@@ -120,26 +120,8 @@ mod tests {
 
     #[test]
     fn test_write_and_read_mcap() -> Result<()> {
-        // Create a simple test message type
         use roslibrust_common::RosMessageType;
-        use serde::{Deserialize, Serialize};
-
-        #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
-        struct TestMessage {
-            data: String,
-            value: i32,
-        }
-
-        impl RosMessageType for TestMessage {
-            const DESCRIPTION: roslibrust_common::MessageDescriptor =
-                roslibrust_common::MessageDescriptor::new::<Self>(
-                    "test_msgs/TestMessage",
-                    "test",
-                    "string data\nint32 value",
-                    "test_msgs/msg/TestMessage",
-                    &[0; 32],
-                );
-        }
+        use roslibrust_test::ros2::{builtin_interfaces, std_msgs};
 
         // Write an MCAP file
         let mut buffer = Vec::new();
@@ -147,16 +129,22 @@ mod tests {
             let mut writer = McapWriter::new(Cursor::new(&mut buffer))?;
 
             // Add a channel for CDR encoding
-            let channel = writer.add_ros_channel::<TestMessage>("/test/topic")?;
+            let channel = writer.add_ros_channel::<std_msgs::Header>("/test/topic")?;
 
             // Write some messages
-            let msg1 = TestMessage {
-                data: "Hello".to_string(),
-                value: 42,
+            let msg1 = std_msgs::Header {
+                frame_id: "Hello".to_string(),
+                stamp: builtin_interfaces::Time {
+                    sec: 42,
+                    nanosec: 0,
+                },
             };
-            let msg2 = TestMessage {
-                data: "World".to_string(),
-                value: 123,
+            let msg2 = std_msgs::Header {
+                frame_id: "World".to_string(),
+                stamp: builtin_interfaces::Time {
+                    sec: 123,
+                    nanosec: 0,
+                },
             };
 
             channel.write(&mut writer, 1000, &msg1)?;
@@ -172,7 +160,10 @@ mod tests {
         assert_eq!(reader.channels().len(), 1);
         let channel = reader.channel(1).expect("Channel 1 should exist");
         assert_eq!(channel.topic, "/test/topic");
-        assert_eq!(channel.message_type, "test_msgs/TestMessage");
+        assert_eq!(
+            channel.message_type,
+            std_msgs::Header::DESCRIPTION.ros_type_name
+        );
         assert_eq!(channel.encoding, "cdr");
 
         // Read messages
@@ -182,16 +173,16 @@ mod tests {
         // Verify first message
         assert_eq!(messages[0].channel_id, 1);
         assert_eq!(messages[0].log_time, 1000);
-        let decoded1: TestMessage = McapReader::deserialize_message(&messages[0].data)?;
-        assert_eq!(decoded1.data, "Hello");
-        assert_eq!(decoded1.value, 42);
+        let decoded1: std_msgs::Header = McapReader::deserialize_message(&messages[0].data)?;
+        assert_eq!(decoded1.frame_id, "Hello");
+        assert_eq!(decoded1.stamp.sec, 42);
 
         // Verify second message
         assert_eq!(messages[1].channel_id, 1);
         assert_eq!(messages[1].log_time, 2000);
-        let decoded2: TestMessage = McapReader::deserialize_message(&messages[1].data)?;
-        assert_eq!(decoded2.data, "World");
-        assert_eq!(decoded2.value, 123);
+        let decoded2: std_msgs::Header = McapReader::deserialize_message(&messages[1].data)?;
+        assert_eq!(decoded2.frame_id, "World");
+        assert_eq!(decoded2.stamp.sec, 123);
 
         Ok(())
     }

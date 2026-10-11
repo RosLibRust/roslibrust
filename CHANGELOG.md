@@ -22,8 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   deserialization, including dynamic construction, nested fields, and declared defaults. String
   bounds count UTF-8 bytes; public `Vec` and `String` field types and byte-array framing are retained.
 - Dynamic publishers and service clients reject incompatible descriptors even when ROS type names
-  match. `MessageDescriptor::is_compatible_with` compares schema metadata by value so independent
-  copies of an identical descriptor remain compatible.
+  match. `MessageDescriptor::is_compatible_with` compares type names and hashes by value, ignoring
+  definition text. A `"*"` identity field or `MessageDescriptor::WILDCARD_ROS2_HASH` explicitly skips
+  that field's comparison; the remaining fields must still match.
 - Mock topic registrations now disappear when their last publisher or subscriber handle is dropped,
   allowing the name to be reused with a different type. Typed and dynamic handles share ownership.
 - Concurrent mock topic creation now atomically checks and reuses registrations, preventing
@@ -31,6 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Generated message defaults now use ordinary Rust derives or explicit implementations,
+  without expression strings or `smart-default`. Arrays up to 32 elements use ordinary
+  defaults unless the ROS definition specifies a value; larger arrays initialize each element
+  independently. Derived traits are emitted in one block. A shared const-generic fixed-array codec
+  replaces `serde-big-array` and preserves native ROS framing for all array lengths.
+  **Breaking:** the `SmartDefault` and `BigArray` re-exports are removed; regenerate existing
+  message source before upgrading.
+- Generated bounded-field codecs now use a shared macro, keeping validation and Serde plumbing
+  out of generated message files. Field generation separately selects types, defaults, and adapters.
 - `McapReader::new` now scans and decompresses records to validate the file before returning,
   adding a validation pass before message iteration. Empty input is rejected; finished MCAP
   files with no messages remain supported.

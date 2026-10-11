@@ -394,6 +394,12 @@ impl std::fmt::Debug for MessageDescriptor {
 }
 
 impl MessageDescriptor {
+    /// Explicit compatibility wildcard for the binary ROS 2 type hash.
+    ///
+    /// This is the byte-array counterpart of `"*"` in textual identity fields.
+    /// An all-zero hash is compared normally and does not opt out of checking.
+    pub const WILDCARD_ROS2_HASH: &'static [u8; 32] = &[b'*'; 32];
+
     /// Construct the descriptor for a concrete ROS message type.
     ///
     /// The supplied fields are the type's complete metadata. Serialization, deserialization, and
@@ -421,18 +427,28 @@ impl MessageDescriptor {
         }
     }
 
-    /// Whether two descriptors declare the same message schema and wire identity.
+    /// Whether two descriptors declare compatible message identities.
     ///
-    /// Compares metadata by value, including expanded definitions and both ROS versions' hashes.
-    /// Codec function addresses and descriptor addresses are intentionally ignored: independently
-    /// generated copies of the same schema are compatible. Descriptors generated with different
-    /// definition-retention settings are conservatively incompatible.
+    /// Compares both ROS versions' type names and hashes by value. Expanded definitions and codec
+    /// addresses are ignored, allowing independent generation and omitted definitions.
+    ///
+    /// A textual identity field equal to `"*"` on either descriptor skips only that field's
+    /// comparison. For the binary ROS 2 hash, use [`Self::WILDCARD_ROS2_HASH`]. Every other field
+    /// must still match. Empty strings and zero hashes are ordinary values, not wildcards.
+    ///
+    /// Custom message types can use these explicit wildcards to handle multiple wire identities.
+    /// This opts out of the corresponding metadata check; the message's codecs and value
+    /// validation still determine which payloads it can actually process.
     pub fn is_compatible_with(&self, other: &Self) -> bool {
-        self.ros_type_name == other.ros_type_name
-            && self.md5sum == other.md5sum
-            && self.definition == other.definition
-            && self.ros2_type_name == other.ros2_type_name
-            && self.ros2_hash == other.ros2_hash
+        fn matches(left: &str, right: &str) -> bool {
+            left == right || left == "*" || right == "*"
+        }
+        matches(self.ros_type_name, other.ros_type_name)
+            && matches(self.md5sum, other.md5sum)
+            && matches(self.ros2_type_name, other.ros2_type_name)
+            && (self.ros2_hash == other.ros2_hash
+                || self.ros2_hash == Self::WILDCARD_ROS2_HASH
+                || other.ros2_hash == Self::WILDCARD_ROS2_HASH)
     }
 
     /// Validate a dynamic value against this generated message type.

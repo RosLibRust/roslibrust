@@ -310,11 +310,11 @@ fn descriptor_compatibility_uses_metadata_values() {
     let changed = roslibrust::MessageDescriptor::new::<std_msgs::String>(
         original.ros_type_name,
         original.md5sum,
-        "uint8 data",
+        "", // Definition retention is independent of wire identity.
         original.ros2_type_name,
         original.ros2_hash,
     );
-    assert!(!original.is_compatible_with(&changed));
+    assert!(original.is_compatible_with(&changed));
     let changed_hash = roslibrust::MessageDescriptor::new::<std_msgs::String>(
         original.ros_type_name,
         original.md5sum,
@@ -323,5 +323,6 @@ fn descriptor_compatibility_uses_metadata_values() {
         &[1; 32],
     );
     assert!(!original.is_compatible_with(&changed_hash));
-    assert!(!original.is_compatible_with(&roslibrust_test::ros1::std_msgs::String::DESCRIPTION));
+    // These ROS 1 and ROS 2 definitions differ in comments, but their identities match.
+    assert!(original.is_compatible_with(&roslibrust_test::ros1::std_msgs::String::DESCRIPTION));
 }

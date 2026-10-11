@@ -1,7 +1,16 @@
-// Expanding the macro compiles real generated definitions, not stored generated source.
-roslibrust_codegen_macro::generate_ros_types!(
-    "roslibrust_codegen_macro/tests/fixtures/array_defaults"
-);
+// Compile and exercise freshly generated definitions using roslibrust_test's macro feature.
+roslibrust::generate_ros_types!("roslibrust_test/tests/fixtures/array_defaults");
+
+#[test]
+fn small_arrays_use_standard_defaults_with_non_copy_elements() {
+    let mut message = array_defaults::SmallArrays::default();
+    assert!(message.empty.is_empty());
+    assert!(message.single[0].is_empty());
+    assert!(message.names.iter().all(String::is_empty));
+    assert!(message.children.iter().all(|child| child.name == "child"));
+    message.children[0].name.push_str(" changed");
+    assert_eq!(message.children[1].name, "child");
+}
 
 #[test]
 fn fixed_and_vector_default_literals_have_their_declared_types() {
@@ -88,4 +97,67 @@ fn large_non_copy_arrays_preserve_string_bounds() {
     let mut invalid = json;
     invalid["labels"][39] = "123456".into();
     assert!(serde_json::from_value::<array_defaults::BoundedArrays>(invalid).is_err());
+}
+
+#[test]
+fn a_message_named_result_does_not_shadow_codec_results() {
+    let message = array_defaults::Result {
+        data: "valid".into(),
+    };
+    let json = serde_json::to_value(&message).unwrap();
+    assert_eq!(
+        serde_json::from_value::<array_defaults::Result>(json).unwrap(),
+        message
+    );
+    assert!(serde_json::to_value(array_defaults::Result {
+        data: "too long".into()
+    })
+    .is_err());
+}
+
+#[test]
+fn bounded_nested_types_resolve_in_the_enclosing_message_module() {
+    let mut message = array_defaults::BoundedArrays::default();
+    message.values = vec![
+        array_defaults::Value {
+            data: "nested".into()
+        };
+        2
+    ];
+    let json = serde_json::to_value(&message).unwrap();
+    assert_eq!(
+        serde_json::from_value::<array_defaults::BoundedArrays>(json.clone()).unwrap(),
+        message
+    );
+    message.values.push(array_defaults::Value::default());
+    assert!(serde_json::to_value(&message).is_err());
+    let mut invalid = json;
+    invalid["values"]
+        .as_array_mut()
+        .unwrap()
+        .push(serde_json::json!({ "data": "extra" }));
+    assert!(serde_json::from_value::<array_defaults::BoundedArrays>(invalid).is_err());
+}
+
+#[test]
+fn bounded_byte_codecs_keep_rosbridge_base64_and_accept_numeric_arrays() {
+    let message = array_defaults::BoundedBytes { data: vec![1; 5] };
+    let json = serde_json::to_value(&message).unwrap();
+    assert_eq!(json["data"], "AQEBAQE=");
+    assert_eq!(
+        serde_json::from_value::<array_defaults::BoundedBytes>(json).unwrap(),
+        message
+    );
+    assert_eq!(
+        serde_json::from_value::<array_defaults::BoundedBytes>(
+            serde_json::json!({ "data": [1,1,1,1,1] })
+        )
+        .unwrap(),
+        message
+    );
+    assert!(serde_json::to_value(array_defaults::BoundedBytes { data: vec![1; 6] }).is_err());
+    assert!(serde_json::from_value::<array_defaults::BoundedBytes>(
+        serde_json::json!({ "data": [1,1,1,1,1,1] })
+    )
+    .is_err());
 }

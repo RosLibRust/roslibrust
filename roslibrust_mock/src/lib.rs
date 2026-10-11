@@ -1081,6 +1081,55 @@ mod tests {
         assert!(publisher.publish(&wrong_message).await.is_err());
     }
 
+    #[test]
+    fn descriptor_compatibility_checks_identity_and_explicit_field_wildcards() {
+        let original = std_msgs::String::DESCRIPTION;
+        let different = std_msgs::Int32::DESCRIPTION;
+        let mut without_definition = original;
+        without_definition.definition = "";
+        assert!(original.is_compatible_with(&without_definition));
+
+        // Each wildcard is symmetric and affects only its own field.
+        for field in 0..4 {
+            let mut mismatch = original;
+            let mut wildcard = original;
+            match field {
+                0 => {
+                    mismatch.ros_type_name = different.ros_type_name;
+                    wildcard.ros_type_name = "*";
+                }
+                1 => {
+                    mismatch.md5sum = different.md5sum;
+                    wildcard.md5sum = "*";
+                }
+                2 => {
+                    mismatch.ros2_type_name = different.ros2_type_name;
+                    wildcard.ros2_type_name = "*";
+                }
+                3 => {
+                    mismatch.ros2_hash = different.ros2_hash;
+                    wildcard.ros2_hash = MessageDescriptor::WILDCARD_ROS2_HASH;
+                }
+                _ => unreachable!(),
+            }
+            assert!(!original.is_compatible_with(&mismatch));
+            assert!(!mismatch.is_compatible_with(&original));
+            assert!(wildcard.is_compatible_with(&mismatch));
+            assert!(mismatch.is_compatible_with(&wildcard));
+            assert!(!wildcard.is_compatible_with(&different));
+        }
+
+        let mut unspecified = original;
+        unspecified.md5sum = "";
+        assert!(!original.is_compatible_with(&unspecified));
+        unspecified = original;
+        unspecified.ros2_hash = &[0; 32];
+        assert!(!original.is_compatible_with(&unspecified));
+        let mut prefix = original;
+        prefix.ros_type_name = "std_msgs/*";
+        assert!(!original.is_compatible_with(&prefix));
+    }
+
     #[tokio::test]
     async fn same_name_descriptors_require_matching_schema_metadata() {
         let mock = MockRos::new();
@@ -1088,14 +1137,14 @@ mod tests {
         let independent = Box::leak(Box::new(MessageDescriptor::new::<std_msgs::String>(
             original.ros_type_name,
             original.md5sum,
-            original.definition,
+            "", // Omitted definitions are compatible when names and hashes match.
             original.ros2_type_name,
             original.ros2_hash,
         )));
         let changed = Box::leak(Box::new(MessageDescriptor::new::<std_msgs::String>(
             original.ros_type_name,
-            original.md5sum,
-            "uint8 data",
+            std_msgs::Int32::DESCRIPTION.md5sum,
+            original.definition,
             original.ros2_type_name,
             original.ros2_hash,
         )));
@@ -1138,8 +1187,8 @@ mod tests {
         let changed_request = Box::leak(Box::new(
             MessageDescriptor::new::<std_srvs::SetBoolRequest>(
                 service.request.ros_type_name,
-                service.request.md5sum,
-                "uint8 data",
+                std_msgs::Int32::DESCRIPTION.md5sum,
+                service.request.definition,
                 service.request.ros2_type_name,
                 service.request.ros2_hash,
             ),

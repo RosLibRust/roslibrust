@@ -16,6 +16,11 @@
 //! `string` is a sequence of 8-bit `char` elements. For example, `é` occupies two bytes.
 //! Byte-sequence checks compose with the existing rosbridge base64 and native binary adapters.
 //!
+//! Generated messages use Rust's `Default` derive when no special initialization is needed.
+//! Messages with ROS defaults or arrays longer than 32 get an explicit `Default` implementation using
+//! typed expressions and independent element initialization. Fixed-array Serde support lives in
+//! [`field_codec::fixed_array`], supports every length, and preserves tuple framing on the wire.
+//!
 //! See [example_package](https://github.com/RosLibRust/roslibrust/tree/master/example_package) for how best to integrate this crate with build.rs
 //!
 //! Directly depending on this crate is not recommended. Instead access it via roslibrust with the `codegen` feature enabled.
@@ -50,15 +55,17 @@ pub use integral_types::*;
 // Custom serde module for byte vectors and arrays that handles rosbridge's base64 representation.
 pub mod serde_rosmsg_bytes;
 
+// Shared codecs and bounds checks used by generated field adapters.
+#[doc(hidden)]
+pub mod field_codec;
+
 // These pub use statements are here to be able to export the dependencies of the generated code
 // so that crates using this crate don't need to add these dependencies themselves.
 // Our generated code should find these exports.
 // Modeled from: https://users.rust-lang.org/t/proc-macros-using-third-party-crate/42465/4
 pub use ::serde;
 pub use serde::{de::DeserializeOwned, Deserialize, Serialize};
-pub use serde_big_array::BigArray; // Used in generated code for large fixed sized arrays
 pub use serde_bytes;
-pub use smart_default::SmartDefault; // Used in generated code for default values // Used in generated code for faster Vec<u8> serialization
 
 /// A unique hash per message type calculated via the RIHS01 Ros2 methodology
 #[derive(Clone, Debug, Default)]

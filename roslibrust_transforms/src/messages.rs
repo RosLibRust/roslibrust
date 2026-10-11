@@ -20,10 +20,10 @@ pub mod ros1 {
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -59,10 +59,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -103,10 +103,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -145,10 +145,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -219,7 +219,6 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
@@ -228,9 +227,16 @@ string frame_id"####,
         #[serde(deny_unknown_fields)]
         pub struct AccelWithCovariance {
             pub r#accel: self::Accel,
-            #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
-            #[serde(with = "::roslibrust::codegen::BigArray")]
+            #[serde(with = "::roslibrust::codegen::field_codec::fixed_array")]
             pub r#covariance: [f64; 36],
+        }
+        impl ::std::default::Default for AccelWithCovariance {
+            fn default() -> Self {
+                Self {
+                    r#accel: ::std::default::Default::default(),
+                    r#covariance: ::std::array::from_fn(|_| ::std::default::Default::default()),
+                }
+            }
         }
         ::roslibrust::impl_ros_message_type!(
             AccelWithCovariance,
@@ -286,10 +292,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -400,10 +406,10 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -461,10 +467,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -547,10 +553,10 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -579,10 +585,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -618,10 +624,10 @@ float32 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -669,10 +675,10 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -710,10 +716,10 @@ float32 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -785,10 +791,10 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -829,10 +835,10 @@ float64 w"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -870,10 +876,10 @@ float64 theta"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -950,10 +956,10 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -1028,7 +1034,6 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
@@ -1037,9 +1042,16 @@ string frame_id"####,
         #[serde(deny_unknown_fields)]
         pub struct PoseWithCovariance {
             pub r#pose: self::Pose,
-            #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
-            #[serde(with = "::roslibrust::codegen::BigArray")]
+            #[serde(with = "::roslibrust::codegen::field_codec::fixed_array")]
             pub r#covariance: [f64; 36],
+        }
+        impl ::std::default::Default for PoseWithCovariance {
+            fn default() -> Self {
+                Self {
+                    r#pose: ::std::default::Default::default(),
+                    r#covariance: ::std::array::from_fn(|_| ::std::default::Default::default()),
+                }
+            }
         }
         ::roslibrust::impl_ros_message_type!(
             PoseWithCovariance,
@@ -1099,10 +1111,10 @@ float64 w"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -1222,10 +1234,10 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -1257,10 +1269,10 @@ float64 w"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -1311,10 +1323,10 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -1362,10 +1374,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -1461,10 +1473,10 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -1503,10 +1515,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -1577,7 +1589,6 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
@@ -1586,9 +1597,16 @@ string frame_id"####,
         #[serde(deny_unknown_fields)]
         pub struct TwistWithCovariance {
             pub r#twist: self::Twist,
-            #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
-            #[serde(with = "::roslibrust::codegen::BigArray")]
+            #[serde(with = "::roslibrust::codegen::field_codec::fixed_array")]
             pub r#covariance: [f64; 36],
+        }
+        impl ::std::default::Default for TwistWithCovariance {
+            fn default() -> Self {
+                Self {
+                    r#twist: ::std::default::Default::default(),
+                    r#covariance: ::std::array::from_fn(|_| ::std::default::Default::default()),
+                }
+            }
         }
         ::roslibrust::impl_ros_message_type!(
             TwistWithCovariance,
@@ -1644,10 +1662,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -1758,10 +1776,10 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -1796,10 +1814,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -1853,10 +1871,10 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -1896,10 +1914,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -1977,10 +1995,10 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2054,10 +2072,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2081,10 +2099,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2108,10 +2126,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2179,10 +2197,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2206,10 +2224,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2239,10 +2257,10 @@ float32 a"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2266,10 +2284,10 @@ float32 a"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2291,10 +2309,10 @@ float32 a"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2318,10 +2336,10 @@ float32 a"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2388,10 +2406,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2415,10 +2433,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2485,10 +2503,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2526,10 +2544,10 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2553,10 +2571,10 @@ string frame_id"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2623,10 +2641,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2650,10 +2668,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2720,10 +2738,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2747,10 +2765,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2817,10 +2835,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2844,10 +2862,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2914,10 +2932,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -2945,10 +2963,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3003,10 +3021,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3030,10 +3048,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3057,10 +3075,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3084,10 +3102,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3154,10 +3172,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3181,10 +3199,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3251,10 +3269,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3278,10 +3296,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3348,10 +3366,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3375,10 +3393,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3520,14 +3538,7 @@ uint32 stride  # stride of given dimension"####,
     /// TFMessage is the message type published on /tf and /tf_static topics.
     /// It contains an array of geometry_msgs/TransformStamped messages.
     #[allow(non_snake_case)]
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        ::roslibrust::codegen::SmartDefault,
-        Debug,
-        Clone,
-        PartialEq,
-    )]
+    #[derive(::serde::Deserialize, ::serde::Serialize, Default, Debug, Clone, PartialEq)]
     pub struct TFMessage {
         pub transforms: Vec<geometry_msgs::TransformStamped>,
     }
@@ -3561,10 +3572,10 @@ pub mod ros2 {
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3600,10 +3611,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3644,10 +3655,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3685,10 +3696,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3779,7 +3790,6 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
@@ -3788,9 +3798,16 @@ uint32 nanosec"####,
         #[serde(deny_unknown_fields)]
         pub struct AccelWithCovariance {
             pub r#accel: self::Accel,
-            #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
-            #[serde(with = "::roslibrust::codegen::BigArray")]
+            #[serde(with = "::roslibrust::codegen::field_codec::fixed_array")]
             pub r#covariance: [f64; 36],
+        }
+        impl ::std::default::Default for AccelWithCovariance {
+            fn default() -> Self {
+                Self {
+                    r#accel: ::std::default::Default::default(),
+                    r#covariance: ::std::array::from_fn(|_| ::std::default::Default::default()),
+                }
+            }
         }
         ::roslibrust::impl_ros_message_type!(
             AccelWithCovariance,
@@ -3844,10 +3861,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -3976,10 +3993,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -4036,10 +4053,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -4144,10 +4161,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -4176,10 +4193,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -4215,10 +4232,10 @@ float32 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -4289,10 +4306,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -4331,10 +4348,10 @@ float32 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -4430,10 +4447,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -4475,10 +4492,10 @@ float64 w 1"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -4513,10 +4530,10 @@ float64 theta"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -4616,10 +4633,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -4718,7 +4735,6 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
@@ -4727,9 +4743,16 @@ uint32 nanosec"####,
         #[serde(deny_unknown_fields)]
         pub struct PoseWithCovariance {
             pub r#pose: self::Pose,
-            #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
-            #[serde(with = "::roslibrust::codegen::BigArray")]
+            #[serde(with = "::roslibrust::codegen::field_codec::fixed_array")]
             pub r#covariance: [f64; 36],
+        }
+        impl ::std::default::Default for PoseWithCovariance {
+            fn default() -> Self {
+                Self {
+                    r#pose: ::std::default::Default::default(),
+                    r#covariance: ::std::array::from_fn(|_| ::std::default::Default::default()),
+                }
+            }
         }
         ::roslibrust::impl_ros_message_type!(
             PoseWithCovariance,
@@ -4790,10 +4813,10 @@ float64 w 1"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -4937,7 +4960,6 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
@@ -4945,14 +4967,20 @@ uint32 nanosec"####,
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
         pub struct Quaternion {
-            #[default(0f64)]
             pub r#x: f64,
-            #[default(0f64)]
             pub r#y: f64,
-            #[default(0f64)]
             pub r#z: f64,
-            #[default(1f64)]
             pub r#w: f64,
+        }
+        impl ::std::default::Default for Quaternion {
+            fn default() -> Self {
+                Self {
+                    r#x: 0f64,
+                    r#y: 0f64,
+                    r#z: 0f64,
+                    r#w: 1f64,
+                }
+            }
         }
         ::roslibrust::impl_ros_message_type!(
             Quaternion,
@@ -4976,10 +5004,10 @@ float64 w 1"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -5052,10 +5080,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -5102,10 +5130,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -5230,10 +5258,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -5272,10 +5300,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -5368,7 +5396,6 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
@@ -5377,9 +5404,16 @@ uint32 nanosec"####,
         #[serde(deny_unknown_fields)]
         pub struct TwistWithCovariance {
             pub r#twist: self::Twist,
-            #[default(_code = "::std::array::from_fn(|_| ::std::default::Default::default())")]
-            #[serde(with = "::roslibrust::codegen::BigArray")]
+            #[serde(with = "::roslibrust::codegen::field_codec::fixed_array")]
             pub r#covariance: [f64; 36],
+        }
+        impl ::std::default::Default for TwistWithCovariance {
+            fn default() -> Self {
+                Self {
+                    r#twist: ::std::default::Default::default(),
+                    r#covariance: ::std::array::from_fn(|_| ::std::default::Default::default()),
+                }
+            }
         }
         ::roslibrust::impl_ros_message_type!(
             TwistWithCovariance,
@@ -5434,10 +5468,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -5569,10 +5603,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -5606,10 +5640,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -5688,10 +5722,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -5730,10 +5764,10 @@ float64 z"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -5832,10 +5866,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -5909,10 +5943,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -5941,10 +5975,10 @@ bool data"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -5973,10 +6007,10 @@ byte data"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6064,10 +6098,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6096,10 +6130,10 @@ char data"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6129,10 +6163,10 @@ float32 a"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6154,10 +6188,10 @@ float32 a"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6186,10 +6220,10 @@ float32 data"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6276,10 +6310,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6308,10 +6342,10 @@ float64 data"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6398,10 +6432,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6447,10 +6481,10 @@ uint32 nanosec"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6479,10 +6513,10 @@ int16 data"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6569,10 +6603,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6601,10 +6635,10 @@ int32 data"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6691,10 +6725,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6723,10 +6757,10 @@ int64 data"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6813,10 +6847,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6845,10 +6879,10 @@ int8 data"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6935,10 +6969,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -6971,10 +7005,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -7039,10 +7073,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -7071,10 +7105,10 @@ string data"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -7103,10 +7137,10 @@ uint16 data"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -7193,10 +7227,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -7225,10 +7259,10 @@ uint32 data"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -7315,10 +7349,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -7347,10 +7381,10 @@ uint64 data"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -7437,10 +7471,10 @@ uint32 stride  # stride of given dimension"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -7469,10 +7503,10 @@ uint8 data"####,
         #[derive(
             :: roslibrust :: codegen :: Deserialize,
             :: roslibrust :: codegen :: Serialize,
-            :: roslibrust :: codegen :: SmartDefault,
             Debug,
             Clone,
             PartialEq,
+            :: std :: default :: Default,
         )]
         #[serde(crate = "::roslibrust::codegen::serde")]
         #[serde(deny_unknown_fields)]
@@ -7632,14 +7666,7 @@ uint32 stride  # stride of given dimension"####,
     /// TFMessage is the message type published on /tf and /tf_static topics.
     /// It contains an array of geometry_msgs/TransformStamped messages.
     #[allow(non_snake_case)]
-    #[derive(
-        ::serde::Deserialize,
-        ::serde::Serialize,
-        ::roslibrust::codegen::SmartDefault,
-        Debug,
-        Clone,
-        PartialEq,
-    )]
+    #[derive(::serde::Deserialize, ::serde::Serialize, Default, Debug, Clone, PartialEq)]
     pub struct TFMessage {
         pub transforms: Vec<geometry_msgs::TransformStamped>,
     }

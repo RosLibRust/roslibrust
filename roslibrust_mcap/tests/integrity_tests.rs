@@ -11,59 +11,46 @@ use roslibrust_mcap::{McapError, McapReader, McapWriter, Result};
 use roslibrust_test::ros2::std_msgs;
 use serde::{Deserialize, Serialize};
 
-macro_rules! message_type {
-    ($type:ident, $definition:expr, $md5:expr, $ros2_name:expr, $hash:expr) => {
+// Test variants share the real generated payload, while deliberately changing one
+// descriptor field at a time to exercise schema-conflict detection.
+type Text = std_msgs::String;
+
+macro_rules! message_variant {
+    ($type:ident $(, $field:ident = $value:expr)* $(,)?) => {
         #[derive(Clone, Debug, Default, Serialize, Deserialize)]
-        struct $type {
-            data: String,
-        }
+        #[serde(transparent)]
+        struct $type(std_msgs::String);
+
         impl RosMessageType for $type {
-            const DESCRIPTION: MessageDescriptor = MessageDescriptor::new::<Self>(
-                "test_msgs/Text",
-                $md5,
-                $definition,
-                $ros2_name,
-                $hash,
-            );
+            const DESCRIPTION: MessageDescriptor = {
+                #[allow(unused_mut)]
+                let mut descriptor = std_msgs::String::DESCRIPTION;
+                $(descriptor.$field = $value;)*
+                MessageDescriptor::new::<Self>(
+                    descriptor.ros_type_name,
+                    descriptor.md5sum,
+                    descriptor.definition,
+                    descriptor.ros2_type_name,
+                    descriptor.ros2_hash,
+                )
+            };
         }
     };
 }
 
-message_type!(Text, "string data", "md5", "test_msgs/msg/Text", &[0; 32]);
-message_type!(
-    TextAlias,
-    "string data",
-    "md5",
-    "test_msgs/msg/Text",
-    &[0; 32]
-);
-message_type!(
+message_variant!(TextAlias);
+message_variant!(
     ChangedDefinition,
-    "int32 data",
-    "md5",
-    "test_msgs/msg/Text",
-    &[0; 32]
+    definition = std_msgs::Int32::DESCRIPTION.definition
 );
-message_type!(
-    ChangedMd5,
-    "string data",
-    "different",
-    "test_msgs/msg/Text",
-    &[0; 32]
-);
-message_type!(
+message_variant!(ChangedMd5, md5sum = std_msgs::Int32::DESCRIPTION.md5sum);
+message_variant!(
     ChangedRos2Name,
-    "string data",
-    "md5",
-    "test_msgs/msg/Other",
-    &[0; 32]
+    ros2_type_name = std_msgs::Int32::DESCRIPTION.ros2_type_name
 );
-message_type!(
+message_variant!(
     ChangedHash,
-    "string data",
-    "md5",
-    "test_msgs/msg/Text",
-    &[1; 32]
+    ros2_hash = std_msgs::Int32::DESCRIPTION.ros2_hash
 );
 
 #[test]
@@ -122,9 +109,9 @@ fn compatible_schema_and_topic_reuse_round_trip() -> Result<()> {
     alias.write(
         &mut writer,
         1,
-        &TextAlias {
+        &TextAlias(std_msgs::String {
             data: "alias".into(),
-        },
+        }),
     )?;
     second.write(
         &mut writer,
@@ -174,7 +161,11 @@ fn fixture(
 ) -> Result<Vec<u8>> {
     let mut buffer = Vec::new();
     let mut writer = options.create(Cursor::new(&mut buffer))?;
-    let schema = writer.add_schema("test_msgs/Text", schema_encoding, b"string data")?;
+    let schema = writer.add_schema(
+        Text::DESCRIPTION.ros_type_name,
+        schema_encoding,
+        Text::DESCRIPTION.definition.as_bytes(),
+    )?;
     let channel = writer.add_channel(schema, "/topic", message_encoding, &BTreeMap::new())?;
     if write_message {
         writer.write_to_known_channel(
@@ -214,7 +205,7 @@ fn summary_free_files_discover_channels_with_and_without_messages() -> Result<()
             assert_eq!(reader.channels().len(), 1);
             let channel = reader.channels().values().next().unwrap();
             assert_eq!(channel.topic, "/topic");
-            assert_eq!(channel.message_type, "test_msgs/Text");
+            assert_eq!(channel.message_type, Text::DESCRIPTION.ros_type_name);
             assert_eq!(
                 reader.iter_messages()?.collect::<Result<Vec<_>>>()?.len(),
                 usize::from(messages)

@@ -104,7 +104,7 @@ pub mod ros1 {{
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
-        ::roslibrust::codegen::SmartDefault,
+        Default,
         Debug,
         Clone,
         PartialEq,
@@ -140,7 +140,7 @@ pub mod ros2 {{
     #[derive(
         ::serde::Deserialize,
         ::serde::Serialize,
-        ::roslibrust::codegen::SmartDefault,
+        Default,
         Debug,
         Clone,
         PartialEq,

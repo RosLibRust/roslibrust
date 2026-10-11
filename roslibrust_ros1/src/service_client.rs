@@ -260,7 +260,7 @@ impl ServiceClientLink {
 #[cfg(test)]
 mod schema_tests {
     use super::*;
-    use roslibrust_common::MessageDescriptor;
+    use roslibrust_common::{MessageDescriptor, RosMessageType};
     use roslibrust_test::ros1::std_srvs;
 
     #[tokio::test]
@@ -270,8 +270,8 @@ mod schema_tests {
         let changed = Box::leak(Box::new(
             MessageDescriptor::new::<std_srvs::SetBoolRequest>(
                 request_descriptor.ros_type_name,
-                request_descriptor.md5sum,
-                "uint8 data",
+                roslibrust_test::ros1::std_msgs::Int32::DESCRIPTION.md5sum,
+                request_descriptor.definition,
                 request_descriptor.ros2_type_name,
                 request_descriptor.ros2_hash,
             ),
@@ -285,7 +285,10 @@ mod schema_tests {
             _actor_task: tokio::spawn(std::future::pending::<()>()).into(),
         };
         let client = DynamicServiceClient::new(sender, link, descriptor);
-        let error = client.call(&request).await.unwrap_err();
+        let error = tokio::time::timeout(std::time::Duration::from_secs(5), client.call(&request))
+            .await
+            .expect("schema mismatch must be rejected before waiting for a response")
+            .unwrap_err();
         assert!(error.to_string().contains("incompatible request schema"));
         assert!(matches!(
             receiver.try_recv(),

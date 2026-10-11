@@ -7,8 +7,7 @@
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::{
-    de::{Error as _, SeqAccess, Visitor},
-    ser::SerializeTuple,
+    de::{SeqAccess, Visitor},
     Deserializer, Serializer,
 };
 use std::fmt;
@@ -46,15 +45,11 @@ impl<const N: usize> ByteSequence for [u8; N] {
     }
 
     fn serialize_binary<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut tuple = serializer.serialize_tuple(N)?;
-        for byte in self {
-            tuple.serialize_element(byte)?;
-        }
-        tuple.end()
+        crate::field_codec::fixed_array::serialize(self, serializer)
     }
 
     fn deserialize_binary<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        deserializer.deserialize_tuple(N, FixedArrayVisitor::<N>)
+        crate::field_codec::fixed_array::deserialize(deserializer)
     }
 }
 
@@ -121,26 +116,6 @@ struct FixedLengthExpectation<const N: usize>;
 impl<const N: usize> serde::de::Expected for FixedLengthExpectation<N> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(formatter, "exactly {N} bytes")
-    }
-}
-
-struct FixedArrayVisitor<const N: usize>;
-
-impl<'de, const N: usize> Visitor<'de> for FixedArrayVisitor<N> {
-    type Value = [u8; N];
-
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "exactly {N} bytes")
-    }
-
-    fn visit_seq<A: SeqAccess<'de>>(self, mut sequence: A) -> Result<Self::Value, A::Error> {
-        let mut bytes = [0; N];
-        for (index, byte) in bytes.iter_mut().enumerate() {
-            *byte = sequence
-                .next_element()?
-                .ok_or_else(|| A::Error::invalid_length(index, &self))?;
-        }
-        Ok(bytes)
     }
 }
 

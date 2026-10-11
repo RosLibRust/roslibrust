@@ -380,8 +380,8 @@ mod dynamic_message_tests {
             roslibrust_test::ros1::std_msgs::Int16,
         >(
             descriptor.ros_type_name,
-            descriptor.md5sum,
-            "int32 data",
+            roslibrust_test::ros1::std_msgs::Int32::DESCRIPTION.md5sum,
+            descriptor.definition,
             descriptor.ros2_type_name,
             descriptor.ros2_hash,
         )));
