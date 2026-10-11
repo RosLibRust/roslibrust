@@ -12,6 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rosbridge service callbacks now run independently of receive-loop polling, so slow
   callbacks retain their responses while messages and publishing remain responsive.
   Pending response tasks are canceled when their connection closes or the client is dropped.
+- MCAP writers reject incompatible topic/schema reuse and channel handles from another writer,
+  preventing message bytes from being stored under the wrong schema.
+- MCAP readers discover and validate channels in files without summaries or repeated summary
+  metadata, and propagate malformed-file and CRC errors during construction.
+
+### Changed
+
+- `McapReader::new` now scans and decompresses records to validate the file before returning,
+  adding a validation pass before message iteration. Empty input is rejected; finished MCAP
+  files with no messages remain supported.
 
 ## 0.26.0 - September 25th, 2026
 
