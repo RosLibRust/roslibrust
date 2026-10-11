@@ -21,6 +21,18 @@ pub enum McapError {
     #[error("Serialization error: {0}")]
     Serialization(String),
 
+    /// A topic was already registered with incompatible ROS schema metadata
+    #[error("Channel `{0}` is already registered with a different ROS schema")]
+    IncompatibleChannel(String),
+
+    /// A schema name was already registered with incompatible ROS metadata
+    #[error("Schema `{0}` is already registered with different ROS metadata")]
+    IncompatibleSchema(String),
+
+    /// A channel handle was used with a writer other than its originating writer
+    #[error("Channel {0} belongs to a different MCAP writer")]
+    ForeignChannel(u16),
+
     /// Channel not found
     #[error("Channel not found: {0}")]
     ChannelNotFound(u16),

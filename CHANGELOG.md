@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- Rosbridge service callbacks now run independently of receive-loop polling, so slow
+  callbacks retain their responses while messages and publishing remain responsive.
+  Pending response tasks are canceled when their connection closes or the client is dropped.
+- MCAP writers reject incompatible topic/schema reuse and channel handles from another writer,
+  preventing message bytes from being stored under the wrong schema.
+- MCAP readers discover and validate channels in files without summaries or repeated summary
+  metadata, and propagate malformed-file and CRC errors during construction.
+- Generated ROS 2 fixed-array defaults now initialize arrays rather than vectors. Fixed arrays
+  longer than 32 also support defaults for strings and nested messages without requiring `Copy`.
+- Generated ROS 2 fields enforce bounded sequence and string lengths during serialization and
+  deserialization, including dynamic construction, nested fields, and declared defaults. String
+  bounds count UTF-8 bytes; public `Vec` and `String` field types and byte-array framing are retained.
+- Dynamic publishers and service clients reject incompatible descriptors even when ROS type names
+  match. `MessageDescriptor::is_compatible_with` compares type names and hashes by value, ignoring
+  definition text. A `"*"` identity field or `MessageDescriptor::WILDCARD_ROS2_HASH` explicitly skips
+  that field's comparison; the remaining fields must still match.
+- Mock topic registrations now disappear when their last publisher or subscriber handle is dropped,
+  allowing the name to be reused with a different type. Typed and dynamic handles share ownership.
+- Concurrent mock topic creation now atomically checks and reuses registrations, preventing
+  disconnected channels or conflicting types from overwriting each other.
+
+### Changed
+
+- Generated message defaults now use ordinary Rust derives or explicit implementations,
+  without expression strings or `smart-default`. Arrays up to 32 elements use ordinary
+  defaults unless the ROS definition specifies a value; larger arrays initialize each element
+  independently. Derived traits are emitted in one block. A shared const-generic fixed-array codec
+  replaces `serde-big-array` and preserves native ROS framing for all array lengths.
+  **Breaking:** the `SmartDefault` and `BigArray` re-exports are removed; regenerate existing
+  message source before upgrading.
+- Generated bounded-field codecs now use a shared macro, keeping validation and Serde plumbing
+  out of generated message files. Field generation separately selects types, defaults, and adapters.
+- `McapReader::new` now scans and decompresses records to validate the file before returning,
+  adding a validation pass before message iteration. Empty input is rejected; finished MCAP
+  files with no messages remain supported.
+- **Breaking:** `MockRos::ServiceServer` is now an owning `MockServiceServer` instead of `()`.
+  Retain the returned handle while serving requests. Clones keep the same registration alive;
+  dropping the last handle immediately removes it from the graph and disables future calls.
+  Duplicate advertisements of an active service now return an error.
+
 ## 0.26.0 - September 25th, 2026
 
 ### Added

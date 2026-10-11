@@ -184,9 +184,9 @@ impl DynamicPublish for DynamicZenohPublisher {
     }
 
     async fn publish(&self, data: &DynamicMessage) -> Result<()> {
-        if data.descriptor().ros_type_name != self.descriptor.ros_type_name {
+        if !self.descriptor.is_compatible_with(data.descriptor()) {
             return Err(Error::SerializationError(format!(
-                "publisher expects {}, but message is {}",
+                "incompatible message schema: publisher expects {}, but message declares {}",
                 self.descriptor.ros_type_name,
                 data.descriptor().ros_type_name
             )));
@@ -298,6 +298,59 @@ impl roslibrust_common::GraphProvider for ZenohClient {
 #[cfg(test)]
 mod dynamic_message_tests {
     use super::*;
+
+    #[test]
+    fn cdr_codec_validates_ros2_bounds_and_keeps_sequence_prefixes() {
+        use roslibrust_test::ros2::ros2_test_msgs::{BoundedInt, BoundedString};
+        let descriptor = &BoundedInt::DESCRIPTION;
+        let boundary = BoundedInt {
+            data: vec![1, 2, 3, 4, 5],
+        };
+        let message = descriptor.message_from(&boundary).unwrap();
+        let bytes = serialize_dynamic_message(&message).unwrap();
+        assert_eq!(&bytes[4..8], &5u32.to_le_bytes());
+        assert_eq!(&bytes[8..], &[1, 2, 3, 4, 5]);
+        assert_eq!(
+            deserialize_dynamic_message(descriptor, &bytes)
+                .unwrap()
+                .value(),
+            message.value()
+        );
+        let mut invalid = hiroz::msg::CDR_HEADER_LE.to_vec();
+        invalid.extend(6u32.to_le_bytes());
+        invalid.extend([1, 2, 3, 4, 5, 6]);
+        assert!(deserialize_dynamic_message(descriptor, &invalid)
+            .unwrap_err()
+            .to_string()
+            .contains("field `data`"));
+        let mut buffer = Vec::new();
+        let mut serializer = hiroz_cdr::CdrSerializer::<hiroz_cdr::LittleEndian>::new(&mut buffer);
+        assert!(
+            serde::Serialize::serialize(&BoundedInt { data: vec![0; 6] }, &mut serializer).is_err()
+        );
+
+        let descriptor = &BoundedString::DESCRIPTION;
+        let boundary = BoundedString {
+            data: "12345".into(),
+            ..Default::default()
+        };
+        let message = descriptor.message_from(&boundary).unwrap();
+        let bytes = serialize_dynamic_message(&message).unwrap();
+        assert_eq!(
+            deserialize_dynamic_message(descriptor, &bytes)
+                .unwrap()
+                .value(),
+            message.value()
+        );
+        // Oversized scalar string is rejected before the following array fields are read.
+        let mut invalid = hiroz::msg::CDR_HEADER_LE.to_vec();
+        invalid.extend(7u32.to_le_bytes());
+        invalid.extend(b"123456\0");
+        assert!(deserialize_dynamic_message(descriptor, &invalid)
+            .unwrap_err()
+            .to_string()
+            .contains("field `data`"));
+    }
 
     #[test]
     fn cdr_codec_round_trips_runtime_selected_message() {
@@ -430,9 +483,13 @@ impl DynamicService for DynamicZenohServiceClient {
     }
 
     async fn call(&self, request: &DynamicMessage) -> Result<DynamicMessage> {
-        if request.descriptor().ros_type_name != self.descriptor.request.ros_type_name {
+        if !self
+            .descriptor
+            .request
+            .is_compatible_with(request.descriptor())
+        {
             return Err(Error::SerializationError(format!(
-                "service {} expects request {}, but message is {}",
+                "incompatible request schema: service {} expects {}, but message declares {}",
                 self.descriptor.ros_service_name,
                 self.descriptor.request.ros_type_name,
                 request.descriptor().ros_type_name

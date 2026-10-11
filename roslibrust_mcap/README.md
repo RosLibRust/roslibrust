@@ -70,6 +70,19 @@ roslibrust_mcap = "0.26"
 
 ## Usage
 
+`McapReader::new` accepts finished MCAP files with or without a summary, including
+channels with no messages. It scans and decompresses the records during construction
+to validate channel/schema references, supported encodings, and available chunk,
+data-section, and summary CRCs. Invalid or truncated files return an error immediately.
+This adds a full validation pass before message iteration; message payloads are not
+retained after validation. The reader supports CDR messages and `ros2msg` schemas.
+
+Channel handles belong to the `McapWriter` that created them. Passing a handle to
+another writer returns `McapError::ForeignChannel`. Reusing a topic or schema name
+requires identical declared ROS metadata (type names, definition, MD5, and ROS 2
+hash); incompatible registrations return `IncompatibleChannel` or
+`IncompatibleSchema` without changing the existing registration.
+
 ### Writing MCAP Files
 
 ```rust
@@ -80,13 +93,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let file = File::create("output.mcap")?;
     let mut writer = McapWriter::new(file)?;
 
-    // Add a channel for your message type
-    let channel_id = writer.add_ros_channel("/my_topic", "std_msgs/String")?;
+    // Use your generated ROS message type (here from roslibrust_test).
+    let channel = writer.add_ros_channel::<roslibrust_test::ros2::std_msgs::String>("/my_topic")?;
 
-    // Write messages
     let timestamp = 1234567890; // nanoseconds
-    let message_data = b"Hello, MCAP!";
-    writer.write_message(channel_id, timestamp, message_data)?;
+    let message = roslibrust_test::ros2::std_msgs::String { data: "Hello, MCAP!".into() };
+    channel.write(&mut writer, timestamp, &message)?;
 
     // Finish writing
     writer.finish()?;

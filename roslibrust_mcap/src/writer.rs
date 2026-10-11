@@ -6,23 +6,51 @@ use roslibrust_common::RosMessageType;
 use std::collections::BTreeMap;
 use std::io::{Seek, Write};
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 /// A writer for creating MCAP files with ROS messages
 ///
 /// This writer only supports CDR encoding (ROS2 format).
 pub struct McapWriter<W: Write + Seek> {
     writer: Writer<W>,
-    channels: BTreeMap<String, u16>,
-    schemas: BTreeMap<String, u16>,
+    channels: BTreeMap<String, (u16, SchemaIdentity)>,
+    schemas: BTreeMap<&'static str, (u16, SchemaIdentity)>,
+    identity: Arc<()>,
 }
 
 /// A channel for writing messages of a specific type to an MCAP file
 ///
 /// This type-safe handle ensures you can only write messages of the correct type
-/// to the channel.
+/// to the channel. A handle belongs to the writer that created it; writing through
+/// another writer returns [`McapError::ForeignChannel`].
 pub struct Channel<T: RosMessageType> {
     channel_id: u16,
+    writer_identity: Arc<()>,
     _phantom: PhantomData<T>,
+}
+
+// Compare all declared ROS schema metadata, not just the name. Identical schemas
+// may be represented by different Rust types, but conflicting definitions or
+// hashes must never share a channel or schema record.
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct SchemaIdentity {
+    name: &'static str,
+    definition: &'static str,
+    md5sum: &'static str,
+    ros2_name: &'static str,
+    ros2_hash: &'static [u8; 32],
+}
+
+impl SchemaIdentity {
+    fn of<T: RosMessageType>() -> Self {
+        Self {
+            name: T::DESCRIPTION.ros_type_name,
+            definition: T::DESCRIPTION.definition,
+            md5sum: T::DESCRIPTION.md5sum,
+            ros2_name: T::DESCRIPTION.ros2_type_name,
+            ros2_hash: T::DESCRIPTION.ros2_hash,
+        }
+    }
 }
 
 impl<T: RosMessageType> Channel<T> {
@@ -62,6 +90,10 @@ impl<T: RosMessageType> Channel<T> {
         log_time: u64,
         message: &T,
     ) -> Result<()> {
+        if !Arc::ptr_eq(&self.writer_identity, &writer.identity) {
+            return Err(McapError::ForeignChannel(self.channel_id));
+        }
+
         // Serialize the message using CDR
         let data = cdr::serialize::<_, _, cdr::CdrLe>(message, cdr::Infinite)
             .map_err(|e| McapError::Serialization(format!("CDR serialization failed: {}", e)))?;
@@ -96,6 +128,7 @@ impl<W: Write + Seek> McapWriter<W> {
             writer: mcap_writer,
             channels: BTreeMap::new(),
             schemas: BTreeMap::new(),
+            identity: Arc::new(()),
         })
     }
 
@@ -103,6 +136,8 @@ impl<W: Write + Seek> McapWriter<W> {
     ///
     /// This registers the message type and creates a channel for it.
     /// Returns a type-safe channel handle that can be used to write messages.
+    /// Reusing a topic requires identical ROS schema metadata. Reusing a schema
+    /// name with different metadata also returns an error.
     ///
     /// # Arguments
     ///
@@ -131,39 +166,39 @@ impl<W: Write + Seek> McapWriter<W> {
     /// # }
     /// ```
     pub fn add_ros_channel<T: RosMessageType>(&mut self, topic: &str) -> Result<Channel<T>> {
-        // Check if we already have this channel
-        let channel_key = format!("{}:cdr", topic);
-        if let Some(&channel_id) = self.channels.get(&channel_key) {
+        let schema = SchemaIdentity::of::<T>();
+        if let Some(&(channel_id, existing)) = self.channels.get(topic) {
+            if existing != schema {
+                return Err(McapError::IncompatibleChannel(topic.to_string()));
+            }
             return Ok(Channel {
                 channel_id,
+                writer_identity: self.identity.clone(),
                 _phantom: PhantomData,
             });
         }
 
-        // Get or create schema for this message type
-        let schema_key = T::DESCRIPTION.ros_type_name.to_string();
-        let schema_id = if let Some(&id) = self.schemas.get(&schema_key) {
+        let schema_id = if let Some(&(id, existing)) = self.schemas.get(schema.name) {
+            if existing != schema {
+                return Err(McapError::IncompatibleSchema(schema.name.to_string()));
+            }
             id
         } else {
-            // Create a new schema using the Writer API
-            // For CDR, we use the ROS message definition
-            let schema_data = T::DESCRIPTION.definition.as_bytes().to_vec();
-            let schema_id =
+            let id =
                 self.writer
-                    .add_schema(T::DESCRIPTION.ros_type_name, "ros2msg", &schema_data)?;
-            self.schemas.insert(schema_key, schema_id);
-            schema_id
+                    .add_schema(schema.name, "ros2msg", schema.definition.as_bytes())?;
+            self.schemas.insert(schema.name, (id, schema));
+            id
         };
 
-        // Create the channel using the Writer API
-        let metadata = BTreeMap::new();
         let channel_id = self
             .writer
-            .add_channel(schema_id, topic, "cdr", &metadata)?;
-
-        self.channels.insert(channel_key, channel_id);
+            .add_channel(schema_id, topic, "cdr", &BTreeMap::new())?;
+        self.channels
+            .insert(topic.to_string(), (channel_id, schema));
         Ok(Channel {
             channel_id,
+            writer_identity: self.identity.clone(),
             _phantom: PhantomData,
         })
     }

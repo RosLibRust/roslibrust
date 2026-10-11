@@ -1,13 +1,17 @@
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote, ToTokens};
-use serde::de::DeserializeOwned;
+use quote::{format_ident, quote};
 use std::str::FromStr;
 use syn::parse_quote;
 
+mod field;
+mod literal;
+use field::generate_field_definition;
+use literal::parse_literal;
+
 use crate::parse::convert_ros_type_to_rust_type;
 use crate::utils::RosVersion;
-use crate::{bail, ArrayType, Error};
-use crate::{ConstantInfo, FieldInfo, MessageFile, RosLiteral, ServiceFile};
+use crate::{ArrayType, Error};
+use crate::{ConstantInfo, MessageFile, ServiceFile};
 
 /// Configuration options for code generation
 #[derive(Debug, Clone)]
@@ -28,37 +32,19 @@ impl Default for CodegenOptions {
     }
 }
 
-fn derive_attrs(options: &CodegenOptions, _has_large_array: bool) -> Vec<syn::Attribute> {
-    let mut attrs = vec![
-        parse_quote! { #[derive(Debug)] },
-        parse_quote! { #[derive(Clone)] },
-        parse_quote! { #[derive(PartialEq)] },
-    ];
-
-    if options.roslibrust_serde {
-        // Use roslibrust's re-exported serde with SmartDefault
-        attrs.insert(
-            0,
-            parse_quote! { #[derive(::roslibrust::codegen::Deserialize)] },
-        );
-        attrs.insert(
-            1,
-            parse_quote! { #[derive(::roslibrust::codegen::Serialize)] },
-        );
-        attrs.insert(
-            2,
-            parse_quote! { #[derive(::roslibrust::codegen::SmartDefault)] },
-        );
-        attrs.push(parse_quote! { #[serde(crate = "::roslibrust::codegen::serde")] });
-        attrs.push(parse_quote! { #[serde(deny_unknown_fields)] });
+fn derive_attrs(options: &CodegenOptions, requires_default_impl: bool) -> Vec<syn::Attribute> {
+    let default = (!requires_default_impl).then(|| quote! { ::std::default::Default, });
+    let mut attrs = if options.roslibrust_serde {
+        vec![
+            parse_quote! { #[derive(::roslibrust::codegen::Deserialize, ::roslibrust::codegen::Serialize, Debug, Clone, PartialEq, #default)] },
+            parse_quote! { #[serde(crate = "::roslibrust::codegen::serde")] },
+        ]
     } else {
-        // Use standard Rust serde with SmartDefault (SmartDefault works with any serde)
-        attrs.insert(0, parse_quote! { #[derive(serde::Deserialize)] });
-        attrs.insert(1, parse_quote! { #[derive(serde::Serialize)] });
-        attrs.insert(2, parse_quote! { #[derive(smart_default::SmartDefault)] });
-        attrs.push(parse_quote! { #[serde(deny_unknown_fields)] });
-    }
-
+        vec![
+            parse_quote! { #[derive(::serde::Deserialize, ::serde::Serialize, Debug, Clone, PartialEq, #default)] },
+        ]
+    };
+    attrs.push(parse_quote! { #[serde(deny_unknown_fields)] });
     attrs
 }
 
@@ -117,12 +103,7 @@ pub fn generate_struct(
     let ros_type_name = msg.get_full_name();
     let ros2_type_name = msg.parsed.get_ros2_dds_type_name();
 
-    // Check if any field has a fixed array > 32 (which doesn't impl Default)
-    let has_large_array = msg.parsed.fields.iter().any(
-        |field| matches!(field.field_type.array_info, ArrayType::FixedLength(len) if len > 32),
-    );
-
-    let attrs = derive_attrs(options, has_large_array);
+    let struct_name = format_ident!("{}", msg.parsed.name);
     let fields = msg
         .parsed
         .fields
@@ -133,9 +114,26 @@ pub fn generate_struct(
                 &msg.parsed.package,
                 msg.parsed.version.unwrap_or(RosVersion::ROS1),
                 options,
+                &struct_name,
             )
         })
-        .collect::<Result<Vec<TokenStream>, _>>()?;
+        .collect::<Result<Vec<_>, _>>()?;
+    let requires_default_impl = fields.iter().any(|field| field.requires_default_impl);
+    let attrs = derive_attrs(options, requires_default_impl);
+    let default_impl = if requires_default_impl {
+        let defaults = fields.iter().map(|field| &field.default);
+        quote! {
+            impl ::std::default::Default for #struct_name {
+                fn default() -> Self {
+                    Self { #(#defaults)* }
+                }
+            }
+        }
+    } else {
+        quote! {}
+    };
+    let field_definitions = fields.iter().map(|field| &field.definition);
+    let field_codecs = fields.iter().map(|field| &field.codec);
 
     let constants = msg
         .parsed
@@ -149,7 +147,6 @@ pub fn generate_struct(
         })
         .collect::<Result<Vec<TokenStream>, _>>()?;
 
-    let struct_name = format_ident!("{}", msg.parsed.name);
     let md5sum = msg.md5sum;
     let definition = msg.definition;
     let ros2_hash = msg.ros2_hash;
@@ -176,10 +173,14 @@ pub fn generate_struct(
         #[allow(dead_code)]
         #(#attrs )*
         pub struct #struct_name {
-            #(#fields )*
+            #(#field_definitions)*
         }
 
+        #default_impl
+
         #trait_impl
+
+        #(#field_codecs)*
     };
 
     // Only if we have constants append the impl
@@ -194,135 +195,6 @@ pub fn generate_struct(
     Ok(base)
 }
 
-fn generate_field_definition(
-    field: FieldInfo,
-    msg_pkg: &str,
-    version: RosVersion,
-    options: &CodegenOptions,
-) -> Result<TokenStream, Error> {
-    let rust_field_type = match field.field_type.package_name {
-        Some(ref pkg) => {
-            if pkg.as_str() == msg_pkg {
-                format!("self::{}", field.field_type.field_type)
-            } else {
-                format!("{}::{}", pkg, field.field_type.field_type)
-            }
-        }
-        None => convert_ros_type_to_rust_type(version, &field.field_type.field_type)
-            .ok_or(Error::new(format!("No Rust type for {}", field.field_type)))?
-            .to_owned(),
-    };
-    // Wrap type in appropriate Vec or array wrapper based on array information
-    let rust_field_type = match field.field_type.array_info {
-        ArrayType::Unbounded => {
-            format!("::std::vec::Vec<{rust_field_type}>")
-        }
-        ArrayType::FixedLength(fixed_length) => format!("[{rust_field_type}; {fixed_length}]"),
-        ArrayType::NotArray => rust_field_type,
-        ArrayType::Bounded(_) => {
-            format!("::std::vec::Vec<{rust_field_type}>")
-        }
-    };
-    let rust_field_type = TokenStream::from_str(rust_field_type.as_str()).expect(
-        "Somehow we generate a rust type that isn't valid rust syntax. This should not happen!",
-    );
-
-    let field_name = format_ident!("r#{}", field.field_name);
-    let property_line = quote! { pub #field_name: #rust_field_type, };
-
-    // SmartDefault attributes are needed regardless of generate_serde setting
-    let default_line = if let Some(ref default_val) = field.default {
-        let default_val = ros_literal_to_rust_literal(
-            &field.field_type.field_type,
-            default_val,
-            &field.field_type.array_info,
-            version,
-        )?;
-        if matches!(
-            field.field_type.array_info,
-            ArrayType::Unbounded | ArrayType::Bounded(_) | ArrayType::FixedLength(_)
-        ) {
-            // For vectors use smart_defaults "dynamic" style
-            quote! {
-                #[default(_code = #default_val)]
-            }
-        } else {
-            // For non vectors use smart_default's constant style
-            quote! {
-              #[default(#default_val)]
-            }
-        }
-    } else {
-        // Okay this is messy, so default isn't defined for fixed sized arrays > 32 in length
-        // so we have to manually provide a default if one isn't provided for arrays that large
-        if let ArrayType::FixedLength(fixed_array_length) = field.field_type.array_info {
-            if fixed_array_length > 32 {
-                // Doing some evil indirection here with the _code directive and Deafult::default()
-                // to generate the default value for a single member of the array type, and then
-                // broadcasting that with an array constant. I can't believe this works...
-                let default_str = format!("[Default::default(); {fixed_array_length}]");
-                quote! { #[default(_code = #default_str)]}
-            } else {
-                quote! {}
-            }
-        } else {
-            quote! {}
-        }
-    };
-    // Rust's derive macros automatically implement traits for arrays up to length 32.
-    // For larger arrays, we need special handling via BigArray.
-    const MAX_FIXED_ARRAY_LEN: usize = 32;
-
-    let is_byte_field = matches!(
-        field.field_type.field_type.as_str(),
-        "uint8" | "byte" | "char"
-    );
-
-    let serde_line = match &field.field_type.array_info {
-        // Dynamic-length arrays (Vec<T>)
-        ArrayType::Unbounded | ArrayType::Bounded(_) => {
-            if is_byte_field {
-                if options.roslibrust_serde {
-                    // Use roslibrust's custom module that handles both base64 (rosbridge) and binary
-                    quote! { #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")] }
-                } else {
-                    // Use standard serde_bytes for efficient binary serialization
-                    quote! { #[serde(with = "serde_bytes")] }
-                }
-            } else {
-                quote! {}
-            }
-        }
-        // Fixed-length arrays larger than 32 need BigArray, except for byte arrays handled by
-        // roslibrust's adapter.
-        ArrayType::FixedLength(len) if *len > MAX_FIXED_ARRAY_LEN => {
-            if is_byte_field && options.roslibrust_serde {
-                quote! { #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")] }
-            } else {
-                quote! { #[serde(with = "::roslibrust::codegen::BigArray")] }
-            }
-        }
-        // Fixed-length arrays <= 32 have automatic trait implementations
-        ArrayType::FixedLength(_) => {
-            if is_byte_field && options.roslibrust_serde {
-                quote! { #[serde(with = "::roslibrust::codegen::serde_rosmsg_bytes")] }
-            } else if is_byte_field {
-                // Use serde_bytes for efficient serialization of byte arrays
-                quote! { #[serde(with = "serde_bytes")] }
-            } else {
-                quote! {}
-            }
-        }
-        // Non-array types need no special serde attributes
-        ArrayType::NotArray => quote! {},
-    };
-    Ok(quote! {
-        #default_line
-        #serde_line
-        #property_line
-    })
-}
-
 fn generate_constant_field_definition(
     constant: ConstantInfo,
     version: RosVersion,
@@ -335,7 +207,7 @@ fn generate_constant_field_definition(
             err,
         )
     })?;
-    let constant_value = ros_literal_to_rust_literal(
+    let constant_value = parse_literal(
         ros_type_for_constant_literal(&constant.constant_type),
         &constant.constant_value,
         &ArrayType::NotArray,
@@ -394,117 +266,118 @@ pub fn generate_mod(
     }
 }
 
-fn ros_literal_to_rust_literal(
-    ros_type: &str,
-    literal: &RosLiteral,
-    array_info: &ArrayType,
-    version: RosVersion,
-) -> Result<TokenStream, Error> {
-    // TODO: The naming of all the functions under this tree seems inaccurate
-    parse_ros_value(ros_type, &literal.inner, array_info, version)
-}
-
-// Converts a ROS string to a literal value
-// Not intended to be called directly, but only via parse_ros_value.
-// Wraps a serde_json deserialize call with our style of error handling.
-fn generic_parse_value<T: DeserializeOwned + ToTokens + std::fmt::Debug>(
-    value: &str,
-    is_vec: bool, // TODO should probably take ArrayType here
-) -> Result<TokenStream, Error> {
-    if is_vec {
-        let parsed: Vec<T> = serde_json::from_str(value).map_err(|e|
-            Error::with(format!("Failed to parse a literal value in a message file to the corresponding rust type: {value} to {}", std::any::type_name::<T>()).as_str(), e)
-        )?;
-        // TODO LIKELY BUG HERE what about a constant for a fixed length array?
-        let vec_str = format!("vec!{parsed:?}");
-        Ok(quote! { #vec_str })
-    } else {
-        let parsed: T = serde_json::from_str(value).map_err(|e|
-            Error::with(format!("Failed to parse a literal value in a message file to the corresponding rust type: {value} to {}", std::any::type_name::<T>()).as_str(), e)
-        )?;
-        Ok(quote! { #parsed })
-    }
-}
-
-/// For a given, which is either a ROS constant or default, parse the constant and convert it into a rust TokenStream
-/// which represents the same literal value. This handles frustrating edge cases that are not well documented features
-/// in either ROS1 or ROS2 such as:
-/// - `f32[] MY_CONST_ARRAY=[0, 1]` we have to convert the value of the constant to `vec![0.0, 1.0]`
-/// - `string[] names_field ['first', "second"]` we have to convert the default value to `vec!["first".to_string(), "second".to_string()]
-/// Note: I could find NO documentation from ROS about what was actually legal or expected for these value expressions
-/// Note: ROS says "strings are not escaped". No idea how the eff I'm actually supposed to handle that so likely bugs...
-/// Note: No idea of "constant arrays" are intended to be supported in ROS...
-/// `ros_type` -- Expects the string key of the determined rust type to hold the value. Should come from one of the type map constants.
-/// `value` -- Expects the trimmed string containing only the value expression
-/// `is_vec` -- True iff the type is an array type
-///   TODO I'd like this to take FieldType, but want it to also work with constants...
-fn parse_ros_value(
-    ros_type: &str,
-    value: &str,
-    array_info: &ArrayType,
-    version: RosVersion,
-) -> Result<TokenStream, Error> {
-    let is_list = matches!(
-        array_info,
-        ArrayType::Unbounded | ArrayType::FixedLength(_) | ArrayType::Bounded(_)
-    );
-    match ros_type {
-        "bool" => generic_parse_value::<bool>(&value.to_lowercase(), is_list),
-        "float64" => generic_parse_value::<f64>(value, is_list),
-        "float32" => generic_parse_value::<f32>(value, is_list),
-        "uint8" | "char" | "byte" => generic_parse_value::<u8>(value, is_list),
-        "int8" => generic_parse_value::<i8>(value, is_list),
-        "uint16" => generic_parse_value::<u16>(value, is_list),
-        "int16" => generic_parse_value::<i16>(value, is_list),
-        "uint32" => generic_parse_value::<u32>(value, is_list),
-        "int32" => generic_parse_value::<i32>(value, is_list),
-        "uint64" => generic_parse_value::<u64>(value, is_list),
-        "int64" => generic_parse_value::<i64>(value, is_list),
-        "string" => {
-            // String is a special case because of quotes and to_string()
-            if is_list {
-                // TODO there is a bug here, no idea how I should be attempting to convert / escape single quotes here...
-                let parsed: Vec<String> = serde_json::from_str(value).map_err(|e|
-                    Error::with(format!("Failed to parse a literal value in a message file to the corresponding rust type: {value} to Vec<String>").as_str(), e)
-                )?;
-                let vec_str = format!("{parsed:?}.iter().map(|x| x.to_string()).collect()");
-                Ok(quote! { #vec_str })
-            } else {
-                match version {
-                    RosVersion::ROS1 => {
-                        // For ROS1 then entire contents except for leading and trailing whitespace are used
-                        let value = value.trim();
-                        Ok(quote! { #value })
-                    }
-                    RosVersion::ROS2 => {
-                        // For ROS2 value must be in quotes, and either single or double quotes are okay
-                        // Strings are not escaped (we think)
-                        let value = value.trim();
-                        if value.len() < 2 {
-                            // TODO would like to provide source file and callsite information for debug, but pretty hard to
-                            // Maybe we wrap that in calling function?
-                            bail!("String constant must at least include start and end quotes, cannot be empty: {value}");
-                        }
-                        let first = value.chars().next().unwrap(); // Unwrap is okay due to previous length check
-                        let last = value.chars().last().unwrap(); // Unwrap is okay due to previous length check
-                        if first != last || !(first == '\'' || first == '\"') {
-                            bail!("ROS2 String constant was found that was not enclosed in single or double quotes: {value}");
-                        }
-                        let parsed = value[1..value.len() - 1].to_string();
-                        Ok(quote! { #parsed })
-                    }
-                }
-            }
-        }
-        _ => {
-            bail!("Found default for type which does not support default: {ros_type}");
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use super::field::validate_field_default;
+    use super::literal::parse_literal_value;
     use super::*;
+    use crate::{FieldInfo, RosLiteral};
+
+    #[test]
+    fn fixed_array_defaults_reject_wrong_element_counts() {
+        for (ros_type, value) in [
+            ("uint8", "[1]"),
+            ("string", "[\"one\", \"two\", \"three\"]"),
+        ] {
+            let error = parse_literal_value(
+                ros_type,
+                value,
+                &ArrayType::FixedLength(2),
+                RosVersion::ROS2,
+            )
+            .unwrap_err();
+            assert!(error.to_string().contains("expected 2"));
+        }
+    }
+
+    #[test]
+    fn defaults_respect_sequence_and_decoded_string_bounds() {
+        let field = |array_info, string_capacity, default: &str| FieldInfo {
+            field_type: crate::FieldType {
+                field_type: "string".into(),
+                package_name: None,
+                source_package: "test".into(),
+                array_info,
+                string_capacity,
+            },
+            field_name: "labels".into(),
+            default: Some(RosLiteral::from(default.to_owned())),
+        };
+        assert!(
+            validate_field_default(&field(ArrayType::Bounded(1), None, r#"["a", "b"]"#)).is_err()
+        );
+        assert!(
+            validate_field_default(&field(ArrayType::Bounded(2), Some(2), r#"["a", "é"]"#)).is_ok()
+        );
+        assert!(validate_field_default(&field(ArrayType::Unbounded, Some(1), r#"["é"]"#)).is_err());
+        assert!(validate_field_default(&field(
+            ArrayType::FixedLength(1),
+            Some(1),
+            r#"["\u0061"]"#
+        ))
+        .is_ok());
+        assert!(validate_field_default(&field(ArrayType::NotArray, Some(5), "'12345'")).is_ok());
+        assert!(validate_field_default(&field(ArrayType::NotArray, Some(5), "'123456'")).is_err());
+    }
+
+    #[test]
+    fn bounded_boolean_defaults_keep_case_normalization() {
+        let field = FieldInfo {
+            field_type: crate::FieldType {
+                field_type: "bool".into(),
+                package_name: None,
+                source_package: "test".into(),
+                array_info: ArrayType::Bounded(2),
+                string_capacity: None,
+            },
+            field_name: "flags".into(),
+            default: Some(RosLiteral::from("[TRUE,False]".to_owned())),
+        };
+        assert!(generate_field_definition(
+            field,
+            "test",
+            RosVersion::ROS2,
+            &CodegenOptions::default(),
+            &format_ident!("Flags")
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn bounds_helpers_follow_selected_serde_import_mode() {
+        for roslibrust_serde in [true, false] {
+            let options = CodegenOptions {
+                roslibrust_serde,
+                ..Default::default()
+            };
+            let field = FieldInfo {
+                field_type: crate::FieldType {
+                    field_type: "string".into(),
+                    package_name: None,
+                    source_package: "test".into(),
+                    array_info: ArrayType::Bounded(3),
+                    string_capacity: Some(5),
+                },
+                field_name: "labels".into(),
+                default: None,
+            };
+            let generated = generate_field_definition(
+                field,
+                "test",
+                RosVersion::ROS2,
+                &options,
+                &format_ident!("Bounds"),
+            )
+            .unwrap();
+            let helpers = generated.codec.to_string();
+            if roslibrust_serde {
+                assert!(helpers.contains("roslibrust :: codegen :: serde"));
+            } else {
+                assert!(helpers.contains("serde = :: serde"));
+                assert!(!helpers.contains("serde = :: roslibrust"));
+            }
+        }
+    }
 
     #[test_log::test]
     fn string_constants_generate_static_str_type() {

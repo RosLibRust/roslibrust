@@ -27,14 +27,13 @@
 //! }
 //! ```
 use std::collections::BTreeMap;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock, Weak};
 
 use bincode::Options;
 use roslibrust_common::topic_name::{GlobalTopicName, ToGlobalTopicName};
 use roslibrust_common::*;
 
 use tokio::sync::broadcast as Channel;
-use tokio::sync::RwLock;
 
 use log::*;
 
@@ -49,25 +48,80 @@ struct TopicEntry {
     sender: Channel::Sender<Vec<u8>>,
     receiver: Channel::Receiver<Vec<u8>>,
     type_name: String,
+    descriptor: &'static MessageDescriptor,
+    registration: Weak<TopicRegistration>,
 }
 
 struct ServiceEntry {
     callback: TypeErasedCallback,
     type_name: String,
+    registration: Weak<ServiceRegistration>,
 }
 
-// Internal type for storing services
+type TopicStore = RwLock<BTreeMap<String, TopicEntry>>;
 type ServiceStore = RwLock<BTreeMap<String, ServiceEntry>>;
+
+// Stores own channels/callbacks, but only handles own registrations. Synchronous locks make
+// cleanup immediate in Drop, even outside a Tokio runtime. No store lock is held across await.
+struct TopicRegistration {
+    store: Weak<TopicStore>,
+    topic: String,
+}
+
+impl Drop for TopicRegistration {
+    fn drop(&mut self) {
+        if let Some(store) = self.store.upgrade() {
+            let mut topics = store.write().unwrap();
+            // A registration whose last handle is dropping can race with a new registration.
+            // Only remove our own entry, never its successor.
+            if topics
+                .get(&self.topic)
+                .is_some_and(|entry| std::ptr::eq(entry.registration.as_ptr(), self))
+            {
+                topics.remove(&self.topic);
+            }
+        }
+    }
+}
+
+struct ServiceRegistration {
+    store: Weak<ServiceStore>,
+    service: String,
+}
+
+impl Drop for ServiceRegistration {
+    fn drop(&mut self) {
+        if let Some(store) = self.store.upgrade() {
+            let removed = {
+                let mut services = store.write().unwrap();
+                if services
+                    .get(&self.service)
+                    .is_some_and(|entry| std::ptr::eq(entry.registration.as_ptr(), self))
+                {
+                    services.remove(&self.service)
+                } else {
+                    None
+                }
+            };
+            // Captured user values may have their own Drop implementation. Release the lock
+            // before destroying the callback so those destructors can safely use the backend.
+            drop(removed);
+        }
+    }
+}
 
 /// A mock ROS implementation that can be substituted for any roslibrust backend in unit tests.
 ///
 /// Implements [TopicProvider] and [ServiceProvider] to provide basic ros functionality.
+/// Topics stay registered until the last publisher or subscriber handle is dropped.
+/// Services stay registered until the last [`MockServiceServer`] handle is dropped.
+/// Advertising an already active service returns an error; drop its handles before replacing it.
 #[derive(Clone)]
 #[allow(clippy::type_complexity)]
 pub struct MockRos {
     // We could probably achieve some fancier type erasure than actually serializing the data
     // but this ends up being pretty simple
-    topics: Arc<RwLock<BTreeMap<String, TopicEntry>>>,
+    topics: Arc<TopicStore>,
     services: Arc<ServiceStore>,
 }
 
@@ -86,8 +140,57 @@ impl MockRos {
     }
 }
 
-// This is a very basic mocking of sending and receiving messages over topics
-// It does not implement automatic shutdown of topics on dropping
+impl MockRos {
+    // Atomically check the type, reuse a live registration, or create a new channel.
+    fn register_topic(
+        &self,
+        topic: &str,
+        descriptor: &'static MessageDescriptor,
+    ) -> Result<(
+        Channel::Sender<Vec<u8>>,
+        Channel::Receiver<Vec<u8>>,
+        Arc<TopicRegistration>,
+    )> {
+        let mut topics = self.topics.write().unwrap();
+        if let Some(entry) = topics.get(topic) {
+            // A weak registration can expire just before its Drop acquires this lock.
+            // Expired entries may be replaced with a different type.
+            if entry.registration.strong_count() > 0
+                && !entry.descriptor.is_compatible_with(descriptor)
+            {
+                return Err(Error::ServerError(format!(
+                    "Topic {topic} already registered with schema {}, incompatible with {}",
+                    entry.type_name, descriptor.ros_type_name
+                )));
+            }
+            if let Some(registration) = entry.registration.upgrade() {
+                return Ok((
+                    entry.sender.clone(),
+                    entry.receiver.resubscribe(),
+                    registration,
+                ));
+            }
+        }
+        let (sender, receiver) = Channel::channel(10);
+        let registration = Arc::new(TopicRegistration {
+            store: Arc::downgrade(&self.topics),
+            topic: topic.to_owned(),
+        });
+        let handles = (sender.clone(), receiver.resubscribe(), registration.clone());
+        topics.insert(
+            topic.to_owned(),
+            TopicEntry {
+                sender,
+                receiver,
+                type_name: descriptor.ros_type_name.to_owned(),
+                descriptor,
+                registration: Arc::downgrade(&registration),
+            },
+        );
+        Ok(handles)
+    }
+}
+
 impl TopicProvider for MockRos {
     type Publisher<T: RosMessageType> = MockPublisher<T>;
     type Subscriber<T: RosMessageType> = MockSubscriber<T>;
@@ -97,40 +200,11 @@ impl TopicProvider for MockRos {
         topic: impl ToGlobalTopicName,
     ) -> Result<Self::Publisher<MsgType>> {
         let topic: GlobalTopicName = topic.to_global_name()?;
-        let topic_str = topic.as_ref();
-        // Check if we already have this channel
-        {
-            let topics = self.topics.read().await;
-            if let Some(entry) = topics.get(topic_str) {
-                if entry.type_name != MsgType::DESCRIPTION.ros_type_name {
-                    return Err(Error::ServerError(format!(
-                        "Topic {topic_str} already registered with type {}, cannot also use {}",
-                        entry.type_name,
-                        MsgType::DESCRIPTION.ros_type_name
-                    )));
-                }
-                debug!("Issued new publisher to existing topic {}", topic_str);
-                return Ok(MockPublisher {
-                    sender: entry.sender.clone(),
-                    _marker: Default::default(),
-                });
-            }
-        } // Drop read lock here
-          // Create a new channel
-        let tx_rx = Channel::channel(10);
-        let tx_copy = tx_rx.0.clone();
-        let mut topics = self.topics.write().await;
-        topics.insert(
-            topic_str.to_string(),
-            TopicEntry {
-                sender: tx_rx.0,
-                receiver: tx_rx.1,
-                type_name: MsgType::DESCRIPTION.ros_type_name.to_string(),
-            },
-        );
-        debug!("Created new publisher and channel for topic {}", topic_str);
+        let (sender, _, registration) =
+            self.register_topic(topic.as_ref(), &MsgType::DESCRIPTION)?;
         Ok(MockPublisher {
-            sender: tx_copy,
+            sender,
+            _registration: registration,
             _marker: Default::default(),
         })
     }
@@ -140,40 +214,11 @@ impl TopicProvider for MockRos {
         topic: impl ToGlobalTopicName,
     ) -> Result<Self::Subscriber<MsgType>> {
         let topic: GlobalTopicName = topic.to_global_name()?;
-        let topic_str = topic.as_ref();
-        // Check if we already have this channel
-        {
-            let topics = self.topics.read().await;
-            if let Some(entry) = topics.get(topic_str) {
-                if entry.type_name != MsgType::DESCRIPTION.ros_type_name {
-                    return Err(Error::ServerError(format!(
-                        "Topic {topic_str} already registered with type {}, cannot also use {}",
-                        entry.type_name,
-                        MsgType::DESCRIPTION.ros_type_name
-                    )));
-                }
-                debug!("Issued new subscriber to existing topic {}", topic_str);
-                return Ok(MockSubscriber {
-                    receiver: entry.receiver.resubscribe(),
-                    _marker: Default::default(),
-                });
-            }
-        } // Drop read lock here
-          // Create a new channel
-        let tx_rx = Channel::channel(10);
-        let rx_copy = tx_rx.1.resubscribe();
-        let mut topics = self.topics.write().await;
-        topics.insert(
-            topic_str.to_string(),
-            TopicEntry {
-                sender: tx_rx.0,
-                receiver: tx_rx.1,
-                type_name: MsgType::DESCRIPTION.ros_type_name.to_string(),
-            },
-        );
-        debug!("Created new subscriber and channel for topic {}", topic_str);
+        let (_, receiver, registration) =
+            self.register_topic(topic.as_ref(), &MsgType::DESCRIPTION)?;
         Ok(MockSubscriber {
-            receiver: rx_copy,
+            receiver,
+            _registration: registration,
             _marker: Default::default(),
         })
     }
@@ -189,37 +234,11 @@ impl DynamicTopicProvider for MockRos {
         descriptor: &'static MessageDescriptor,
     ) -> Result<Self::DynamicPublisher> {
         let topic: GlobalTopicName = topic.to_global_name()?;
-        let topic_str = topic.as_ref();
-        {
-            let topics = self.topics.read().await;
-            if let Some(entry) = topics.get(topic_str) {
-                if entry.type_name != descriptor.ros_type_name {
-                    return Err(Error::ServerError(format!(
-                        "Topic {topic_str} already registered with type {}, cannot also use {}",
-                        entry.type_name, descriptor.ros_type_name
-                    )));
-                }
-                return Ok(MockDynamicPublisher {
-                    sender: entry.sender.clone(),
-                    descriptor,
-                });
-            }
-        }
-
-        let (sender, receiver) = Channel::channel(10);
-        let publisher_sender = sender.clone();
-        let mut topics = self.topics.write().await;
-        topics.insert(
-            topic_str.to_owned(),
-            TopicEntry {
-                sender,
-                receiver,
-                type_name: descriptor.ros_type_name.to_owned(),
-            },
-        );
+        let (sender, _, registration) = self.register_topic(topic.as_ref(), descriptor)?;
         Ok(MockDynamicPublisher {
-            sender: publisher_sender,
+            sender,
             descriptor,
+            _registration: registration,
         })
     }
 
@@ -229,37 +248,11 @@ impl DynamicTopicProvider for MockRos {
         descriptor: &'static MessageDescriptor,
     ) -> Result<Self::DynamicSubscriber> {
         let topic: GlobalTopicName = topic.to_global_name()?;
-        let topic_str = topic.as_ref();
-        {
-            let topics = self.topics.read().await;
-            if let Some(entry) = topics.get(topic_str) {
-                if entry.type_name != descriptor.ros_type_name {
-                    return Err(Error::ServerError(format!(
-                        "Topic {topic_str} already registered with type {}, cannot also use {}",
-                        entry.type_name, descriptor.ros_type_name
-                    )));
-                }
-                return Ok(MockDynamicSubscriber {
-                    receiver: entry.receiver.resubscribe(),
-                    descriptor,
-                });
-            }
-        }
-
-        let (sender, receiver) = Channel::channel(10);
-        let subscriber_receiver = receiver.resubscribe();
-        let mut topics = self.topics.write().await;
-        topics.insert(
-            topic_str.to_owned(),
-            TopicEntry {
-                sender,
-                receiver,
-                type_name: descriptor.ros_type_name.to_owned(),
-            },
-        );
+        let (_, receiver, registration) = self.register_topic(topic.as_ref(), descriptor)?;
         Ok(MockDynamicSubscriber {
-            receiver: subscriber_receiver,
+            receiver,
             descriptor,
+            _registration: registration,
         })
     }
 }
@@ -296,9 +289,10 @@ impl<T: RosServiceType> Service<T> for MockServiceClient<T> {
 
         // Check if a service exists for this topic
         let callback = {
-            let services = services.read().await;
+            let services = services.read().unwrap();
             services
                 .get(&self.topic)
+                .filter(|entry| entry.registration.strong_count() > 0)
                 .map(|entry| entry.callback.clone())
         };
         let callback = match callback {
@@ -343,9 +337,13 @@ impl DynamicService for MockDynamicServiceClient {
     }
 
     async fn call(&self, request: &DynamicMessage) -> Result<DynamicMessage> {
-        if request.descriptor().ros_type_name != self.descriptor.request.ros_type_name {
+        if !self
+            .descriptor
+            .request
+            .is_compatible_with(request.descriptor())
+        {
             return Err(Error::SerializationError(format!(
-                "service {} expects request {}, but message is {}",
+                "incompatible request schema: service {} expects {}, but message declares {}",
                 self.descriptor.ros_service_name,
                 self.descriptor.request.ros_type_name,
                 request.descriptor().ros_type_name
@@ -357,8 +355,9 @@ impl DynamicService for MockDynamicServiceClient {
         tokio::task::yield_now().await;
         let callback = services
             .read()
-            .await
+            .unwrap()
             .get(&self.topic)
+            .filter(|entry| entry.registration.strong_count() > 0)
             .map(|entry| entry.callback.clone())
             .ok_or_else(|| {
                 Error::ServerError(format!("No service server found for topic: {}", self.topic))
@@ -416,7 +415,7 @@ impl DynamicServiceProvider for MockRos {
 
 impl ServiceProvider for MockRos {
     type ServiceClient<T: RosServiceType> = MockServiceClient<T>;
-    type ServiceServer = ();
+    type ServiceServer = MockServiceServer;
 
     async fn call_service<SrvType: RosServiceType>(
         &self,
@@ -449,18 +448,6 @@ impl ServiceProvider for MockRos {
     ) -> Result<Self::ServiceServer> {
         let service: GlobalTopicName = service.to_global_name()?;
         let service_name = service.as_ref().to_string();
-        {
-            let services = self.services.read().await;
-            if let Some(existing) = services.get(&service_name) {
-                if existing.type_name != SrvType::ROS_SERVICE_NAME {
-                    return Err(Error::ServerError(format!(
-                        "Service {service_name} already registered with type {}, cannot also use {}",
-                        existing.type_name,
-                        SrvType::ROS_SERVICE_NAME
-                    )));
-                }
-            }
-        }
         // Type erase the service function here
         let erased_closure = move |message: Vec<u8>| -> std::result::Result<
             Vec<u8>,
@@ -474,26 +461,41 @@ impl ServiceProvider for MockRos {
             Ok(bytes)
         };
         let erased_closure = Arc::new(erased_closure);
-        let mut services = self.services.write().await;
-        services.insert(
+        let mut services = self.services.write().unwrap();
+        if services
+            .get(&service_name)
+            .is_some_and(|entry| entry.registration.strong_count() > 0)
+        {
+            return Err(Error::ServerError(format!(
+                "Service {service_name} is already advertised; drop its server handles before replacing it"
+            )));
+        }
+        let registration = Arc::new(ServiceRegistration {
+            store: Arc::downgrade(&self.services),
+            service: service_name.clone(),
+        });
+        let previous = services.insert(
             service_name,
             ServiceEntry {
                 callback: erased_closure,
                 type_name: SrvType::ROS_SERVICE_NAME.to_string(),
+                registration: Arc::downgrade(&registration),
             },
         );
-
-        // We technically need to hand back a token that shuts the service down here
-        // But we haven't implemented that yet in this mock
-        Ok(())
+        drop(services);
+        drop(previous);
+        Ok(MockServiceServer {
+            _registration: registration,
+        })
     }
 }
 
 impl GraphProvider for MockRos {
     async fn list_topics(&self) -> Result<Vec<TopicInfo>> {
-        let topics = self.topics.read().await;
+        let topics = self.topics.read().unwrap();
         Ok(topics
             .iter()
+            .filter(|(_, entry)| entry.registration.strong_count() > 0)
             .map(|(name, entry)| TopicInfo {
                 name: name.clone(),
                 type_name: entry.type_name.clone(),
@@ -502,9 +504,10 @@ impl GraphProvider for MockRos {
     }
 
     async fn list_services(&self) -> Result<Vec<ServiceInfo>> {
-        let services = self.services.read().await;
+        let services = self.services.read().unwrap();
         Ok(services
             .iter()
+            .filter(|(_, entry)| entry.registration.strong_count() > 0)
             .map(|(name, entry)| ServiceInfo {
                 name: name.clone(),
                 type_name: entry.type_name.clone(),
@@ -513,10 +516,29 @@ impl GraphProvider for MockRos {
     }
 }
 
+/// Owns a mock service advertisement. Keep this handle alive while serving requests.
+/// Clones share ownership; dropping the last handle immediately unregisters the service.
+#[derive(Clone)]
+#[must_use = "dropping the service server handle unregisters the service"]
+pub struct MockServiceServer {
+    _registration: Arc<ServiceRegistration>,
+}
+
 /// The publisher type returned by calling [MockRos::advertise].
 pub struct MockPublisher<T: RosMessageType> {
     sender: Channel::Sender<Vec<u8>>,
+    _registration: Arc<TopicRegistration>,
     _marker: std::marker::PhantomData<T>,
+}
+
+impl<T: RosMessageType> Clone for MockPublisher<T> {
+    fn clone(&self) -> Self {
+        Self {
+            sender: self.sender.clone(),
+            _registration: self._registration.clone(),
+            _marker: Default::default(),
+        }
+    }
 }
 
 impl<T: RosMessageType> Publish<T> for MockPublisher<T> {
@@ -532,6 +554,7 @@ impl<T: RosMessageType> Publish<T> for MockPublisher<T> {
 /// The subscriber type returned by calling [MockRos::subscribe].
 pub struct MockSubscriber<T: RosMessageType> {
     receiver: Channel::Receiver<Vec<u8>>,
+    _registration: Arc<TopicRegistration>,
     _marker: std::marker::PhantomData<T>,
 }
 
@@ -550,9 +573,11 @@ impl<T: RosMessageType> Subscribe<T> for MockSubscriber<T> {
 }
 
 /// Dynamic publisher returned by [`DynamicTopicProvider::dynamic_advertise`] on [`MockRos`].
+#[derive(Clone)]
 pub struct MockDynamicPublisher {
     sender: Channel::Sender<Vec<u8>>,
     descriptor: &'static MessageDescriptor,
+    _registration: Arc<TopicRegistration>,
 }
 
 impl DynamicPublish for MockDynamicPublisher {
@@ -561,9 +586,9 @@ impl DynamicPublish for MockDynamicPublisher {
     }
 
     async fn publish(&self, data: &DynamicMessage) -> Result<()> {
-        if data.descriptor().ros_type_name != self.descriptor.ros_type_name {
+        if !self.descriptor.is_compatible_with(data.descriptor()) {
             return Err(Error::SerializationError(format!(
-                "publisher expects {}, but message is {}",
+                "incompatible message schema: publisher expects {}, but message declares {}",
                 self.descriptor.ros_type_name,
                 data.descriptor().ros_type_name
             )));
@@ -585,6 +610,7 @@ impl DynamicPublish for MockDynamicPublisher {
 pub struct MockDynamicSubscriber {
     receiver: Channel::Receiver<Vec<u8>>,
     descriptor: &'static MessageDescriptor,
+    _registration: Arc<TopicRegistration>,
 }
 
 impl DynamicSubscribe for MockDynamicSubscriber {
@@ -609,6 +635,354 @@ mod tests {
     use super::*;
     use roslibrust_test::ros1::std_msgs;
     use roslibrust_test::ros1::std_srvs;
+
+    fn respond(
+        request: std_srvs::SetBoolRequest,
+    ) -> std::result::Result<std_srvs::SetBoolResponse, ServiceError> {
+        Ok(std_srvs::SetBoolResponse {
+            success: request.data,
+            message: String::new(),
+        })
+    }
+
+    #[tokio::test]
+    async fn service_lifetime_follows_last_handle_and_clients_can_reconnect() {
+        let ros = MockRos::new();
+        let client = ros
+            .service_client::<std_srvs::SetBool>("/lifetime")
+            .await
+            .unwrap();
+        let dynamic_client = ros
+            .dynamic_service_client("/lifetime", &std_srvs::SetBool::DESCRIPTION)
+            .await
+            .unwrap();
+        let request = std_srvs::SetBoolRequest { data: true };
+        let dynamic_request = std_srvs::SetBoolRequest::DESCRIPTION
+            .message_from(&request)
+            .unwrap();
+        assert!(client.call(&request).await.is_err());
+        {
+            let server = ros
+                .advertise_service::<std_srvs::SetBool, _>("/lifetime", respond)
+                .await
+                .unwrap();
+            let clone = server.clone();
+            assert_eq!(ros.list_services().await.unwrap().len(), 1);
+            assert!(client.call(&request).await.unwrap().success);
+            assert!(dynamic_client.call(&dynamic_request).await.is_ok());
+            assert!(ros
+                .advertise_service::<std_srvs::SetBool, _>("/lifetime", respond)
+                .await
+                .is_err());
+            assert!(ros
+                .advertise_service::<std_srvs::Trigger, _>("/lifetime", |_| Ok(
+                    std_srvs::TriggerResponse::default()
+                ))
+                .await
+                .is_err());
+            drop(server);
+            assert!(client.call(&request).await.unwrap().success);
+            assert_eq!(ros.list_services().await.unwrap().len(), 1);
+            drop(clone);
+        }
+        assert!(ros.list_services().await.unwrap().is_empty());
+        assert!(client.call(&request).await.is_err());
+        assert!(dynamic_client.call(&dynamic_request).await.is_err());
+        {
+            let _server = ros
+                .advertise_service::<std_srvs::SetBool, _>("/lifetime", respond)
+                .await
+                .unwrap();
+            assert!(client.call(&request).await.unwrap().success);
+        }
+        assert!(ros.list_services().await.unwrap().is_empty());
+        let _different_type = ros
+            .advertise_service::<std_srvs::Trigger, _>("/lifetime", |_| {
+                Ok(std_srvs::TriggerResponse::default())
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            ros.list_services().await.unwrap()[0].type_name,
+            "std_srvs/Trigger"
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn concurrent_service_advertisements_have_one_owner() {
+        let ros = MockRos::new();
+        let barrier = Arc::new(tokio::sync::Barrier::new(16));
+        let mut tasks = tokio::task::JoinSet::new();
+        for _ in 0..16 {
+            let ros = ros.clone();
+            let barrier = barrier.clone();
+            tasks.spawn(async move {
+                barrier.wait().await;
+                ros.advertise_service::<std_srvs::SetBool, _>("/concurrent", respond)
+                    .await
+            });
+        }
+        let mut servers = Vec::new();
+        while let Some(result) = tasks.join_next().await {
+            if let Ok(server) = result.unwrap() {
+                servers.push(server);
+            }
+        }
+        assert_eq!(servers.len(), 1);
+        assert_eq!(ros.list_services().await.unwrap().len(), 1);
+        drop(servers);
+        assert!(ros.list_services().await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn pending_old_service_cleanup_does_not_remove_its_replacement() {
+        let ros = MockRos::new();
+        let server = ros
+            .advertise_service::<std_srvs::SetBool, _>("/replace", respond)
+            .await
+            .unwrap();
+        let mut services = ros.services.write().unwrap();
+        let old_registration = services["/replace"].registration.clone();
+        // Block the old handle's Drop after its Arc count reaches zero, exactly the window
+        // in which advertise_service is allowed to replace an expired registration.
+        let dropper = std::thread::spawn(move || drop(server));
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(1);
+        while old_registration.strong_count() != 0 {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "old handle did not start dropping"
+            );
+            std::thread::yield_now();
+        }
+        let registration = Arc::new(ServiceRegistration {
+            store: Arc::downgrade(&ros.services),
+            service: "/replace".to_owned(),
+        });
+        services.get_mut("/replace").unwrap().registration = Arc::downgrade(&registration);
+        let replacement = MockServiceServer {
+            _registration: registration,
+        };
+        drop(services);
+        dropper.join().unwrap();
+        assert_eq!(ros.list_services().await.unwrap().len(), 1);
+        assert!(
+            ros.call_service::<std_srvs::SetBool>(
+                "/replace",
+                std_srvs::SetBoolRequest { data: true }
+            )
+            .await
+            .unwrap()
+            .success
+        );
+        drop(replacement);
+        assert!(ros.list_services().await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn topic_lifetime_is_shared_across_typed_dynamic_and_cloned_handles() {
+        let ros = MockRos::new();
+        let descriptor = &std_msgs::Int16::DESCRIPTION;
+        let publisher = ros.advertise::<std_msgs::Int16>("/lifetime").await.unwrap();
+        let clone = publisher.clone();
+        let dynamic_publisher = ros
+            .dynamic_advertise("/lifetime", descriptor)
+            .await
+            .unwrap();
+        let dynamic_clone = dynamic_publisher.clone();
+        let subscriber = ros.subscribe::<std_msgs::Int16>("/lifetime").await.unwrap();
+        let mut dynamic_subscriber = ros
+            .dynamic_subscribe("/lifetime", descriptor)
+            .await
+            .unwrap();
+        drop(publisher);
+        clone.publish(&std_msgs::Int16 { data: 17 }).await.unwrap();
+        assert_eq!(
+            dynamic_subscriber.next().await.unwrap().get("data"),
+            Some(&DynamicValue::I16(17))
+        );
+        drop(clone);
+        drop(dynamic_publisher);
+        drop(dynamic_clone);
+        assert_eq!(ros.list_topics().await.unwrap().len(), 1);
+        assert!(ros
+            .advertise::<std_msgs::String>("/lifetime")
+            .await
+            .is_err());
+        drop(subscriber);
+        assert_eq!(ros.list_topics().await.unwrap().len(), 1);
+        drop(dynamic_subscriber);
+        assert!(ros.list_topics().await.unwrap().is_empty());
+        {
+            let _subscriber = ros
+                .dynamic_subscribe("/lifetime", &std_msgs::String::DESCRIPTION)
+                .await
+                .unwrap();
+            let _publisher = ros
+                .advertise::<std_msgs::String>("/lifetime")
+                .await
+                .unwrap();
+            assert_eq!(
+                ros.list_topics().await.unwrap()[0].type_name,
+                "std_msgs/String"
+            );
+        }
+        assert!(ros.list_topics().await.unwrap().is_empty());
+        {
+            let _publisher = ros
+                .dynamic_advertise("/lifetime", descriptor)
+                .await
+                .unwrap();
+        }
+        assert!(ros.list_topics().await.unwrap().is_empty());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn concurrent_topic_creation_shares_one_channel() {
+        enum Handle {
+            Publisher(MockPublisher<std_msgs::Int16>),
+            DynamicPublisher(MockDynamicPublisher),
+            Subscriber(MockSubscriber<std_msgs::Int16>),
+            DynamicSubscriber(MockDynamicSubscriber),
+        }
+        let ros = MockRos::new();
+        let barrier = Arc::new(tokio::sync::Barrier::new(32));
+        let mut tasks = tokio::task::JoinSet::new();
+        for i in 0..32 {
+            let ros = ros.clone();
+            let barrier = barrier.clone();
+            tasks.spawn(async move {
+                barrier.wait().await;
+                match i % 4 {
+                    0 => Handle::Publisher(
+                        ros.advertise::<std_msgs::Int16>("/concurrent")
+                            .await
+                            .unwrap(),
+                    ),
+                    1 => Handle::DynamicPublisher(
+                        ros.dynamic_advertise("/concurrent", &std_msgs::Int16::DESCRIPTION)
+                            .await
+                            .unwrap(),
+                    ),
+                    2 => Handle::Subscriber(
+                        ros.subscribe::<std_msgs::Int16>("/concurrent")
+                            .await
+                            .unwrap(),
+                    ),
+                    _ => Handle::DynamicSubscriber(
+                        ros.dynamic_subscribe("/concurrent", &std_msgs::Int16::DESCRIPTION)
+                            .await
+                            .unwrap(),
+                    ),
+                }
+            });
+        }
+        let mut publishers = Vec::new();
+        let mut subscribers = Vec::new();
+        while let Some(handle) = tasks.join_next().await {
+            match handle.unwrap() {
+                handle @ (Handle::Publisher(_) | Handle::DynamicPublisher(_)) => {
+                    publishers.push(handle)
+                }
+                handle => subscribers.push(handle),
+            }
+        }
+        assert_eq!(ros.list_topics().await.unwrap().len(), 1);
+        for (i, publisher) in publishers.iter().enumerate() {
+            let data = i as i16;
+            let message = std_msgs::Int16 { data };
+            match publisher {
+                Handle::Publisher(publisher) => publisher.publish(&message).await.unwrap(),
+                Handle::DynamicPublisher(publisher) => publisher
+                    .publish(&std_msgs::Int16::DESCRIPTION.message_from(&message).unwrap())
+                    .await
+                    .unwrap(),
+                _ => unreachable!(),
+            }
+            for subscriber in &mut subscribers {
+                tokio::time::timeout(std::time::Duration::from_secs(1), async {
+                    match subscriber {
+                        Handle::Subscriber(subscriber) => {
+                            assert_eq!(subscriber.next().await.unwrap().data, data)
+                        }
+                        Handle::DynamicSubscriber(subscriber) => assert_eq!(
+                            subscriber.next().await.unwrap().get("data"),
+                            Some(&DynamicValue::I16(data))
+                        ),
+                        _ => unreachable!(),
+                    }
+                })
+                .await
+                .expect("all subscribers must share every publisher's channel");
+            }
+        }
+        drop(publishers);
+        assert_eq!(ros.list_topics().await.unwrap().len(), 1);
+        drop(subscribers);
+        assert!(ros.list_topics().await.unwrap().is_empty());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn concurrent_conflicting_topic_types_cannot_both_register() {
+        for _ in 0..32 {
+            let ros = MockRos::new();
+            let barrier = Arc::new(tokio::sync::Barrier::new(2));
+            let typed = {
+                let ros = ros.clone();
+                let barrier = barrier.clone();
+                tokio::spawn(async move {
+                    barrier.wait().await;
+                    ros.advertise::<std_msgs::Int16>("/conflict").await
+                })
+            };
+            let dynamic = tokio::spawn({
+                let ros = ros.clone();
+                async move {
+                    barrier.wait().await;
+                    ros.dynamic_subscribe("/conflict", &std_msgs::String::DESCRIPTION)
+                        .await
+                }
+            });
+            let typed = typed.await.unwrap();
+            let dynamic = dynamic.await.unwrap();
+            assert_ne!(typed.is_ok(), dynamic.is_ok());
+            assert_eq!(ros.list_topics().await.unwrap().len(), 1);
+            drop(typed);
+            drop(dynamic);
+            assert!(ros.list_topics().await.unwrap().is_empty());
+        }
+    }
+
+    #[test]
+    fn handles_are_send_sync_and_cleanup_without_a_runtime() {
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<MockRos>();
+        assert_send_sync::<MockPublisher<std_msgs::Int16>>();
+        assert_send_sync::<MockSubscriber<std_msgs::Int16>>();
+        assert_send_sync::<MockDynamicPublisher>();
+        assert_send_sync::<MockDynamicSubscriber>();
+        assert_send_sync::<MockServiceServer>();
+        assert_send_sync::<MockServiceClient<std_srvs::SetBool>>();
+        assert_send_sync::<MockDynamicServiceClient>();
+        let ros = MockRos::new();
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
+        let (publisher, server) = runtime.block_on(async {
+            (
+                ros.advertise::<std_msgs::Int16>("/outside_runtime")
+                    .await
+                    .unwrap(),
+                ros.advertise_service::<std_srvs::SetBool, _>("/outside_runtime", respond)
+                    .await
+                    .unwrap(),
+            )
+        });
+        drop(runtime);
+        drop(publisher);
+        drop(server);
+        assert!(ros.topics.read().unwrap().is_empty());
+        assert!(ros.services.read().unwrap().is_empty());
+    }
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_mock_topics() {
@@ -707,6 +1081,133 @@ mod tests {
         assert!(publisher.publish(&wrong_message).await.is_err());
     }
 
+    #[test]
+    fn descriptor_compatibility_checks_identity_and_explicit_field_wildcards() {
+        let original = std_msgs::String::DESCRIPTION;
+        let different = std_msgs::Int32::DESCRIPTION;
+        let mut without_definition = original;
+        without_definition.definition = "";
+        assert!(original.is_compatible_with(&without_definition));
+
+        // Each wildcard is symmetric and affects only its own field.
+        for field in 0..4 {
+            let mut mismatch = original;
+            let mut wildcard = original;
+            match field {
+                0 => {
+                    mismatch.ros_type_name = different.ros_type_name;
+                    wildcard.ros_type_name = "*";
+                }
+                1 => {
+                    mismatch.md5sum = different.md5sum;
+                    wildcard.md5sum = "*";
+                }
+                2 => {
+                    mismatch.ros2_type_name = different.ros2_type_name;
+                    wildcard.ros2_type_name = "*";
+                }
+                3 => {
+                    mismatch.ros2_hash = different.ros2_hash;
+                    wildcard.ros2_hash = MessageDescriptor::WILDCARD_ROS2_HASH;
+                }
+                _ => unreachable!(),
+            }
+            assert!(!original.is_compatible_with(&mismatch));
+            assert!(!mismatch.is_compatible_with(&original));
+            assert!(wildcard.is_compatible_with(&mismatch));
+            assert!(mismatch.is_compatible_with(&wildcard));
+            assert!(!wildcard.is_compatible_with(&different));
+        }
+
+        let mut unspecified = original;
+        unspecified.md5sum = "";
+        assert!(!original.is_compatible_with(&unspecified));
+        unspecified = original;
+        unspecified.ros2_hash = &[0; 32];
+        assert!(!original.is_compatible_with(&unspecified));
+        let mut prefix = original;
+        prefix.ros_type_name = "std_msgs/*";
+        assert!(!original.is_compatible_with(&prefix));
+    }
+
+    #[tokio::test]
+    async fn same_name_descriptors_require_matching_schema_metadata() {
+        let mock = MockRos::new();
+        let original = &std_msgs::String::DESCRIPTION;
+        let independent = Box::leak(Box::new(MessageDescriptor::new::<std_msgs::String>(
+            original.ros_type_name,
+            original.md5sum,
+            "", // Omitted definitions are compatible when names and hashes match.
+            original.ros2_type_name,
+            original.ros2_hash,
+        )));
+        let changed = Box::leak(Box::new(MessageDescriptor::new::<std_msgs::String>(
+            original.ros_type_name,
+            std_msgs::Int32::DESCRIPTION.md5sum,
+            original.definition,
+            original.ros2_type_name,
+            original.ros2_hash,
+        )));
+        let publisher = mock.dynamic_advertise("/schema", original).await.unwrap();
+        let mut subscriber = mock
+            .dynamic_subscribe("/schema", independent)
+            .await
+            .unwrap();
+        assert!(mock.dynamic_advertise("/schema", changed).await.is_err());
+        assert!(mock.dynamic_subscribe("/schema", changed).await.is_err());
+        let message = independent
+            .message_from(&std_msgs::String {
+                data: "hello".into(),
+            })
+            .unwrap();
+        publisher.publish(&message).await.unwrap();
+        assert_eq!(
+            subscriber
+                .next()
+                .await
+                .unwrap()
+                .get("data")
+                .unwrap()
+                .as_str(),
+            Some("hello")
+        );
+        let invalid = changed
+            .message_from(&std_msgs::String {
+                data: "hello".into(),
+            })
+            .unwrap();
+        assert!(publisher
+            .publish(&invalid)
+            .await
+            .unwrap_err()
+            .to_string()
+            .contains("incompatible message schema"));
+
+        let service = &std_srvs::SetBool::DESCRIPTION;
+        let changed_request = Box::leak(Box::new(
+            MessageDescriptor::new::<std_srvs::SetBoolRequest>(
+                service.request.ros_type_name,
+                std_msgs::Int32::DESCRIPTION.md5sum,
+                service.request.definition,
+                service.request.ros2_type_name,
+                service.request.ros2_hash,
+            ),
+        ));
+        let client = mock
+            .dynamic_service_client("/service_schema", service)
+            .await
+            .unwrap();
+        let request = changed_request
+            .message_from(&std_srvs::SetBoolRequest { data: true })
+            .unwrap();
+        assert!(client
+            .call(&request)
+            .await
+            .unwrap_err()
+            .to_string()
+            .contains("incompatible request schema"));
+    }
+
     #[tokio::test(flavor = "multi_thread")]
     async fn test_mock_services() {
         let mock_topics = MockRos::new();
@@ -718,7 +1219,7 @@ mod tests {
             })
         };
 
-        mock_topics
+        let _server = mock_topics
             .advertise_service::<std_srvs::SetBool, _>("/test_service", server_fn)
             .await
             .unwrap();
@@ -743,7 +1244,7 @@ mod tests {
             .advertise::<std_msgs::String>("/test_topic")
             .await
             .unwrap();
-        mock_ros
+        let _server = mock_ros
             .advertise_service::<std_srvs::SetBool, _>("/test_service", |request| {
                 Ok(std_srvs::SetBoolResponse {
                     success: request.data,
@@ -821,7 +1322,7 @@ mod tests {
                 message: "You set my bool!".to_string(),
             })
         };
-        mock_ros
+        let _server = mock_ros
             .advertise_service::<std_srvs::SetBool, _>("/test_service", server_fn)
             .await
             .unwrap();
@@ -851,7 +1352,7 @@ mod tests {
                     message: "You set my bool!".to_string(),
                 })
             };
-            mock_ros
+            let _server = mock_ros
                 .advertise_service::<std_srvs::SetBool, _>("/test_service", server_fn)
                 .await
                 .unwrap();

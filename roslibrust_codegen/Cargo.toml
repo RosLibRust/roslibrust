@@ -26,11 +26,7 @@ simple-error = "0.3"
 syn = "1.0"
 walkdir = "2.5"
 xml-rs = "0.8"
-# Not a direct dependencies of the crate, but something generated code uses
-# We include them as dependencies here and expose them with a `pub use`
-# So that the generate code can find them, and users don't have to added dependencies themselves
-smart-default = "0.7"
-serde-big-array = "0.5"
+# Re-exported for generated code and used by the ROS byte adapter.
 serde_bytes = "0.11"
 base64 = "0.22"
 chrono = { version = "0.4", optional = true }
