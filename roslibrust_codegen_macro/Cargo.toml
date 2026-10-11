@@ -18,3 +18,8 @@ quote = "1.0"
 # https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#multiple-locations
 roslibrust_codegen = { path = "../roslibrust_codegen", version = "0.26" }
 syn = "1.0"
+
+[dev-dependencies]
+# Compile generated definitions against the real message traits and derive exports.
+roslibrust = { path = "../roslibrust", features = ["codegen"] }
+serde_json = "1.0"

@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   preventing message bytes from being stored under the wrong schema.
 - MCAP readers discover and validate channels in files without summaries or repeated summary
   metadata, and propagate malformed-file and CRC errors during construction.
+- Generated ROS 2 fixed-array defaults now initialize arrays rather than vectors. Fixed arrays
+  longer than 32 also support defaults for strings and nested messages without requiring `Copy`.
 
 ### Changed
 

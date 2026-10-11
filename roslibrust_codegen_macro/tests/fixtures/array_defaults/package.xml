@@ -1,0 +1,8 @@
+<package format="3">
+  <name>array_defaults</name>
+  <version>0.0.0</version>
+  <description>Fixtures for compiling generated array defaults.</description>
+  <maintainer email="test@example.com">Test</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+</package>

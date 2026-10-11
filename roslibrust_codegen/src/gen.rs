@@ -242,25 +242,22 @@ fn generate_field_definition(
             field.field_type.array_info,
             ArrayType::Unbounded | ArrayType::Bounded(_) | ArrayType::FixedLength(_)
         ) {
-            // For vectors use smart_defaults "dynamic" style
+            // Array and vector defaults need an expression through SmartDefault's _code.
             quote! {
                 #[default(_code = #default_val)]
             }
         } else {
-            // For non vectors use smart_default's constant style
+            // Scalar defaults use SmartDefault's constant style.
             quote! {
               #[default(#default_val)]
             }
         }
     } else {
-        // Okay this is messy, so default isn't defined for fixed sized arrays > 32 in length
-        // so we have to manually provide a default if one isn't provided for arrays that large
+        // Arrays longer than 32 do not implement Default. Initialize each element
+        // independently so this also works for String and nested message types.
         if let ArrayType::FixedLength(fixed_array_length) = field.field_type.array_info {
             if fixed_array_length > 32 {
-                // Doing some evil indirection here with the _code directive and Deafult::default()
-                // to generate the default value for a single member of the array type, and then
-                // broadcasting that with an array constant. I can't believe this works...
-                let default_str = format!("[Default::default(); {fixed_array_length}]");
+                let default_str = "::std::array::from_fn(|_| ::std::default::Default::default())";
                 quote! { #[default(_code = #default_str)]}
             } else {
                 quote! {}
@@ -407,23 +404,48 @@ fn ros_literal_to_rust_literal(
 // Converts a ROS string to a literal value
 // Not intended to be called directly, but only via parse_ros_value.
 // Wraps a serde_json deserialize call with our style of error handling.
-fn generic_parse_value<T: DeserializeOwned + ToTokens + std::fmt::Debug>(
+fn generic_parse_value<T: DeserializeOwned + ToTokens>(
     value: &str,
-    is_vec: bool, // TODO should probably take ArrayType here
+    array_info: &ArrayType,
 ) -> Result<TokenStream, Error> {
-    if is_vec {
+    if !matches!(array_info, ArrayType::NotArray) {
         let parsed: Vec<T> = serde_json::from_str(value).map_err(|e|
             Error::with(format!("Failed to parse a literal value in a message file to the corresponding rust type: {value} to {}", std::any::type_name::<T>()).as_str(), e)
         )?;
-        // TODO LIKELY BUG HERE what about a constant for a fixed length array?
-        let vec_str = format!("vec!{parsed:?}");
-        Ok(quote! { #vec_str })
+        generate_list_default(
+            parsed.iter().map(ToTokens::to_token_stream).collect(),
+            array_info,
+        )
     } else {
         let parsed: T = serde_json::from_str(value).map_err(|e|
             Error::with(format!("Failed to parse a literal value in a message file to the corresponding rust type: {value} to {}", std::any::type_name::<T>()).as_str(), e)
         )?;
         Ok(quote! { #parsed })
     }
+}
+
+/// SmartDefault's _code attribute takes a string containing the initializer expression.
+fn generate_list_default(
+    values: Vec<TokenStream>,
+    array_info: &ArrayType,
+) -> Result<TokenStream, Error> {
+    let expression = match array_info {
+        ArrayType::FixedLength(length) => {
+            if values.len() != *length {
+                bail!(
+                    "Fixed array default has {} elements, expected {length}",
+                    values.len()
+                );
+            }
+            quote! { [#(#values),*] }
+        }
+        ArrayType::Unbounded | ArrayType::Bounded(_) => {
+            quote! { ::std::vec![#(#values),*] }
+        }
+        ArrayType::NotArray => unreachable!("List defaults require an array type"),
+    };
+    let code = expression.to_string();
+    Ok(quote! { #code })
 }
 
 /// For a given, which is either a ROS constant or default, parse the constant and convert it into a rust TokenStream
@@ -436,30 +458,26 @@ fn generic_parse_value<T: DeserializeOwned + ToTokens + std::fmt::Debug>(
 /// Note: No idea of "constant arrays" are intended to be supported in ROS...
 /// `ros_type` -- Expects the string key of the determined rust type to hold the value. Should come from one of the type map constants.
 /// `value` -- Expects the trimmed string containing only the value expression
-/// `is_vec` -- True iff the type is an array type
-///   TODO I'd like this to take FieldType, but want it to also work with constants...
+/// `array_info` -- Determines whether list defaults initialize a fixed array or a vector.
 fn parse_ros_value(
     ros_type: &str,
     value: &str,
     array_info: &ArrayType,
     version: RosVersion,
 ) -> Result<TokenStream, Error> {
-    let is_list = matches!(
-        array_info,
-        ArrayType::Unbounded | ArrayType::FixedLength(_) | ArrayType::Bounded(_)
-    );
+    let is_list = !matches!(array_info, ArrayType::NotArray);
     match ros_type {
-        "bool" => generic_parse_value::<bool>(&value.to_lowercase(), is_list),
-        "float64" => generic_parse_value::<f64>(value, is_list),
-        "float32" => generic_parse_value::<f32>(value, is_list),
-        "uint8" | "char" | "byte" => generic_parse_value::<u8>(value, is_list),
-        "int8" => generic_parse_value::<i8>(value, is_list),
-        "uint16" => generic_parse_value::<u16>(value, is_list),
-        "int16" => generic_parse_value::<i16>(value, is_list),
-        "uint32" => generic_parse_value::<u32>(value, is_list),
-        "int32" => generic_parse_value::<i32>(value, is_list),
-        "uint64" => generic_parse_value::<u64>(value, is_list),
-        "int64" => generic_parse_value::<i64>(value, is_list),
+        "bool" => generic_parse_value::<bool>(&value.to_lowercase(), array_info),
+        "float64" => generic_parse_value::<f64>(value, array_info),
+        "float32" => generic_parse_value::<f32>(value, array_info),
+        "uint8" | "char" | "byte" => generic_parse_value::<u8>(value, array_info),
+        "int8" => generic_parse_value::<i8>(value, array_info),
+        "uint16" => generic_parse_value::<u16>(value, array_info),
+        "int16" => generic_parse_value::<i16>(value, array_info),
+        "uint32" => generic_parse_value::<u32>(value, array_info),
+        "int32" => generic_parse_value::<i32>(value, array_info),
+        "uint64" => generic_parse_value::<u64>(value, array_info),
+        "int64" => generic_parse_value::<i64>(value, array_info),
         "string" => {
             // String is a special case because of quotes and to_string()
             if is_list {
@@ -467,8 +485,11 @@ fn parse_ros_value(
                 let parsed: Vec<String> = serde_json::from_str(value).map_err(|e|
                     Error::with(format!("Failed to parse a literal value in a message file to the corresponding rust type: {value} to Vec<String>").as_str(), e)
                 )?;
-                let vec_str = format!("{parsed:?}.iter().map(|x| x.to_string()).collect()");
-                Ok(quote! { #vec_str })
+                let values = parsed
+                    .iter()
+                    .map(|value| quote! { ::std::string::String::from(#value) })
+                    .collect();
+                generate_list_default(values, array_info)
             } else {
                 match version {
                     RosVersion::ROS1 => {
@@ -505,6 +526,23 @@ fn parse_ros_value(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fixed_array_defaults_reject_wrong_element_counts() {
+        for (ros_type, value) in [
+            ("uint8", "[1]"),
+            ("string", "[\"one\", \"two\", \"three\"]"),
+        ] {
+            let error = parse_ros_value(
+                ros_type,
+                value,
+                &ArrayType::FixedLength(2),
+                RosVersion::ROS2,
+            )
+            .unwrap_err();
+            assert!(error.to_string().contains("expected 2"));
+        }
+    }
 
     #[test_log::test]
     fn string_constants_generate_static_str_type() {
