@@ -13,8 +13,9 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
+use tokio::task::JoinSet;
 use tokio::time::Duration;
 use tokio_tungstenite::tungstenite::Message;
 
@@ -694,11 +695,14 @@ impl ClientHandle {
 /// A client connection to the rosbridge_server that allows for publishing and subscribing to topics
 pub(crate) struct Client {
     reader: RwLock<Reader>,
-    writer: RwLock<Writer>,
+    writer: Arc<RwLock<Writer>>,
     // Stores a record of the publishers we've handed out
     publishers: DashMap<String, PublisherHandle>,
     subscriptions: DashMap<String, Subscription>,
     services: DashMap<String, ServiceCallback>,
+    // Own response tasks without keeping the Client alive. Dropping the JoinSet
+    // aborts them; an already running synchronous callback can still finish.
+    service_tasks: Mutex<JoinSet<()>>,
     // Contains any outstanding service calls we're waiting for a response on
     // Map key will be a uniquely generated id for each call
     service_calls: Arc<DashMap<String, tokio::sync::oneshot::Sender<Value>>>,
@@ -711,9 +715,10 @@ impl Client {
         let (writer, reader) = stubborn_connect(&opts.url).await;
         let client = Self {
             reader: RwLock::new(reader),
-            writer: RwLock::new(writer),
+            writer: Arc::new(RwLock::new(writer)),
             publishers: DashMap::new(),
             services: DashMap::new(),
+            service_tasks: Mutex::new(JoinSet::new()),
             subscriptions: DashMap::new(),
             service_calls: Arc::new(DashMap::new()),
             opts,
@@ -815,7 +820,7 @@ impl Client {
             .map(|id| id.to_string());
 
         // Lookup if we have a service for the message
-        let callback = self.services.get(topic);
+        let callback = self.services.get(topic).map(|entry| entry.value().clone());
         let callback = match callback {
             Some(callback) => callback,
             _ => {
@@ -829,30 +834,46 @@ impl Client {
             return;
         };
 
-        let mut writer = self.writer.write().await;
-
-        // Wrap evaluation of callback in a spawn_blocking to match trait expectations from roslibrust_common
-        let callback = callback.value().clone();
-        let response = tokio::task::spawn_blocking(move || (callback)(&request))
-            .await
-            .unwrap_or_else(|e| Err(format!("Service callback panicked: {e}").into()));
-        // A failed write means the connection dropped; spin_once will notice and
-        // trigger a reconnect, so logging is all we can usefully do here
-        let write_result = match response {
-            Ok(res) => writer.service_response(topic, id, true, res).await,
-            Err(e) => {
-                error!("A service callback on topic {:?} failed with {:?} sending response false in service_response", data.get("service"), e);
-                writer
-                    .service_response(topic, id, false, serde_json::json!(format!("{e}")))
-                    .await
+        let topic = topic.to_owned();
+        let writer = self.writer.clone();
+        // Dispatch synchronously before yielding so the polling timeout cannot
+        // cancel an accepted request. No map guard or writer lock is held while
+        // user code executes, and the receive loop can process the next message.
+        self.service_tasks.lock().unwrap().spawn(async move {
+            // Keep ownership of the blocking task too, so cancellation can
+            // abort callbacks still queued in Tokio's blocking pool.
+            let mut callback_task = JoinSet::new();
+            callback_task.spawn_blocking(move || (callback)(&request));
+            let response = callback_task
+                .join_next()
+                .await
+                .expect("the callback task was just spawned")
+                .unwrap_or_else(|e| Err(format!("Service callback panicked: {e}").into()));
+            let mut writer = writer.write().await;
+            // A failed write means the connection dropped; the receive loop
+            // will notice and trigger a reconnect.
+            let write_result = match response {
+                Ok(res) => writer.service_response(&topic, id, true, res).await,
+                Err(e) => {
+                    error!("A service callback on topic {topic:?} failed with {e:?} sending response false in service_response");
+                    writer
+                        .service_response(&topic, id, false, serde_json::json!(format!("{e}")))
+                        .await
+                }
+            };
+            if let Err(e) = write_result {
+                error!("Failed to send service_response for `{topic}`: {e}");
             }
-        };
-        if let Err(e) = write_result {
-            error!("Failed to send service_response for `{topic}`: {e}");
-        }
+        });
     }
 
     async fn spin_once(&self) -> Result<()> {
+        // Reap completed responses even when no new service requests arrive.
+        while let Some(result) = self.service_tasks.lock().unwrap().try_join_next() {
+            if let Err(e) = result {
+                debug!("Service response task ended: {e}");
+            }
+        }
         let read = {
             let mut stream = self.reader.write().await;
             match stream.next().await {
@@ -900,6 +921,10 @@ impl Client {
     }
 
     async fn reconnect(&mut self) -> Result<()> {
+        // Responses belong to the connection which received their requests.
+        // Cancel them before replacing its writer, including tasks waiting for
+        // a blocking callback. Running blocking callbacks cannot be aborted.
+        self.service_tasks.lock().unwrap().abort_all();
         // Responses to calls made on the old connection will never arrive.
         // This also catches calls that raced with the initial disconnect cleanup.
         self.service_calls.clear();
@@ -907,7 +932,7 @@ impl Client {
         // Reconnect stream
         let (writer, reader) = stubborn_connect(&self.opts.url).await;
         self.reader = RwLock::new(reader);
-        self.writer = RwLock::new(writer);
+        self.writer = Arc::new(RwLock::new(writer));
 
         // TODO re-establish service servers?
 
@@ -955,7 +980,11 @@ async fn stubborn_spin(
                 is_disconnected.store(true, Ordering::Relaxed);
                 // Dropping the senders wakes in-flight service calls before we
                 // request the exclusive lock needed to reconnect.
-                client.read().await.service_calls.clear();
+                {
+                    let client = client.read().await;
+                    client.service_calls.clear();
+                    client.service_tasks.lock().unwrap().abort_all();
+                }
                 warn!("Spin failed with error: {err}, attempting to reconnect");
                 // Never propagate a reconnect failure: this task is the only
                 // thing keeping the connection alive, so keep retrying
@@ -1023,8 +1052,8 @@ mod tests {
     use super::*;
     use futures::SinkExt;
     use roslibrust_test::ros1::{
+        std_msgs,
         std_srvs::{SetBool, SetBoolRequest},
-        test_msgs::ByteArrays,
     };
     use tokio::net::TcpListener;
     use tokio_tungstenite::WebSocketStream;
@@ -1062,6 +1091,206 @@ mod tests {
             panic!("expected text message, got {message:?}");
         };
         serde_json::from_str(&text).unwrap()
+    }
+
+    async fn send_service_request(websocket: &mut ServerSocket, id: &str) {
+        websocket
+            .send(Message::Text(
+                serde_json::json!({
+                    "op": "call_service", "service": "/test", "id": id,
+                    "args": {"data": true}
+                })
+                .to_string(),
+            ))
+            .await
+            .unwrap();
+    }
+
+    // Dropping the release sender also releases the callback, keeping failed
+    // tests from leaving a blocking thread behind during runtime shutdown.
+    fn blocked_callback() -> (
+        ServiceCallback,
+        Arc<tokio::sync::Notify>,
+        std::sync::mpsc::Sender<()>,
+    ) {
+        let started = Arc::new(tokio::sync::Notify::new());
+        let (release, wait) = std::sync::mpsc::channel();
+        let wait = Mutex::new(wait);
+        let started_copy = started.clone();
+        let callback = Arc::new(move |_: &str| {
+            started_copy.notify_one();
+            let _ = wait.lock().unwrap().recv_timeout(Duration::from_secs(5));
+            Ok(serde_json::json!({"success": true, "message": "finished"}))
+        });
+        (callback, started, release)
+    }
+
+    #[tokio::test]
+    async fn slow_service_callback_survives_receive_loop_polling() {
+        let (_listener, client, mut websocket) = test_connection(None).await;
+        client.inner.read().await.services.insert(
+            "/test".to_string(),
+            Arc::new(|_| {
+                std::thread::sleep(Duration::from_millis(50));
+                Ok(serde_json::json!({"success": true, "message": "slow"}))
+            }),
+        );
+
+        send_service_request(&mut websocket, "slow-request").await;
+        let response = next_json(&mut websocket).await;
+        assert_eq!(response["op"], "service_response");
+        assert_eq!(response["id"], "slow-request");
+        assert_eq!(response["result"], true);
+        assert_eq!(response["values"]["message"], "slow");
+        tokio::time::timeout(Duration::from_secs(2), async {
+            while !client
+                .inner
+                .read()
+                .await
+                .service_tasks
+                .lock()
+                .unwrap()
+                .is_empty()
+            {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .expect("completed response tasks were not reaped while idle");
+    }
+
+    #[tokio::test]
+    async fn active_callback_allows_receipt_publishing_and_service_removal() {
+        let (_listener, client, mut websocket) = test_connection(None).await;
+        let subscriber = client
+            .subscribe::<std_msgs::String>("/incoming")
+            .await
+            .unwrap();
+        assert_eq!(next_json(&mut websocket).await["op"], "subscribe");
+        let publisher = client
+            .advertise::<std_msgs::String>("/outgoing")
+            .await
+            .unwrap();
+        assert_eq!(next_json(&mut websocket).await["op"], "advertise");
+        let (callback, started, release) = blocked_callback();
+        client
+            .inner
+            .read()
+            .await
+            .services
+            .insert("/test".to_string(), callback);
+        send_service_request(&mut websocket, "blocked-request").await;
+        tokio::time::timeout(Duration::from_secs(2), started.notified())
+            .await
+            .unwrap();
+
+        websocket
+            .send(Message::Text(
+                serde_json::json!({
+                    "op": "publish", "topic": "/incoming", "msg": {"data": "received"}
+                })
+                .to_string(),
+            ))
+            .await
+            .unwrap();
+        let incoming = tokio::time::timeout(Duration::from_secs(2), subscriber.next())
+            .await
+            .expect("callback blocked incoming messages");
+        assert_eq!(incoming.data, "received");
+        tokio::time::timeout(
+            Duration::from_secs(2),
+            publisher.publish(&std_msgs::String {
+                data: "published".to_string(),
+            }),
+        )
+        .await
+        .expect("callback blocked the writer")
+        .unwrap();
+        assert_eq!(next_json(&mut websocket).await["msg"]["data"], "published");
+
+        // Removal runs on a blocking thread so a map guard regression fails the
+        // timeout instead of blocking this test's async executor.
+        let remove_client = client.inner.clone();
+        let removal = tokio::task::spawn_blocking(move || {
+            remove_client.blocking_read().services.remove("/test")
+        });
+        assert!(tokio::time::timeout(Duration::from_secs(2), removal)
+            .await
+            .expect("callback retained the services map guard")
+            .unwrap()
+            .is_some());
+
+        release.send(()).unwrap();
+        let response = next_json(&mut websocket).await;
+        assert_eq!(response["id"], "blocked-request");
+        assert_eq!(response["result"], true);
+    }
+
+    #[tokio::test]
+    async fn dropping_client_aborts_response_task_without_waiting_for_callback() {
+        let (_listener, client, mut websocket) = test_connection(None).await;
+        let (callback, started, release) = blocked_callback();
+        client
+            .inner
+            .read()
+            .await
+            .services
+            .insert("/test".to_string(), callback);
+        let client_weak = Arc::downgrade(&client.inner);
+        let writer_weak = Arc::downgrade(&client.inner.read().await.writer);
+        send_service_request(&mut websocket, "shutdown-request").await;
+        tokio::time::timeout(Duration::from_secs(2), started.notified())
+            .await
+            .unwrap();
+
+        drop(client);
+        tokio::time::timeout(Duration::from_secs(2), async {
+            while client_weak.upgrade().is_some() || writer_weak.upgrade().is_some() {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .expect("response task kept the client or its writer alive");
+        release.send(()).unwrap();
+    }
+
+    #[tokio::test]
+    async fn reconnect_cancels_response_for_old_connection() {
+        let (listener, client, mut websocket) = test_connection(None).await;
+        let (callback, started, release) = blocked_callback();
+        client
+            .inner
+            .read()
+            .await
+            .services
+            .insert("/test".to_string(), callback);
+        let old_writer = Arc::downgrade(&client.inner.read().await.writer);
+        send_service_request(&mut websocket, "old-request").await;
+        tokio::time::timeout(Duration::from_secs(2), started.notified())
+            .await
+            .unwrap();
+        websocket.send(Message::Close(None)).await.unwrap();
+        drop(websocket);
+
+        let mut reconnected = tokio::time::timeout(Duration::from_secs(2), async {
+            let (stream, _) = listener.accept().await.unwrap();
+            tokio_tungstenite::accept_async(stream).await.unwrap()
+        })
+        .await
+        .expect("callback prevented reconnect");
+        tokio::time::timeout(Duration::from_secs(2), async {
+            while old_writer.upgrade().is_some() {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .expect("old connection's response task was not canceled");
+        release.send(()).unwrap();
+        assert!(
+            tokio::time::timeout(Duration::from_millis(100), reconnected.next())
+                .await
+                .is_err()
+        );
     }
 
     #[tokio::test]

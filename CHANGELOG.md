@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Fixed
+
+- Rosbridge service callbacks now run independently of receive-loop polling, so slow
+  callbacks retain their responses while messages and publishing remain responsive.
+  Pending response tasks are canceled when their connection closes or the client is dropped.
+
 ## 0.26.0 - September 25th, 2026
 
 ### Added
