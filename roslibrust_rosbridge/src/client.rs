@@ -1,5 +1,6 @@
 use crate::comm::Ops;
 use crate::comm::RosBridgeComm;
+use crate::runtime::{self, spawn};
 use crate::{
     deserialize_dynamic_message, serialize_dynamic_message, DynamicPublisher, DynamicSubscriber,
     Publisher, ServiceHandle, Subscriber,
@@ -14,13 +15,12 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::RwLock;
-use tokio::time::Duration;
-use tokio_tungstenite::tungstenite::Message;
 
 use super::{
-    MessageQueue, PublisherHandle, Reader, ServiceCallback, ServiceClient, Socket, Subscription,
-    Writer, QUEUE_SIZE,
+    Message, MessageQueue, PublisherHandle, Reader, ServiceCallback, ServiceClient, Socket,
+    Subscription, Writer, QUEUE_SIZE,
 };
 
 /// Builder options for creating a client
@@ -95,10 +95,7 @@ impl ClientHandle {
 
         // Spawn the spin task
         // The internal stubborn spin task continues to try to reconnect on failure
-        drop(tokio::task::spawn(stubborn_spin(
-            inner_weak,
-            is_disconnected.clone(),
-        )));
+        spawn!(stubborn_spin(inner_weak, is_disconnected.clone()));
 
         Ok(ClientHandle {
             inner,
@@ -511,7 +508,7 @@ impl ClientHandle {
 
         // Having to do manual timeout logic here because of error types
         let recv = if let Some(timeout) = response_timeout {
-            match tokio::time::timeout(timeout, rx).await {
+            match runtime::timeout(timeout, rx).await {
                 Ok(recv) => recv,
                 Err(e) => {
                     // Stop tracking the call so a late response is discarded
@@ -609,7 +606,7 @@ impl ClientHandle {
     pub(crate) fn unadvertise_service(&self, topic: &str) {
         let copy = self.inner.clone();
         let topic = topic.to_string();
-        tokio::spawn(async move {
+        spawn!(async move {
             let client = copy.read().await;
             let entry = client.services.remove(&topic);
             // Since this is called by drop we can't really propagate and error and instead simply have to log
@@ -635,7 +632,7 @@ impl ClientHandle {
     pub(crate) fn unadvertise(&self, topic_name: &str) {
         let copy = self.clone();
         let topic_name_copy = topic_name.to_string();
-        tokio::spawn(async move {
+        spawn!(async move {
             // Remove publisher from our records
             let client = copy.inner.read().await;
             client.publishers.remove(&topic_name_copy);
@@ -660,7 +657,7 @@ impl ClientHandle {
         let topic_name = topic_name.to_string();
         let id = *id;
         // Actually send the unsubscribe message in a task so subscriber::Drop can call this function
-        tokio::spawn(async move {
+        spawn!(async move {
             // Identify the subscription entry for the subscriber
             let client = client.inner.read().await;
             let mut subscription = match client.subscriptions.get_mut(&topic_name) {
@@ -762,6 +759,7 @@ impl Client {
                     }
                 }
             }
+            #[cfg(not(target_arch = "wasm32"))]
             Message::Close(close) => {
                 // Returning an error here hands control back to stubborn_spin,
                 // which marks the client disconnected and reconnects.
@@ -769,9 +767,11 @@ impl Client {
                     "Close requested from server: {close:?}"
                 )));
             }
+            #[cfg(not(target_arch = "wasm32"))]
             Message::Ping(ping) => {
                 debug!("Ping received: {:?}", ping);
             }
+            #[cfg(not(target_arch = "wasm32"))]
             Message::Pong(pong) => {
                 debug!("Pong received {:?}", pong);
             }
@@ -833,7 +833,7 @@ impl Client {
 
         // Wrap evaluation of callback in a spawn_blocking to match trait expectations from roslibrust_common
         let callback = callback.value().clone();
-        let response = tokio::task::spawn_blocking(move || (callback)(&request))
+        let response = runtime::spawn_blocking(move || (callback)(&request))
             .await
             .unwrap_or_else(|e| Err(format!("Service callback panicked: {e}").into()));
         // A failed write means the connection dropped; spin_once will notice and
@@ -946,8 +946,7 @@ async fn stubborn_spin(
         const SPIN_DURATION: Duration = Duration::from_millis(10);
 
         // Do a spin, important to not do this in the match or it keeps the lock alive in the branch arms
-        let spin_result =
-            tokio::time::timeout(SPIN_DURATION, client.read().await.spin_once()).await;
+        let spin_result = runtime::timeout(SPIN_DURATION, client.read().await.spin_once()).await;
 
         match spin_result {
             Ok(Ok(())) => {}
@@ -961,7 +960,7 @@ async fn stubborn_spin(
                 // thing keeping the connection alive, so keep retrying
                 while let Err(e) = client.write().await.reconnect().await {
                     warn!("Reconnect attempt failed: {e}, retrying");
-                    tokio::time::sleep(Duration::from_millis(200)).await;
+                    runtime::sleep(Duration::from_millis(200)).await;
                 }
                 is_disconnected.store(false, Ordering::Relaxed);
             }
@@ -982,7 +981,7 @@ where
     F: futures::Future<Output = Result<T>>,
 {
     if let Some(t) = timeout {
-        tokio::time::timeout(t, future)
+        runtime::timeout(t, future)
             .await
             .map_err(|e| Error::Timeout(format!("{e:?}")))?
     } else {
@@ -998,7 +997,7 @@ async fn stubborn_connect(url: &str) -> (Writer, Reader) {
             Err(e) => {
                 warn!("Failed to reconnect: {:?}", e);
                 // TODO configurable rate?
-                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+                runtime::sleep(Duration::from_millis(200)).await;
                 continue;
             }
             Ok(stream) => {
@@ -1011,11 +1010,15 @@ async fn stubborn_connect(url: &str) -> (Writer, Reader) {
 
 // Basic connection attempt and error wrapping
 async fn connect(url: &str) -> Result<Socket> {
-    let attempt = tokio_tungstenite::connect_async(url).await;
-    match attempt {
-        Ok((stream, _response)) => Ok(stream),
-        Err(e) => Err(Error::IoError(std::io::Error::other(e))),
-    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let attempt = tokio_tungstenite::connect_async(url)
+        .await
+        .map(|(stream, _response)| stream);
+
+    #[cfg(target_arch = "wasm32")]
+    let attempt = crate::wasm::connect(url).await;
+
+    attempt.map_err(|e| Error::IoError(std::io::Error::other(e)))
 }
 
 #[cfg(test)]

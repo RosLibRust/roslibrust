@@ -105,13 +105,20 @@ mod dynamic_message_tests {
 /// Communication primitives for the rosbridge_suite protocol
 mod comm;
 mod rosapi_discovery;
+/// Async runtime primitives (spawning, timers) that depend on the target platform
+mod runtime;
+/// Browser-specific code: WebSocket and timers
+#[cfg(target_arch = "wasm32")]
+mod wasm;
 
 use futures_util::stream::{SplitSink, SplitStream};
 use std::collections::HashMap;
 use std::time::Duration;
-use tokio::net::TcpStream;
-use tokio_tungstenite::*;
-use tungstenite::Message;
+
+#[cfg(target_arch = "wasm32")]
+use gloo_net::websocket::Message;
+#[cfg(not(target_arch = "wasm32"))]
+use tokio_tungstenite::tungstenite::Message;
 
 const SERVICE_TYPE_QUERY_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -205,7 +212,21 @@ impl<T: RosServiceType> ServiceClient<T> {
 }
 
 /// Our underlying communication socket type (maybe move to comm?)
-type Socket = tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<TcpStream>>;
+///
+/// The websocket implementation depends on the target platform:
+/// - native: tokio-tungstenite over a TCP stream
+/// - wasm32: the browser's `WebSocket` (gloo-net), made `Send` with `send_wrapper` (see wasm.rs)
+#[cfg(not(target_arch = "wasm32"))]
+type Socket =
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+#[cfg(target_arch = "wasm32")]
+type Socket = wasm::BrowserSocket;
+
+/// Error type of the [Socket] stream and sink
+#[cfg(not(target_arch = "wasm32"))]
+type SocketError = tokio_tungstenite::tungstenite::Error;
+#[cfg(target_arch = "wasm32")]
+type SocketError = gloo_net::websocket::WebSocketError;
 
 /// We split our underlying socket into two halves with separate locks on read and write.
 /// This is the read half.
@@ -354,53 +375,43 @@ impl GraphProvider for crate::ClientHandle {
             )
             .await?;
 
-        // Spawn parallel tasks to query service types for all services
-        let probe_tasks: Vec<_> = response
-            .services
-            .into_iter()
-            .map(|service| {
-                let handle = self.clone();
-                tokio::spawn(async move {
-                    let type_name = match tokio::time::timeout(
-                        SERVICE_TYPE_QUERY_TIMEOUT,
-                        handle.call_service::<rosapi_discovery::ServiceType>(
-                            "/rosapi/service_type",
-                            rosapi_discovery::ServiceTypeRequest {
-                                service: service.clone(),
-                            },
-                        ),
-                    )
-                    .await
-                    {
-                        Ok(Ok(service_type)) => normalize_graph_type(service_type.type_name),
-                        Ok(Err(err)) => {
-                            log::warn!(
-                                "Failed to resolve type for service {service}: {err}. Returning empty type."
-                            );
-                            String::new()
-                        }
-                        Err(_) => {
-                            log::warn!(
-                                "Timed out resolving type for service {service}. Returning empty type."
-                            );
-                            String::new()
-                        }
-                    };
-                    ServiceInfo {
-                        name: service,
-                        type_name,
-                    }
-                })
-            })
-            .collect();
-
-        // Collect results from all parallel tasks
-        let mut services = Vec::with_capacity(probe_tasks.len());
-        for task in probe_tasks {
-            if let Ok(service_info) = task.await {
-                services.push(service_info);
+        // Query the type of every service concurrently on the current task.
+        // join_all needs no spawned tasks, so this works the same on native and wasm32.
+        let probes = response.services.into_iter().map(|service| async move {
+            let type_name = match runtime::timeout(
+                SERVICE_TYPE_QUERY_TIMEOUT,
+                self.call_service::<rosapi_discovery::ServiceType>(
+                    "/rosapi/service_type",
+                    rosapi_discovery::ServiceTypeRequest {
+                        service: service.clone(),
+                    },
+                ),
+            )
+            .await
+            {
+                Ok(Ok(service_type)) => normalize_graph_type(service_type.type_name),
+                Ok(Err(err)) => {
+                    log::warn!(
+                        "Failed to resolve type for service {service}: {err}. Returning empty type."
+                    );
+                    String::new()
+                }
+                Err(_) => {
+                    log::warn!(
+                        "Timed out resolving type for service {service}. Returning empty type."
+                    );
+                    String::new()
+                }
+            };
+            ServiceInfo {
+                name: service,
+                type_name,
             }
-        }
+        });
+
+        // Wait for all probes to finish. They run concurrently, so this takes as long as the
+        // slowest one (capped by SERVICE_TYPE_QUERY_TIMEOUT) instead of their sum.
+        let mut services = futures_util::future::join_all(probes).await;
 
         services.sort_by(|a, b| a.name.cmp(&b.name));
         Ok(services)
@@ -482,15 +493,15 @@ impl<T: RosMessageType> Publish<T> for crate::Publisher<T> {
     }
 }
 
-/// Defines a conversion from a tungstenite error to a roslibrust error
+/// Defines a conversion from a websocket error to a roslibrust error
 /// Since neither error type is owned by this crate we use a trait to define the conversion
 trait MapError {
     type T;
     fn map_to_roslibrust(self) -> Result<Self::T>;
 }
 
-// Implementation of conversion from tungstenite error to roslibrust error for a result
-impl<T: Send + Sync> MapError for std::result::Result<T, tokio_tungstenite::tungstenite::Error> {
+// Implementation of conversion from websocket error to roslibrust error for a result
+impl<T: Send + Sync> MapError for std::result::Result<T, SocketError> {
     type T = T;
     fn map_to_roslibrust(self) -> Result<T> {
         match self {

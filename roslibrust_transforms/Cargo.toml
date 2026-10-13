@@ -14,11 +14,19 @@ roslibrust_common = { path = "../roslibrust_common", version = "0.26" }
 # roslibrust is needed because the macro-generated code references ::roslibrust::
 roslibrust = { path = "../roslibrust", version = "0.26", features = ["macro", "codegen"] }
 transforms = "2.1"
-tokio = { workspace = true }
+tokio = { version = "1", features = ["sync", "macros", "rt", "time"] }
 log = { workspace = true }
 thiserror = "2.0"
 serde = { workspace = true }
 tokio-util = "0.7"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4"
+gloo-timers = { version = "0.4", features = ["futures"] }
+send_wrapper = { version = "0.6", features = ["futures"] }
 
 [dev-dependencies]
 env_logger = "0.11"

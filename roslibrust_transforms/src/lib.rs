@@ -62,6 +62,36 @@ use roslibrust_common::{Publish, RosMessageType, Subscribe, TopicProvider};
 use tokio::sync::{watch, RwLock};
 use tokio_util::sync::CancellationToken;
 
+/// Spawns a detached task and discards its output.
+///
+/// Native: `tokio::spawn`, so the future must be `Send + 'static`.
+/// wasm32: `wasm_bindgen_futures::spawn_local`, which runs it on the browser's event loop.
+macro_rules! spawn {
+    ($future:expr) => {{
+        let future = $future;
+        #[cfg(not(target_arch = "wasm32"))]
+        drop(::tokio::spawn(future));
+        #[cfg(target_arch = "wasm32")]
+        ::wasm_bindgen_futures::spawn_local(async move {
+            let _ = future.await;
+        });
+    }};
+}
+
+// Sleep timer for wait_for_transform.
+//
+// Native: `tokio::time::sleep`, so the future must be `Send + 'static`.
+// wasm32: `gloo_timers::future::TimeoutFuture`
+#[cfg(not(target_arch = "wasm32"))]
+use tokio::time::sleep;
+#[cfg(target_arch = "wasm32")]
+fn sleep(duration: Duration) -> send_wrapper::SendWrapper<gloo_timers::future::TimeoutFuture> {
+    // SendWrapper keeps wait_for_transform's future `Send`, as on native.
+    send_wrapper::SendWrapper::new(gloo_timers::future::TimeoutFuture::new(
+        duration.as_millis().min(i32::MAX as u128) as u32,
+    ))
+}
+
 /// Error types for TransformManager operations.
 #[derive(thiserror::Error, Debug)]
 pub enum TransformManagerError {
@@ -252,7 +282,7 @@ where
         let registry_clone = registry.clone();
         let notify_clone = transform_notify.clone();
         let cancel_clone = cancel_token.clone();
-        tokio::spawn(async move {
+        spawn!(async move {
             Self::process_tf_messages(
                 tf_subscriber,
                 registry_clone,
@@ -267,7 +297,7 @@ where
         let registry_clone = registry.clone();
         let notify_clone = transform_notify.clone();
         let cancel_clone = cancel_token.clone();
-        tokio::spawn(async move {
+        spawn!(async move {
             Self::process_tf_messages(
                 tf_static_subscriber,
                 registry_clone,
@@ -424,6 +454,12 @@ where
     /// Returns the transform that converts points from `source_frame` to `target_frame`,
     /// or a `Timeout` error if the transform is not available within the timeout period.
     ///
+    /// # WebAssembly
+    ///
+    /// In the browser, pass a message stamp or the result of [Self::latest_common_time] as
+    /// `time`, not `Timestamp::now()`: it reads the system clock, which panics on
+    /// wasm32-unknown-unknown.
+    ///
     /// # Example
     ///
     /// ```no_run
@@ -456,7 +492,9 @@ where
         timeout: Option<Duration>,
     ) -> Result<transforms::Transform<T>, TransformManagerError> {
         let timeout_duration = timeout.unwrap_or(self.buffer_duration);
-        let deadline = tokio::time::Instant::now() + timeout_duration;
+        // A single timer for the whole call;
+        let deadline = sleep(timeout_duration);
+        tokio::pin!(deadline);
 
         // Subscribe to transform notifications
         let mut receiver = self.transform_notify.subscribe();
@@ -470,19 +508,9 @@ where
                 }
             }
 
-            // Wait for either a notification or timeout
-            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
-            if remaining.is_zero() {
-                return Err(TransformManagerError::Timeout(
-                    target_frame.to_string(),
-                    source_frame.to_string(),
-                    Self::pretty_print_timestamp(time),
-                ));
-            }
-
             // Wait for either the final deadline to occur, or for a notification that a transform has been added
             tokio::select! {
-                _ = tokio::time::sleep(remaining) => {
+                _ = &mut deadline => {
                     // Timeout expired - do one final check then return error
                     let registry = self.registry.read().await;
                     if let Ok(transform) = registry.get_transform(target_frame, source_frame, time) {
