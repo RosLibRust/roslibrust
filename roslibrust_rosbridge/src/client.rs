@@ -1,5 +1,6 @@
 use crate::comm::Ops;
 use crate::comm::RosBridgeComm;
+use crate::runtime::{self, spawn};
 use crate::{
     deserialize_dynamic_message, serialize_dynamic_message, DynamicPublisher, DynamicSubscriber,
     Publisher, ServiceHandle, Subscriber,
@@ -14,27 +15,13 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::RwLock;
-use tokio::time::Duration;
 
 use super::{
     Message, MessageQueue, PublisherHandle, Reader, ServiceCallback, ServiceClient, Socket,
     Subscription, Writer, QUEUE_SIZE,
 };
-
-macro_rules! spawn {
-    ($future:expr) => {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let _ = tokio::spawn($future);
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            wasm_bindgen_futures::spawn_local($future);
-        }
-    };
-}
 
 /// Builder options for creating a client
 #[derive(Clone)]
@@ -108,19 +95,7 @@ impl ClientHandle {
 
         // Spawn the spin task
         // The internal stubborn spin task continues to try to reconnect on failure
-        #[cfg(not(target_arch = "wasm32"))]
-        drop(tokio::task::spawn(stubborn_spin(
-            inner_weak,
-            is_disconnected.clone(),
-        )));
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            let is_disconnected_clone = is_disconnected.clone();
-            wasm_bindgen_futures::spawn_local(async move {
-                let _ = stubborn_spin(inner_weak, is_disconnected_clone).await;
-            });
-        }
+        spawn!(stubborn_spin(inner_weak, is_disconnected.clone()));
 
         Ok(ClientHandle {
             inner,
@@ -533,31 +508,13 @@ impl ClientHandle {
 
         // Having to do manual timeout logic here because of error types
         let recv = if let Some(timeout) = response_timeout {
-            #[cfg(not(target_arch = "wasm32"))]
-            {
-                match tokio::time::timeout(timeout, rx).await {
-                    Ok(recv) => recv,
-                    Err(e) => {
-                        // Stop tracking the call so a late response is discarded
-                        // instead of accumulating in the map
-                        service_calls.remove(&rand_string);
-                        return Err(Error::Timeout(format!("Service call timed out: {e:?}")));
-                    }
-                }
-            }
-            #[cfg(target_arch = "wasm32")]
-            {
-                use futures::future::{select, Either};
-                let timeout_fut =
-                    gloo_timers::future::TimeoutFuture::new(timeout.as_millis() as u32);
-                futures::pin_mut!(rx);
-                futures::pin_mut!(timeout_fut);
-
-                match select(rx, timeout_fut).await {
-                    Either::Left((res, _)) => res,
-                    Either::Right((_, _)) => {
-                        return Err(Error::Timeout("Service call timed out".to_string()))
-                    }
+            match runtime::timeout(timeout, rx).await {
+                Ok(recv) => recv,
+                Err(e) => {
+                    // Stop tracking the call so a late response is discarded
+                    // instead of accumulating in the map
+                    service_calls.remove(&rand_string);
+                    return Err(Error::Timeout(format!("Service call timed out: {e:?}")));
                 }
             }
         } else {
@@ -818,11 +775,6 @@ impl Client {
             Message::Pong(pong) => {
                 debug!("Pong received {:?}", pong);
             }
-            #[cfg(not(target_arch = "wasm32"))]
-            _ => {
-                panic!("Non-text response received");
-            }
-            #[cfg(target_arch = "wasm32")]
             _ => {
                 warn!("Unexpected non-text response received, ignoring...");
             }
@@ -881,12 +833,9 @@ impl Client {
 
         // Wrap evaluation of callback in a spawn_blocking to match trait expectations from roslibrust_common
         let callback = callback.value().clone();
-        #[cfg(not(target_arch = "wasm32"))]
-        let response = tokio::task::spawn_blocking(move || (callback)(&request))
+        let response = runtime::spawn_blocking(move || (callback)(&request))
             .await
             .unwrap_or_else(|e| Err(format!("Service callback panicked: {e}").into()));
-        #[cfg(target_arch = "wasm32")]
-        let response = (callback)(&request);
         // A failed write means the connection dropped; spin_once will notice and
         // trigger a reconnect, so logging is all we can usefully do here
         let write_result = match response {
@@ -904,7 +853,6 @@ impl Client {
     }
 
     async fn spin_once(&self) -> Result<()> {
-        #[cfg(not(target_arch = "wasm32"))]
         let read = {
             let mut stream = self.reader.write().await;
             match stream.next().await {
@@ -912,17 +860,6 @@ impl Client {
                 Some(Err(e)) => {
                     return Err(Error::IoError(std::io::Error::other(e)));
                 }
-                None => {
-                    return Err(Error::Unexpected(anyhow!("Wtf does none mean here?")));
-                }
-            }
-        };
-
-        #[cfg(target_arch = "wasm32")]
-        let read = {
-            let mut stream = self.reader.write().await;
-            match stream.next().await {
-                Some(msg) => msg,
                 None => {
                     return Err(Error::Unexpected(anyhow!("Wtf does none mean here?")));
                 }
@@ -1009,24 +946,7 @@ async fn stubborn_spin(
         const SPIN_DURATION: Duration = Duration::from_millis(10);
 
         // Do a spin, important to not do this in the match or it keeps the lock alive in the branch arms
-        #[cfg(not(target_arch = "wasm32"))]
-        let spin_result =
-            tokio::time::timeout(SPIN_DURATION, client.read().await.spin_once()).await;
-        #[cfg(target_arch = "wasm32")]
-        let spin_result = {
-            use futures::future::{select, Either};
-            let timeout_fut =
-                gloo_timers::future::TimeoutFuture::new(SPIN_DURATION.as_millis() as u32);
-            let client_lock = client.read().await;
-            let future = client_lock.spin_once();
-            futures::pin_mut!(future);
-            futures::pin_mut!(timeout_fut);
-
-            match select(future, timeout_fut).await {
-                Either::Left((res, _)) => Ok(res),
-                Either::Right((_, _)) => Err("timeout"),
-            }
-        };
+        let spin_result = runtime::timeout(SPIN_DURATION, client.read().await.spin_once()).await;
 
         match spin_result {
             Ok(Ok(())) => {}
@@ -1040,7 +960,7 @@ async fn stubborn_spin(
                 // thing keeping the connection alive, so keep retrying
                 while let Err(e) = client.write().await.reconnect().await {
                     warn!("Reconnect attempt failed: {e}, retrying");
-                    tokio::time::sleep(Duration::from_millis(200)).await;
+                    runtime::sleep(Duration::from_millis(200)).await;
                 }
                 is_disconnected.store(false, Ordering::Relaxed);
             }
@@ -1056,29 +976,14 @@ async fn stubborn_spin(
 // Implementation of timeout that is a no-op if timeout is 0 or un-configured
 // Only works on functions that already return our result type
 // This might not be needed but reading tokio::timeout docs I couldn't confirm this
-pub(crate) async fn timeout<F, T>(timeout: Option<Duration>, future: F) -> Result<T>
+async fn timeout<F, T>(timeout: Option<Duration>, future: F) -> Result<T>
 where
     F: futures::Future<Output = Result<T>>,
 {
     if let Some(t) = timeout {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            tokio::time::timeout(t, future)
-                .await
-                .map_err(|e| Error::Timeout(format!("{e:?}")))?
-        }
-        #[cfg(target_arch = "wasm32")]
-        {
-            use futures::future::{select, Either};
-            let timeout_fut = gloo_timers::future::TimeoutFuture::new(t.as_millis() as u32);
-            futures::pin_mut!(future);
-            futures::pin_mut!(timeout_fut);
-
-            match select(future, timeout_fut).await {
-                Either::Left((res, _)) => res,
-                Either::Right((_, _)) => Err(Error::Timeout("Service call timed out".to_string())),
-            }
-        }
+        runtime::timeout(t, future)
+            .await
+            .map_err(|e| Error::Timeout(format!("{e:?}")))?
     } else {
         future.await
     }
@@ -1092,10 +997,7 @@ async fn stubborn_connect(url: &str) -> (Writer, Reader) {
             Err(e) => {
                 warn!("Failed to reconnect: {:?}", e);
                 // TODO configurable rate?
-                #[cfg(not(target_arch = "wasm32"))]
-                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-                #[cfg(target_arch = "wasm32")]
-                gloo_timers::future::TimeoutFuture::new(200).await;
+                runtime::sleep(Duration::from_millis(200)).await;
                 continue;
             }
             Ok(stream) => {
@@ -1107,13 +1009,16 @@ async fn stubborn_connect(url: &str) -> (Writer, Reader) {
 }
 
 // Basic connection attempt and error wrapping
-#[cfg(not(target_arch = "wasm32"))]
 async fn connect(url: &str) -> Result<Socket> {
-    let attempt = tokio_tungstenite::connect_async(url).await;
-    match attempt {
-        Ok((stream, _response)) => Ok(stream),
-        Err(e) => Err(Error::IoError(std::io::Error::other(e))),
-    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let attempt = tokio_tungstenite::connect_async(url)
+        .await
+        .map(|(stream, _response)| stream);
+
+    #[cfg(target_arch = "wasm32")]
+    let attempt = crate::wasm::connect(url).await;
+
+    attempt.map_err(|e| Error::IoError(std::io::Error::other(e)))
 }
 
 #[cfg(test)]
@@ -1279,12 +1184,4 @@ mod tests {
             .unwrap()
             .contains("Service callback panicked"));
     }
-}
-
-#[cfg(target_arch = "wasm32")]
-async fn connect(url: &str) -> Result<Socket> {
-    let (_meta, stream) = ws_stream_wasm::WsMeta::connect(url, None)
-        .await
-        .map_err(|e| Error::IoError(std::io::Error::other(e)))?;
-    Ok(stream)
 }

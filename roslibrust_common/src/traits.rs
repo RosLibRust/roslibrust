@@ -91,16 +91,6 @@ where
 {
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-pub trait WasmNotSend: Send {}
-#[cfg(not(target_arch = "wasm32"))]
-impl<T: Send> WasmNotSend for T {}
-
-#[cfg(target_arch = "wasm32")]
-pub trait WasmNotSend {}
-#[cfg(target_arch = "wasm32")]
-impl<T> WasmNotSend for T {}
-
 // ANCHOR: publish
 /// Indicates that something is a publisher and has our expected publish
 /// Implementors of this trait are expected to auto-cleanup the publisher when dropped
@@ -109,7 +99,7 @@ pub trait Publish<T: RosMessageType> {
     // However see: https://blog.rust-lang.org/2023/12/21/async-fn-rpit-in-traits.html
     // This generates a warning is rust as of writing due to ambiguity around the "Send-ness" of the return type
     // We only plan to work with multi-threaded work stealing executors (e.g. tokio) so we're manually specifying Send
-    fn publish(&self, data: &T) -> impl Future<Output = Result<()>> + WasmNotSend;
+    fn publish(&self, data: &T) -> impl Future<Output = Result<()>> + Send;
 }
 // ANCHOR_END: publish
 
@@ -126,7 +116,7 @@ where
     /// Returns the next message on the topic, or an Err as appropriate.
     /// [crate::Error] is currently quite generic, and the different backends can return different error variants in different circumstances.
     /// We hope to clean-up this error type substantially in the future.
-    fn next(&mut self) -> impl Future<Output = Result<T>> + WasmNotSend;
+    fn next(&mut self) -> impl Future<Output = Result<T>> + Send;
 
     /// Converts the subscriber into an async [futures_core::Stream].
     /// This allows using the various adaptors in either [tokio_stream::StreamExt](https://docs.rs/tokio-stream/latest/tokio_stream/trait.StreamExt.html)
@@ -170,7 +160,7 @@ pub trait TopicProvider {
     fn advertise<MsgType: RosMessageType>(
         &self,
         topic: impl ToGlobalTopicName,
-    ) -> impl Future<Output = Result<Self::Publisher<MsgType>>> + WasmNotSend;
+    ) -> impl Future<Output = Result<Self::Publisher<MsgType>>> + Send;
 
     /// Subscribes to a topic and returns a type specific subscriber to use.
     ///
@@ -178,7 +168,7 @@ pub trait TopicProvider {
     fn subscribe<MsgType: RosMessageType>(
         &self,
         topic: impl ToGlobalTopicName,
-    ) -> impl Future<Output = Result<Self::Subscriber<MsgType>>> + WasmNotSend;
+    ) -> impl Future<Output = Result<Self::Subscriber<MsgType>>> + Send;
 }
 // ANCHOR_END: topic_provider
 
@@ -198,7 +188,7 @@ pub trait DynamicPublish {
     /// let message = descriptor.message_from(&serde_json::json!({"data": "hello"}))?;
     /// publisher.publish(&message).await?;
     /// ```
-    fn publish(&self, data: &DynamicMessage) -> impl Future<Output = Result<()>> + WasmNotSend;
+    fn publish(&self, data: &DynamicMessage) -> impl Future<Output = Result<()>> + Send;
 
     /// Validate and publish any Serde value using this publisher's generated message schema.
     ///
@@ -206,7 +196,7 @@ pub trait DynamicPublish {
     /// [`DynamicMessage`] and fully schema-checked before the backend serializes it. This method is
     /// a convenience for tools that already have a Serde-friendly input representation; callers
     /// that reuse a message should construct it once and call [`Self::publish`] instead.
-    fn publish_serializable<T>(&self, data: &T) -> impl Future<Output = Result<()>> + WasmNotSend
+    fn publish_serializable<T>(&self, data: &T) -> impl Future<Output = Result<()>> + Send
     where
         Self: Sync,
         T: serde::Serialize + Sync + ?Sized,
@@ -227,7 +217,7 @@ where
     Self: Sized,
 {
     /// Return the next message, validated against the descriptor supplied at subscription time.
-    fn next(&mut self) -> impl Future<Output = Result<DynamicMessage>> + WasmNotSend;
+    fn next(&mut self) -> impl Future<Output = Result<DynamicMessage>> + Send;
 
     /// Convert this subscriber into an infinite asynchronous stream.
     fn into_stream(mut self) -> impl futures_core::Stream<Item = Result<DynamicMessage>> {
@@ -263,7 +253,7 @@ pub trait DynamicTopicProvider {
         &self,
         topic: impl ToGlobalTopicName,
         descriptor: &'static MessageDescriptor,
-    ) -> impl Future<Output = Result<Self::DynamicPublisher>> + WasmNotSend;
+    ) -> impl Future<Output = Result<Self::DynamicPublisher>> + Send;
 
     /// Subscribe to `topic` using a message type selected at runtime.
     ///
@@ -280,12 +270,12 @@ pub trait DynamicTopicProvider {
         &self,
         topic: impl ToGlobalTopicName,
         descriptor: &'static MessageDescriptor,
-    ) -> impl Future<Output = Result<Self::DynamicSubscriber>> + WasmNotSend;
+    ) -> impl Future<Output = Result<Self::DynamicSubscriber>> + Send;
 }
 
 /// Defines what it means to be something that is callable as a service
 pub trait Service<T: RosServiceType> {
-    fn call(&self, request: &T::Request) -> impl Future<Output = Result<T::Response>> + WasmNotSend;
+    fn call(&self, request: &T::Request) -> impl Future<Output = Result<T::Response>> + Send;
 }
 
 /// A reusable client for a service whose concrete Rust type was selected at runtime.
@@ -295,13 +285,13 @@ pub trait DynamicService {
 
     /// Call the service with a schema-validated dynamic request.
     fn call(&self, request: &DynamicMessage)
-        -> impl Future<Output = Result<DynamicMessage>> + WasmNotSend;
+        -> impl Future<Output = Result<DynamicMessage>> + Send;
 
     /// Validate and call the service using any Serde request value.
     fn call_serializable<T>(
         &self,
         request: &T,
-    ) -> impl Future<Output = Result<DynamicMessage>> + WasmNotSend
+    ) -> impl Future<Output = Result<DynamicMessage>> + Send
     where
         Self: Sync,
         T: serde::Serialize + Sync + ?Sized,
@@ -327,14 +317,14 @@ pub trait DynamicServiceProvider {
         service: impl ToGlobalTopicName,
         descriptor: &'static ServiceDescriptor,
         request: DynamicMessage,
-    ) -> impl Future<Output = Result<DynamicMessage>> + WasmNotSend;
+    ) -> impl Future<Output = Result<DynamicMessage>> + Send;
 
     /// Create a reusable client for a runtime-selected service.
     fn dynamic_service_client(
         &self,
         service: impl ToGlobalTopicName,
         descriptor: &'static ServiceDescriptor,
-    ) -> impl Future<Output = Result<Self::DynamicServiceClient>> + WasmNotSend;
+    ) -> impl Future<Output = Result<Self::DynamicServiceClient>> + Send;
 }
 
 /// This trait is analogous to TopicProvider, but instead provides the capability to create service servers and service clients
@@ -347,7 +337,7 @@ pub trait ServiceProvider {
         &self,
         service: impl ToGlobalTopicName,
         request: SrvType::Request,
-    ) -> impl Future<Output = Result<SrvType::Response>> + WasmNotSend;
+    ) -> impl Future<Output = Result<SrvType::Response>> + Send;
 
     /// An optimized version of call_service that returns a persistent client that can be used to repeatedly call a service.
     /// Depending on backend this may provide a performance benefit over call_service.
@@ -355,7 +345,7 @@ pub trait ServiceProvider {
     fn service_client<SrvType: RosServiceType + 'static>(
         &self,
         service: impl ToGlobalTopicName,
-    ) -> impl Future<Output = Result<Self::ServiceClient<SrvType>>> + WasmNotSend;
+    ) -> impl Future<Output = Result<Self::ServiceClient<SrvType>>> + Send;
 
     /// Advertise a service function to be available for clients to call.
     /// A handle is returned that manages the lifetime of the service.
@@ -369,13 +359,13 @@ pub trait ServiceProvider {
         &self,
         service: impl ToGlobalTopicName,
         server: F,
-    ) -> impl Future<Output = Result<Self::ServiceServer>> + WasmNotSend;
+    ) -> impl Future<Output = Result<Self::ServiceServer>> + Send;
 }
 
 /// Describes the ability to inspect the visible ROS graph.
 pub trait GraphProvider {
     /// List topics currently visible to this backend.
-    fn list_topics(&self) -> impl Future<Output = Result<Vec<TopicInfo>>> + WasmNotSend;
+    fn list_topics(&self) -> impl Future<Output = Result<Vec<TopicInfo>>> + Send;
 
     /// List services currently visible to this backend.
     ///
@@ -386,7 +376,7 @@ pub trait GraphProvider {
     /// empty string (`""`) for the `type_name` field rather than failing the entire
     /// operation. This behavior matches the rosapi node's convention and allows
     /// partial service discovery to succeed even when some services are unreachable.
-    fn list_services(&self) -> impl Future<Output = Result<Vec<ServiceInfo>>> + WasmNotSend;
+    fn list_services(&self) -> impl Future<Output = Result<Vec<ServiceInfo>>> + Send;
 }
 
 // ANCHOR: ros_trait

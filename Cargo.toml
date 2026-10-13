@@ -23,13 +23,7 @@ members = [
 
 [workspace.dependencies]
 log = "0.4"
-tokio = { version = "1", default-features = false, features = [
-    "sync",
-    "macros",
-    "rt",
-    "time",
-    "test-util",
-] }
+tokio = {version = "1", features = ["full", "test-util"] }
 serde = { version = "1.0", features = ["derive"] }
 # Someday we may move this crate into this workspace
 # For now this is how we keep from repeating the verison everywhere
