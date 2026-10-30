@@ -1,31 +1,4 @@
-//! A mock implementation of roslibrust's generic traits useful for testing ROS behaviors.
-//!
-//! It is not recommended to depend on this crate directly, but instead access it via roslibrust with the `mock` feature enabled.
-//!
-//! ```
-//! // Normally accessed as roslibrust::{Result, TopicProvider, Publish}
-//! use roslibrust_common::{Result, TopicProvider, Publish};
-//! // Normally you'd use generated types from roslibrust::codegen
-//! use roslibrust_test::ros1::*;
-//!
-//! async fn my_ros_thing(ros: impl TopicProvider) -> Result<()> {
-//!     let my_publisher = ros.advertise::<std_msgs::String>("/my_topic").await?;
-//!     my_publisher.publish(&std_msgs::String { data: "Hello, world!".to_string() }).await?;
-//!     Ok(())
-//! }
-//!
-//! #[tokio::test]
-//! async fn test_my_ros_thing() {
-//!     // Create a mock ros instance with new
-//!     let ros = roslibrust::mock::MockRos::new();
-//!     // Use it like ros:
-//!     let test_sub = ros.subscribe::<std_msgs::String>("/my_topic").await?;
-//!     // Kick off our object under test
-//!     tokio::spawn(my_ros_thing(ros));
-//!     // Assert we got the message we expected
-//!     assert_eq!(test_sub.next().await.unwrap().unwrap().data, "Hello, world!");
-//! }
-//! ```
+#![doc = include_str!("../README.md")]
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
@@ -61,7 +34,11 @@ type ServiceStore = RwLock<BTreeMap<String, ServiceEntry>>;
 
 /// A mock ROS implementation that can be substituted for any roslibrust backend in unit tests.
 ///
-/// Implements [TopicProvider] and [ServiceProvider] to provide basic ros functionality.
+/// Implements [`TopicProvider`], [`ServiceProvider`], [`DynamicTopicProvider`],
+/// [`DynamicServiceProvider`], and [`GraphProvider`].
+///
+/// Create a fresh instance per test (`MockRos::new()`) so topics and services do not leak between
+/// parallel test cases.
 #[derive(Clone)]
 #[allow(clippy::type_complexity)]
 pub struct MockRos {
