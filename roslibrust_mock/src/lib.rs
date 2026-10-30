@@ -1,6 +1,21 @@
 //! A mock implementation of roslibrust's generic traits useful for testing ROS behaviors.
 //!
-//! It is not recommended to depend on this crate directly, but instead access it via roslibrust with the `mock` feature enabled.
+//! Prefer enabling the `mock` feature on the [`roslibrust`](https://docs.rs/roslibrust) crate and
+//! using [`roslibrust::mock::MockRos`](https://docs.rs/roslibrust/latest/roslibrust/mock/struct.MockRos.html)
+//! rather than depending on `roslibrust_mock` directly.
+//!
+//! # Testing with simulated time
+//!
+//! Node code written against [`Ros`](roslibrust_common::Ros) can be exercised in tests without a
+//! ROS installation by constructing a [`MockRos`] and passing it in place of a live backend.
+//! Because [`MockRos`] uses in-memory channels, tests are isolated and safe to run in parallel.
+//!
+//! For code that uses [`tokio::time::sleep`] or intervals, call [`tokio::time::pause`] at the start
+//! of the test (or use `#[tokio::test(start_paused = true)]`) so long delays complete instantly.
+//! See the [`mock_ros_integration_testing` example](https://github.com/RosLibRust/roslibrust/blob/master/roslibrust/examples/mock_ros_integration_testing.rs)
+//! for publisher/subscriber and service integration tests that print real wall-clock duration.
+//!
+//! # Basic example
 //!
 //! ```
 //! // Normally accessed as roslibrust::{Result, TopicProvider, Publish}
@@ -61,7 +76,11 @@ type ServiceStore = RwLock<BTreeMap<String, ServiceEntry>>;
 
 /// A mock ROS implementation that can be substituted for any roslibrust backend in unit tests.
 ///
-/// Implements [TopicProvider] and [ServiceProvider] to provide basic ros functionality.
+/// Implements [`TopicProvider`], [`ServiceProvider`], [`DynamicTopicProvider`],
+/// [`DynamicServiceProvider`], and [`GraphProvider`].
+///
+/// Create a fresh instance per test (`MockRos::new()`) so topics and services do not leak between
+/// parallel test cases.
 #[derive(Clone)]
 #[allow(clippy::type_complexity)]
 pub struct MockRos {
