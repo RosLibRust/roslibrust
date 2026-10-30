@@ -97,7 +97,6 @@ This allows cargo to know when message files are edited and automatically re-gen
 - Checkout the [Quick Getting Started Guide](https://roslibrust.github.io/roslibrust/quick_getting_started.html) for a brief guide on how to get started with RosLibRust.
 - Checkout the [Extended Getting Started Guide](https://roslibrust.github.io/roslibrust/extended_getting_started.html) for a more in depth guide on how to get started with RosLibRust.
 - Examples can be found in [examples](https://github.com/RosLibRust/roslibrust/tree/master/roslibrust/examples).
-- For testing without a ROS install, see [`mock_ros_integration_testing`](examples/mock_ros_integration_testing.rs) (`cargo test -p roslibrust --example mock_ros_integration_testing --features mock`).
 
 ## Contributing
 

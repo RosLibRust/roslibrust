@@ -1,46 +1,4 @@
-//! A mock implementation of roslibrust's generic traits useful for testing ROS behaviors.
-//!
-//! Prefer enabling the `mock` feature on the [`roslibrust`](https://docs.rs/roslibrust) crate and
-//! using [`roslibrust::mock::MockRos`](https://docs.rs/roslibrust/latest/roslibrust/mock/struct.MockRos.html)
-//! rather than depending on `roslibrust_mock` directly.
-//!
-//! # Testing with simulated time
-//!
-//! Node code written against [`Ros`](roslibrust_common::Ros) can be exercised in tests without a
-//! ROS installation by constructing a [`MockRos`] and passing it in place of a live backend.
-//! Because [`MockRos`] uses in-memory channels, tests are isolated and safe to run in parallel.
-//!
-//! For code that uses [`tokio::time::sleep`] or intervals, call [`tokio::time::pause`] at the start
-//! of the test (or use `#[tokio::test(start_paused = true)]`) so long delays complete instantly.
-//! See the [`mock_ros_integration_testing` example](https://github.com/RosLibRust/roslibrust/blob/master/roslibrust/examples/mock_ros_integration_testing.rs)
-//! for publisher/subscriber and service integration tests that print real wall-clock duration.
-//!
-//! # Basic example
-//!
-//! ```
-//! // Normally accessed as roslibrust::{Result, TopicProvider, Publish}
-//! use roslibrust_common::{Result, TopicProvider, Publish};
-//! // Normally you'd use generated types from roslibrust::codegen
-//! use roslibrust_test::ros1::*;
-//!
-//! async fn my_ros_thing(ros: impl TopicProvider) -> Result<()> {
-//!     let my_publisher = ros.advertise::<std_msgs::String>("/my_topic").await?;
-//!     my_publisher.publish(&std_msgs::String { data: "Hello, world!".to_string() }).await?;
-//!     Ok(())
-//! }
-//!
-//! #[tokio::test]
-//! async fn test_my_ros_thing() {
-//!     // Create a mock ros instance with new
-//!     let ros = roslibrust::mock::MockRos::new();
-//!     // Use it like ros:
-//!     let test_sub = ros.subscribe::<std_msgs::String>("/my_topic").await?;
-//!     // Kick off our object under test
-//!     tokio::spawn(my_ros_thing(ros));
-//!     // Assert we got the message we expected
-//!     assert_eq!(test_sub.next().await.unwrap().unwrap().data, "Hello, world!");
-//! }
-//! ```
+#![doc = include_str!("../README.md")]
 use std::collections::BTreeMap;
 use std::sync::Arc;
 

@@ -2,13 +2,6 @@
 
 In-memory implementation of RosLibRust's [`TopicProvider`](https://docs.rs/roslibrust_common/latest/roslibrust_common/trait.TopicProvider.html), [`ServiceProvider`](https://docs.rs/roslibrust_common/latest/roslibrust_common/trait.ServiceProvider.html), and [`GraphProvider`](https://docs.rs/roslibrust_common/latest/roslibrust_common/trait.GraphProvider.html) traits for unit and integration tests.
 
-Enable it from the main crate with the `mock` feature:
-
-```toml
-[dev-dependencies]
-roslibrust = { version = "0.26", features = ["mock"] }
-```
-
 ## Why use MockRos?
 
 - **No ROS install** — tests run anywhere `cargo test` runs.
@@ -19,7 +12,7 @@ roslibrust = { version = "0.26", features = ["mock"] }
 
 Write node logic against `impl roslibrust::Ros`, then fixture tests with `MockRos`:
 
-```rust
+```rust,ignore
 async fn my_node(ros: impl roslibrust::Ros) -> roslibrust::Result<()> {
     let pub_handle = ros.advertise::<std_msgs::String>("/out").await?;
     pub_handle.publish(&std_msgs::String { data: "hi".into() }).await?;
